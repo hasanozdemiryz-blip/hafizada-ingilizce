@@ -24,7 +24,7 @@ export function BackButton({ onClick }: { onClick: () => void }) {
     <button
       onClick={onClick}
       className="-ml-1 h-9 w-9 rounded-full bg-white/70 text-ink shadow-[var(--shadow-soft)] grid place-items-center hover:bg-white transition"
-      aria-label="Ana ekran"
+      aria-label="Geri"
     >
       ←
     </button>
