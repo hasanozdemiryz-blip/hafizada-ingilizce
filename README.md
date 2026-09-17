@@ -18,7 +18,7 @@ npm run dev        # http://localhost:5173
 | `npm run dev` | Geliştirme sunucusu |
 | `npm run build` | Typecheck + production build |
 | `npm run preview` | Build'i servis eder (PWA'yı test etmek için tek yol) |
-| `npm test` | Çekirdek mantık testleri (58 test) |
+| `npm test` | Çekirdek mantık testleri (59 test) |
 | `npm run import:cards` | `mnemonik-aday-havuzu.xlsx` → `content/cards.json` |
 | `npm run icons` | `public/icon.svg` → PWA ikonları |
 
