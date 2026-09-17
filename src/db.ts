@@ -24,6 +24,7 @@ const APP_KEY = 'app';
 
 export const EMPTY_STATE: AppState = {
   onboarded: false,
+  extraNew: null,
   streakCount: 0,
   lastSessionDate: null,
   deckTests: {},

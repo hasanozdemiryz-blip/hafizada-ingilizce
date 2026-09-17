@@ -54,6 +54,8 @@ export type DeckTestResult = {
 export type AppState = {
   /** Karsilama ekrani goruldu mu */
   onboarded: boolean;
+  /** Gunluk yeni kelime butcesine bugun eklenen ekstra */
+  extraNew: { date: string; count: number } | null;
   streakCount: number;
   /** YYYY-MM-DD, yerel saat */
   lastSessionDate: string | null;

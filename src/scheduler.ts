@@ -113,7 +113,17 @@ export function currentIntroDeck(introduced: Set<string>): number | null {
   return null;
 }
 
-export function newCardsToday(all: Progress[], now = new Date()): Card[] {
+/**
+ * Bugun tanisilacak kartlar.
+ *
+ * Gunluk butce NEW_PER_DAY; kullanici acikca "devam" derse `extra` ile
+ * genisler. Butce pedagojik bir fren, duvar degil — isteyen ilerleyebilmeli.
+ */
+export function newCardsToday(
+  all: Progress[],
+  now = new Date(),
+  extra: { date: string; count: number } | null = null,
+): Card[] {
   const introduced = new Set(all.filter((p) => p.introduced).map((p) => p.cardId));
   const deck = currentIntroDeck(introduced);
   if (deck === null) return [];
@@ -122,7 +132,8 @@ export function newCardsToday(all: Progress[], now = new Date()): Card[] {
   const doneToday = all.filter(
     (p) => p.introducedAt && todayKey(new Date(p.introducedAt)) === today,
   ).length;
-  const budget = Math.max(0, NEW_PER_DAY - doneToday);
+  const bonus = extra && extra.date === today ? extra.count : 0;
+  const budget = Math.max(0, NEW_PER_DAY + bonus - doneToday);
   if (budget === 0) return [];
 
   return DECKS[deck - 1].cards.filter((c) => !introduced.has(c.id)).slice(0, budget);

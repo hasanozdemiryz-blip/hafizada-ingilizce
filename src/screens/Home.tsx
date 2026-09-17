@@ -1,6 +1,13 @@
 import { useRef } from 'react';
 import { Button, Card, Screen, Streak } from '../components/ui';
-import { CARDS, CARD_BY_ID, DAILY_REVIEW_CAP, DECKS, TEST_PASS_SCORE } from '../content';
+import {
+  CARDS,
+  CARD_BY_ID,
+  DAILY_REVIEW_CAP,
+  DECKS,
+  NEW_PER_DAY,
+  TEST_PASS_SCORE,
+} from '../content';
 import { relativeDue } from '../dates';
 import { exportProgress, importProgress, resetAll } from '../db';
 import { deckStatus, isTestUnlocked } from '../scheduler';
@@ -12,8 +19,11 @@ type Props = {
   /** Vadesi gelmis TUM kartlar — ham sayi ekranda ASLA gosterilmez */
   due: Progress[];
   newCards: CardType[];
+  /** Havuzda hala tanisilmamis kart var mi */
+  moreLeft: boolean;
   onIntro: () => void;
   onReview: () => void;
+  onMoreNew: () => void;
   onTest: (deck: number) => void;
 };
 
@@ -28,7 +38,17 @@ const TILE: Record<string, string> = {
   locked: 'bg-white/55 text-ink-faint',
 };
 
-export function Home({ progress, state, due, newCards, onIntro, onReview, onTest }: Props) {
+export function Home({
+  progress,
+  state,
+  due,
+  newCards,
+  moreLeft,
+  onIntro,
+  onReview,
+  onMoreNew,
+  onTest,
+}: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const byId = new Map(progress.map((p) => [p.cardId, p]));
 
@@ -94,6 +114,13 @@ export function Home({ progress, state, due, newCards, onIntro, onReview, onTest
             <p className="text-ink-soft mt-2 text-sm">
               {siradaki ? `Sıradaki tekrar ${relativeDue(siradaki)}.` : 'Yarın görüşürüz.'}
             </p>
+            {moreLeft && (
+              <div className="mt-5">
+                <Button variant="soft" onClick={onMoreNew}>
+                  {NEW_PER_DAY} kelime daha öğren
+                </Button>
+              </div>
+            )}
           </Card>
         ) : (
           <>
@@ -113,8 +140,13 @@ export function Home({ progress, state, due, newCards, onIntro, onReview, onTest
               </div>
             )}
 
-            {newCards.length > 0 &&
-              (bugun > 0 ? (
+            {/*
+              Tanis bolumu HER ZAMAN gorunur. Onceki surumde gunluk butce
+              bitince blok tamamen kayboluyordu; kullanici Tanis'in nereye
+              gittigini anlamiyordu.
+            */}
+            {newCards.length > 0 ? (
+              bugun > 0 ? (
                 <Card className="rise delay-1">
                   <p className="text-sm text-ink-soft">Deste {introDeck}</p>
                   <p className="word text-3xl font-semibold mt-0.5 mb-3">
@@ -134,7 +166,24 @@ export function Home({ progress, state, due, newCards, onIntro, onReview, onTest
                     Tanış
                   </Button>
                 </div>
-              ))}
+              )
+            ) : moreLeft ? (
+              <Card className="rise delay-1">
+                <p className="word text-lg font-semibold">Bugünün yeni kelimeleri tamam</p>
+                <p className="text-sm text-ink-soft mt-1 mb-3">
+                  Günde {NEW_PER_DAY} kelime, tekrarlar birikmesin diye. İstersen devam et.
+                </p>
+                <Button variant="soft" onClick={onMoreNew}>
+                  {NEW_PER_DAY} kelime daha
+                </Button>
+              </Card>
+            ) : (
+              <Card className="rise delay-1 text-center py-7">
+                <p className="text-3xl mb-1">🏁</p>
+                <p className="word text-lg font-semibold">Tüm kelimelerle tanıştın</p>
+                <p className="text-sm text-ink-soft mt-1">Bundan sonrası tekrar.</p>
+              </Card>
+            )}
           </>
         )}
 

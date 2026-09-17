@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { DAILY_REVIEW_CAP, DECKS } from './content';
-import { db, getState } from './db';
+import { CARDS, DAILY_REVIEW_CAP, DECKS, NEW_PER_DAY } from './content';
+import { db, getState, setState } from './db';
+import { todayKey } from './dates';
 import { dueQueue, isTestUnlocked, newCardsToday } from './scheduler';
 import { DeckTest } from './screens/DeckTest';
 import { Home } from './screens/Home';
@@ -76,15 +77,24 @@ export default function App() {
     default: {
       // Seans basladiginda kuyruk dondurulur — seans ortasinda liste degismesin.
       const due = dueQueue(progress);
-      const newCards = newCardsToday(progress);
+      const newCards = newCardsToday(progress, new Date(), state.extraNew);
+      const introducedCount = progress.filter((p) => p.introduced).length;
+
       return (
         <Home
           progress={progress}
           state={state}
           due={due}
           newCards={newCards}
+          /** Havuzda hala tanisilmamis kart var mi */
+          moreLeft={introducedCount < CARDS.length}
           onReview={() => setRoute({ name: 'review', queue: due.slice(0, DAILY_REVIEW_CAP) })}
           onIntro={() => setRoute({ name: 'intro', cards: newCards })}
+          onMoreNew={() => {
+            const today = todayKey();
+            const had = state.extraNew?.date === today ? state.extraNew.count : 0;
+            void setState({ extraNew: { date: today, count: had + NEW_PER_DAY } });
+          }}
           onTest={test}
         />
       );

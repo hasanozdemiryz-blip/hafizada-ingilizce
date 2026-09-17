@@ -225,6 +225,18 @@ describe('gunluk yeni kart butcesi', () => {
     expect(newCardsToday(ps, NOW)).toHaveLength(0);
   });
 
+  it('kullanici "devam" derse butce genisler', () => {
+    const ps = introduceMany(NEW_PER_DAY, NOW);
+    const bugun = { date: '2026-03-10', count: NEW_PER_DAY };
+    expect(newCardsToday(ps, NOW, bugun)).toHaveLength(NEW_PER_DAY);
+  });
+
+  it('dunden kalan ekstra bugune tasinmaz', () => {
+    const ps = introduceMany(NEW_PER_DAY, NOW);
+    const dun = { date: '2026-03-09', count: 50 };
+    expect(newCardsToday(ps, NOW, dun)).toHaveLength(0);
+  });
+
   it('ertesi gun butce yenilenir', () => {
     const ps = introduceMany(NEW_PER_DAY, NOW);
     expect(newCardsToday(ps, day(1))).toHaveLength(NEW_PER_DAY);
