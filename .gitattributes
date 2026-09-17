@@ -1,0 +1,11 @@
+# Satir sonlarini depoda LF'e sabitle.
+# Boyle olmazsa Windows'ta uretilen dosyalar (cards.json, ikonlar)
+# icerik ayni olsa bile "degismis" gorunuyor.
+* text=auto eol=lf
+
+# Ikili dosyalar dokunulmasin
+*.png    binary
+*.webp   binary
+*.woff2  binary
+*.xlsx   binary
+*.ico    binary
