@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CardVisual } from '../components/CardVisual';
 import { BackButton, Button, Card, HookChip, Progressbar, Screen, TopBar } from '../components/ui';
-import { db, touchStreak } from '../db';
+import { db, logSession } from '../db';
 import { introduceCard } from '../scheduler';
 import type { Card as CardType } from '../types';
 
@@ -29,7 +29,7 @@ export function IntroSession({
     await db.progress.put(introduceCard(card, stuck));
 
     if (i + 1 >= cards.length) {
-      const state = await touchStreak();
+      const state = await logSession('intro', cards.length);
       onFinish(cards.length, state.streakCount);
     } else {
       setI(i + 1);

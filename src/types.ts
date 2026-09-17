@@ -57,6 +57,10 @@ export type AppState = {
   /** Gunluk yeni kelime butcesine bugun eklenen ekstra */
   extraNew: { date: string; count: number } | null;
   streakCount: number;
+  /** Seri koruma hakki. 7 gunde bir kazanilir, en fazla 2 tutulur. */
+  freezes: number;
+  /** Gunluk etkinlik: tarih -> { r: tekrar, i: yeni kelime } */
+  days: Record<string, { r: number; i: number }>;
   /** YYYY-MM-DD, yerel saat */
   lastSessionDate: string | null;
   deckTests: Record<number, DeckTestResult>;

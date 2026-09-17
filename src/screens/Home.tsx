@@ -1,5 +1,5 @@
-import { useRef } from 'react';
 import { Button, Card, Screen, Streak } from '../components/ui';
+import { TAB_SPACE } from '../components/TabBar';
 import {
   CARDS,
   CARD_BY_ID,
@@ -9,7 +9,6 @@ import {
   TEST_PASS_SCORE,
 } from '../content';
 import { relativeDue } from '../dates';
-import { exportProgress, importProgress, resetAll } from '../db';
 import { deckStatus, isTestUnlocked } from '../scheduler';
 import type { AppState, Card as CardType, Progress } from '../types';
 
@@ -49,7 +48,6 @@ export function Home({
   onMoreNew,
   onTest,
 }: Props) {
-  const fileRef = useRef<HTMLInputElement>(null);
   const byId = new Map(progress.map((p) => [p.cardId, p]));
 
   const learned = progress.filter((p) => p.introduced).length;
@@ -87,16 +85,6 @@ export function Home({
     .map((p) => CARD_BY_ID.get(p.cardId))
     .filter((c): c is CardType => Boolean(c));
 
-  async function onExport() {
-    const url = URL.createObjectURL(
-      new Blob([await exportProgress()], { type: 'application/json' }),
-    );
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `hafizada-yedek-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
 
   return (
     <Screen>
@@ -105,7 +93,7 @@ export function Home({
         {state.streakCount > 0 && <Streak count={state.streakCount} />}
       </header>
 
-      <div className="flex-1 flex flex-col gap-3 pb-4">
+      <div className={`flex-1 flex flex-col gap-3 ${TAB_SPACE}`}>
         {/* Bugunluk tamamsa: sakin bir durum, devre disi buton degil */}
         {bosGun ? (
           <Card className="rise text-center py-10">
@@ -244,43 +232,7 @@ export function Home({
         )}
       </div>
 
-      <footer className="shrink-0 flex items-center justify-center gap-3 text-xs text-ink-faint">
-        <button onClick={() => void onExport()} className="hover:text-ink-soft">
-          Yedek al
-        </button>
-        <span>·</span>
-        <button onClick={() => fileRef.current?.click()} className="hover:text-ink-soft">
-          Geri yükle
-        </button>
-        <span>·</span>
-        <button
-          onClick={() => {
-            if (confirm('Tüm ilerleme silinecek. Emin misin?')) void resetAll();
-          }}
-          className="hover:text-ink-soft"
-        >
-          Sıfırla
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/json"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (f) void onImport(f);
-          }}
-        />
-      </footer>
     </Screen>
   );
 }
 
-async function onImport(file: File) {
-  try {
-    await importProgress(await file.text());
-  } catch {
-    alert('Yedek dosyası okunamadı.');
-  }
-}

@@ -1,5 +1,5 @@
 import Dexie, { type Table } from 'dexie';
-import { nextStreak } from './dates';
+import { nextStreak, todayKey } from './dates';
 import type { AppState, DeckTestResult, Progress } from './types';
 
 type MetaRow = { key: string; value: unknown };
@@ -26,6 +26,8 @@ export const EMPTY_STATE: AppState = {
   onboarded: false,
   extraNew: null,
   streakCount: 0,
+  freezes: 0,
+  days: {},
   lastSessionDate: null,
   deckTests: {},
 };
@@ -41,10 +43,28 @@ export async function setState(patch: Partial<AppState>): Promise<AppState> {
   return next;
 }
 
-/** Seans tamamlaninca cagrilir. */
-export async function touchStreak(now = new Date()): Promise<AppState> {
+/**
+ * Seans tamamlaninca cagrilir: gunluk etkinligi kaydeder ve seriyi isler.
+ * Donen `freezeUsed`, koruma hakkinin harcandigini soyler — kullaniciya
+ * bunu soylemek gerek, yoksa serinin nasil korundugu sihir gibi gorunur.
+ */
+export async function logSession(
+  kind: 'intro' | 'review',
+  count: number,
+  now = new Date(),
+): Promise<AppState & { freezeUsed: boolean }> {
   const state = await getState();
-  return setState(nextStreak(state, now));
+  const { freezeUsed, ...streak } = nextStreak(state, now);
+
+  const key = todayKey(now);
+  const gun = state.days[key] ?? { r: 0, i: 0 };
+  const days = {
+    ...state.days,
+    [key]: kind === 'intro' ? { ...gun, i: gun.i + count } : { ...gun, r: gun.r + count },
+  };
+
+  const next = await setState({ ...streak, days });
+  return { ...next, freezeUsed };
 }
 
 export async function recordDeckTest(deck: number, result: DeckTestResult): Promise<AppState> {

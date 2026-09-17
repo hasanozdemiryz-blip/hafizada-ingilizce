@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { AnswerFace, QuestionFace } from '../components/CardFace';
 import { BackButton, Button, Progressbar, Screen, TopBar } from '../components/ui';
 import { CARD_BY_ID } from '../content';
-import { db, touchStreak } from '../db';
+import { db, logSession } from '../db';
 import { Rating, reviewCard } from '../scheduler';
 import type { Progress } from '../types';
 import type { Grade } from 'ts-fsrs';
@@ -49,7 +49,7 @@ export function ReviewSession({
     const next = requeue ? [...rest, progress] : rest;
 
     if (next.length === 0) {
-      const state = await touchStreak();
+      const state = await logSession('review', total);
       onFinish(total, state.streakCount);
       return;
     }
