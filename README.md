@@ -80,7 +80,9 @@ Hangi kartın revize edileceğini tahminle değil bu verilerle seçmek için.
 
 ```
 content/cards.json     İçeriğin tek kaynağı (xlsx'ten üretilir)
+brand/                 Sosyal medya için yüksek çözünürlüklü görseller
 src/
+  assets/cards/        Kart görselleri — dosya adı kart id'si (snake.webp)
   content.ts           Kart havuzu, desteler, sabitler
   scheduler.ts         FSRS + aşamalı iskele + seans kurulumu
   dates.ts             Seri, seri koruma, tarih mantığı (saf)
@@ -101,11 +103,11 @@ tools/
 
 ## Durum
 
-**Bitti:** İki modlu çekirdek · aşamalı iskele · 10'arlı desteler + sıralı kilit · deste bitirme testi · karşılama ekranı · hafif seri + seri koruma · günlük takip (ısı haritası) · Kelimelerim + arama + kanca panosu · yedekleme · PWA (kurulabilir, çevrimdışı).
+**Bitti:** Logo (vektör, ikonlar ondan türetiliyor) · iki modlu çekirdek · aşamalı iskele · 10'arlı desteler + sıralı kilit · deste bitirme testi · karşılama ekranı · hafif seri + seri koruma · günlük takip (ısı haritası) · Kelimelerim + arama + kanca panosu · yedekleme · PWA (kurulabilir, çevrimdışı).
 
 **Yapılmadı ve nedeni:**
 
-- **Kart görselleri** — Faz 2 kilitli, ayrıca konuşulacak. Görsel yerine kartta brief metni duruyor; akış eksiksiz çalışıyor. `cards.json`'daki `image` alanı doldurulunca başka hiçbir şey değişmeyecek.
+- **Kart görselleri** — 100'ün 1'i hazır (`snake`). Görseli olmayan kartta brief metni duruyor, akış eksiksiz çalışıyor. Yeni görsel eklemek için tek iş: `src/assets/cards/<kart-id>.webp` — kod veya JSON düzenlemesi yok.
 - **Hatırlatma bildirimi** — PWA'da kapalıyken bildirim göndermek sunucu gerektiriyor (Web Push). Backend'siz mümkün değil. Aynı sınır ana ekran widget'ı için de geçerli (o native istiyor).
 - **Telaffuz** — ses kancası yanlış telaffuz öğretebilir (`sell` gerçekte "sel" değil). Planlanan çözüm: L1–L0'da, iskele sökülürken devreye girsin.
 

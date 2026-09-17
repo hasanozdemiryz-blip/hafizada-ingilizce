@@ -18,6 +18,25 @@ const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[^a-zçğıöşü
  */
 const zayifKanca = (c: Card) => norm(c.en) === norm(c.hook);
 
+/**
+ * Kart gorselleri.
+ * `src/assets/cards/<kart-id>.webp` koyulunca o kartin gorseli olur —
+ * elle liste tutmaya, cards.json'a dokunmaya gerek yok. 100 kart da
+ * ayni sekilde eklenecek.
+ */
+const GORSEL_DOSYALARI = import.meta.glob('./assets/cards/*.{webp,png,jpg,jpeg}', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>;
+
+const GORSELLER = new Map(
+  Object.entries(GORSEL_DOSYALARI).map(([yol, url]) => [
+    yol.split('/').pop()!.replace(/\.[^.]+$/, ''),
+    url,
+  ]),
+);
+
 const frekansSirasi = (raw as Card[])
   .filter((c) => c.klass === 'tutan')
   .sort((a, b) => a.order - b.order);
@@ -35,7 +54,11 @@ export const CARDS: Card[] = (() => {
   const zayif = frekansSirasi.filter(zayifKanca);
   const deste1 = guclu.slice(0, DECK_SIZE);
   const kalan = [...guclu.slice(DECK_SIZE), ...zayif].sort((a, b) => a.order - b.order);
-  return [...deste1, ...kalan].map((c, i) => ({ ...c, order: i + 1 }));
+  return [...deste1, ...kalan].map((c, i) => ({
+    ...c,
+    order: i + 1,
+    image: GORSELLER.get(c.id) ?? null,
+  }));
 })();
 
 export const CARD_BY_ID = new Map(CARDS.map((c) => [c.id, c]));

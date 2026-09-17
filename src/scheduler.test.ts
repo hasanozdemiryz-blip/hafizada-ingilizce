@@ -48,6 +48,12 @@ describe('icerik', () => {
     expect(zayif.map((c) => c.en)).toEqual([]);
   });
 
+  // src/assets/cards/<id>.webp koyulunca otomatik baglanmali
+  it('gorseli olan kart cards.json elle duzenlenmeden baglanir', () => {
+    const snake = CARDS.find((c) => c.id === 'snake');
+    expect(snake?.image).toBeTruthy();
+  });
+
   it('zayif kancali kartlar setten atilmaz, sadece Deste 1in arkasina kayar', () => {
     const far = CARDS.find((c) => c.en === 'far');
     expect(far).toBeDefined();
