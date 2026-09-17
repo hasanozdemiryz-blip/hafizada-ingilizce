@@ -66,6 +66,88 @@
   --radius-card: 1.75rem;
 }
 
+/* ---------------------------------------------------------------
+ * CESUR VARYANT  —  ?look=bold
+ *
+ * Ayni yapi, yuksek ses. Tek satir HTML bile degismiyor: sadece
+ * token'lar doyuyor ve yuzeyler cikartma (sticker) hissine geciyor —
+ * kalin koyu kenar + sert offset golge.
+ *
+ * Amac karsilastirma: iki gorunumu yan yana koyup secmek.
+ * Secim yapilinca kaybeden taraf silinir.
+ * --------------------------------------------------------------- */
+:root[data-look='bold'] {
+  --color-paper: #fff3e4;
+  --color-surface: #ffffff;
+  --color-sunken: #ffe3c9;
+  --color-line: #f0d7bb;
+
+  --color-ink: #241d18;
+  --color-ink-soft: #6d5a4a;
+  --color-ink-faint: #a8917c;
+
+  --color-brand: #ff5a1f;
+  --color-brand-deep: #c93c06;
+  --color-brand-soft: #ffe0d1;
+
+  --color-spark: #ffb302;
+  --color-spark-soft: #ffeec4;
+
+  --color-grow: #10b06a;
+  --color-grow-soft: #d5f7e7;
+
+  --radius-card: 2rem;
+}
+
+:root[data-look='bold'] .word {
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+/* Kart: kalin kenar, sert golge — elle tutulur bir cikartma */
+:root[data-look='bold'] .rounded-card {
+  border-width: 2px;
+  border-color: var(--color-ink);
+  box-shadow: 0 6px 0 var(--color-ink);
+}
+
+/* Butonlar ve deste kareleri ayni dile gecer */
+:root[data-look='bold'] button.rounded-2xl {
+  border: 2px solid var(--color-ink);
+  box-shadow: 0 5px 0 var(--color-ink);
+  font-weight: 700;
+}
+:root[data-look='bold'] button.rounded-2xl:active {
+  box-shadow: 0 1px 0 var(--color-ink);
+}
+:root[data-look='bold'] button.rounded-2xl:disabled {
+  box-shadow: 0 5px 0 var(--color-ink);
+}
+
+/* Kanca rozeti: soluk tint degil, dolu marka rengi */
+:root[data-look='bold'] .bg-brand-soft.rounded-full {
+  background: var(--color-brand);
+  color: #fff;
+  border: 2px solid var(--color-ink);
+  box-shadow: 0 3px 0 var(--color-ink);
+}
+
+/* Seri rozeti ve kanca seridi de cikartma olur */
+:root[data-look='bold'] .bg-spark-soft.rounded-full {
+  border: 2px solid var(--color-ink);
+  box-shadow: 0 3px 0 var(--color-ink);
+}
+:root[data-look='bold'] .rounded-full.border {
+  border-width: 2px;
+  border-color: var(--color-ink);
+}
+
+/* Ilerleme cubugu kalinlasir ve cerceveye girer */
+:root[data-look='bold'] .bg-sunken.rounded-full {
+  height: 0.75rem;
+  border: 2px solid var(--color-ink);
+}
+
 html,
 body,
 #root {
