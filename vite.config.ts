@@ -3,7 +3,20 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+/**
+ * GitHub Pages alt dizinde servis ediyor (/repo-adi/).
+ * Yerelde kok dizin; yayinda is akisi BASE_PATH'i veriyor.
+ */
+const base = process.env.BASE_PATH ?? '/';
+
 export default defineConfig({
+  base,
+
+  // Telefonda test icin cloudflare tuneli uzerinden servis edilebilsin.
+  // Sadece alt alan adlari; genel erisime acmaz.
+  preview: { allowedHosts: ['.trycloudflare.com'] },
+  server: { allowedHosts: ['.trycloudflare.com'] },
+
   plugins: [
     react(),
     tailwindcss(),
@@ -16,12 +29,13 @@ export default defineConfig({
         description: 'İngilizce kelimeleri Türkçe ses kancası ve tek görselle öğren.',
         lang: 'tr',
         dir: 'ltr',
-        start_url: '/',
-        scope: '/',
+        id: base,
+        start_url: base,
+        scope: base,
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#faf7f2',
-        theme_color: '#1c1917',
+        background_color: '#eaf1fb',
+        theme_color: '#16233a',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -30,6 +44,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
+        // Alt dizinde de dogru giris noktasina dus
+        navigateFallback: `${base}index.html`,
       },
     }),
   ],
