@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rating } from 'ts-fsrs';
+import { Rating, State } from 'ts-fsrs';
 import { CARDS, DECKS, DECK_SIZE, NEW_PER_DAY, TEST_UNLOCK_REPS } from './content';
 import {
   currentIntroDeck,
@@ -133,6 +133,22 @@ describe('seans kuyrugu', () => {
   it('Kolay karti seanstan cikarir', () => {
     const p = introduceCard(CARDS[0], false, NOW);
     expect(reviewCard(p, Rating.Easy, false, day(1)).requeue).toBe(false);
+  });
+
+  it('Iyi de karti seanstan cikarir', () => {
+    const p = introduceCard(CARDS[0], false, NOW);
+    expect(reviewCard(p, Rating.Good, false, day(1)).requeue).toBe(false);
+  });
+
+  // Regresyon: Review durumundaki kart Again alinca FSRS onu TAM 10 dk
+  // sonraya koyuyordu; kesin "<" karsilastirmasi bunu kaciriyor ve kart
+  // seanstan sessizce dusuyordu. Tarayicida yakalandi.
+  it('Review durumundaki kart da Unuttum deyince ayni seansa doner', () => {
+    let p = introduceCard(CARDS[0], false, NOW);
+    p = reviewCard(p, Rating.Easy, false, day(1)).progress;
+    expect(p.fsrs.state).toBe(State.Review);
+
+    expect(reviewCard(p, Rating.Again, false, day(30)).requeue).toBe(true);
   });
 
   it('kuyruk vadesi gecmis kartlari erken olandan siralar', () => {

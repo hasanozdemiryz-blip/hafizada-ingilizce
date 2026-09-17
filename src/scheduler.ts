@@ -20,8 +20,13 @@ import type { Card, Progress, SupportLevel } from './types';
 
 const f = fsrs(generatorParameters({ enable_fuzz: true }));
 
-/** Bu araliktan yakin gelen kart ayni seansta tekrar sorulur. */
-const SESSION_WINDOW_MS = 10 * 60 * 1000;
+/**
+ * Basarisiz cevaplanan kart seansi terk etmez: kullanici seansi
+ * hatirlayamadigi bir kartla bitirmemeli. Pencere, FSRS'in
+ * (re)learning adimlarini kapsayacak kadar genis — adim suresi
+ * degisirse kural bozulmasin diye.
+ */
+const REQUEUE_WINDOW_MS = 30 * 60 * 1000;
 
 const clampSupport = (n: number): SupportLevel =>
   Math.max(0, Math.min(3, n)) as SupportLevel;
@@ -83,7 +88,7 @@ export function reviewCard(
 
   return {
     progress,
-    requeue: next.due.getTime() - now.getTime() < SESSION_WINDOW_MS,
+    requeue: !ok && next.due.getTime() - now.getTime() <= REQUEUE_WINDOW_MS,
   };
 }
 
