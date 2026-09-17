@@ -17,11 +17,15 @@ type Props = {
   onTest: (deck: number) => void;
 };
 
+/**
+ * Deste kareleri. Kilitli olanlar da GORUNUR olmali —
+ * onceki surumde bej ustune bej kaliyor ve ekrandan siliniyorlardi.
+ */
 const TILE: Record<string, string> = {
-  done: 'bg-grow text-white border-grow shadow-[0_2px_0_#25794f]',
-  introduced: 'bg-brand text-white border-brand shadow-[0_2px_0_var(--color-brand-deep)]',
-  active: 'bg-surface text-ink border-line shadow-[0_2px_0_var(--color-line)]',
-  locked: 'bg-sunken text-ink-faint border-transparent',
+  done: 'bg-grow text-white shadow-[0_8px_18px_-8px_rgba(43,196,138,0.8)]',
+  introduced: 'bg-brand text-white shadow-[0_8px_18px_-8px_rgba(79,146,246,0.85)]',
+  active: 'bg-white text-ink ring-2 ring-brand shadow-[var(--shadow-soft)]',
+  locked: 'bg-white/55 text-ink-faint',
 };
 
 export function Home({ progress, state, due, newCards, onIntro, onReview, onTest }: Props) {
@@ -93,40 +97,54 @@ export function Home({ progress, state, due, newCards, onIntro, onReview, onTest
           </Card>
         ) : (
           <>
+            {/* Birincil eylem renkli blok, ikincil beyaz — hiyerarsi renkten okunur */}
             {bugun > 0 && (
-              <Card className="rise">
-                <p className="text-sm text-ink-soft">Bugünün tekrarı</p>
+              <div className="rise rounded-card p-5 bg-gradient-to-br from-brand to-[#7db2ff] text-white shadow-[0_16px_34px_-16px_rgba(79,146,246,0.95)]">
+                <p className="text-sm font-medium text-white/80">Bugünün tekrarı</p>
                 <p className="word text-3xl font-semibold mt-0.5 mb-3">{bugun} kart</p>
                 {birikmis && (
-                  <p className="text-sm text-ink-faint -mt-2 mb-3">
+                  <p className="text-sm text-white/75 -mt-2 mb-3">
                     Ara vermişsin — yavaştan başlayalım.
                   </p>
                 )}
-                <Button onClick={onReview}>Tekrarla</Button>
-              </Card>
+                <Button variant="soft" onClick={onReview}>
+                  Tekrarla
+                </Button>
+              </div>
             )}
 
-            {newCards.length > 0 && (
-              <Card className="rise delay-1">
-                <p className="text-sm text-ink-soft">Deste {introDeck}</p>
-                <p className="word text-3xl font-semibold mt-0.5 mb-3">
-                  {newCards.length} yeni kelime
-                </p>
-                <Button variant={bugun > 0 ? 'soft' : 'brand'} onClick={onIntro}>
-                  Tanış
-                </Button>
-              </Card>
-            )}
+            {newCards.length > 0 &&
+              (bugun > 0 ? (
+                <Card className="rise delay-1">
+                  <p className="text-sm text-ink-soft">Deste {introDeck}</p>
+                  <p className="word text-3xl font-semibold mt-0.5 mb-3">
+                    {newCards.length} yeni kelime
+                  </p>
+                  <Button variant="brand" onClick={onIntro}>
+                    Tanış
+                  </Button>
+                </Card>
+              ) : (
+                <div className="rise delay-1 rounded-card p-5 bg-gradient-to-br from-grow to-[#5fe0ad] text-white shadow-[0_16px_34px_-16px_rgba(43,196,138,0.95)]">
+                  <p className="text-sm font-medium text-white/85">Deste {introDeck}</p>
+                  <p className="word text-3xl font-semibold mt-0.5 mb-3">
+                    {newCards.length} yeni kelime
+                  </p>
+                  <Button variant="soft" onClick={onIntro}>
+                    Tanış
+                  </Button>
+                </div>
+              ))}
           </>
         )}
 
         {testReady !== undefined && (
           <button
             onClick={() => onTest(testReady)}
-            className="rise delay-2 rounded-card bg-spark-soft border border-spark/40 p-5 text-left transition-all active:translate-y-[2px]"
+            className="rise delay-2 rounded-card bg-gradient-to-br from-spark to-[#ffbe1a] p-5 text-left shadow-[0_12px_26px_-12px_rgba(255,190,26,0.9)] transition-all active:scale-[0.98]"
           >
-            <p className="font-semibold">Deste {testReady} testi hazır ✨</p>
-            <p className="text-sm text-ink-soft mt-0.5">
+            <p className="word text-lg font-semibold">Deste {testReady} testi hazır ✨</p>
+            <p className="text-sm font-medium text-ink/70 mt-0.5">
               10 kelime, çıplak. {TEST_PASS_SCORE}/10 geçer.
             </p>
           </button>
@@ -149,9 +167,9 @@ export function Home({ progress, state, due, newCards, onIntro, onReview, onTest
                   key={d.n}
                   disabled={!clickable}
                   onClick={() => onTest(d.n)}
-                  className={`aspect-square rounded-2xl border font-semibold tabular-nums transition-all ${TILE[status]} ${clickable ? 'active:translate-y-[2px] active:shadow-none' : ''}`}
+                  className={`aspect-square rounded-2xl word font-semibold text-lg tabular-nums transition-all ${TILE[status]} ${clickable ? 'active:scale-95' : ''}`}
                 >
-                  {status === 'locked' ? '' : status === 'done' ? '✓' : d.n}
+                  {status === 'done' ? '✓' : d.n}
                 </button>
               );
             })}
@@ -165,11 +183,11 @@ export function Home({ progress, state, due, newCards, onIntro, onReview, onTest
               {sonKancalar.map((c) => (
                 <span
                   key={c.id}
-                  className="rounded-full bg-surface border border-line px-3 py-1.5 text-sm"
+                  className="rounded-full bg-white px-3 py-1.5 text-sm shadow-[var(--shadow-soft)]"
                 >
                   <span className="word font-semibold">{c.en}</span>
                   <span className="text-ink-faint"> ≈ </span>
-                  <span className="text-brand font-medium">{c.hook}</span>
+                  <span className="font-semibold text-ink bg-spark/55 rounded px-1">{c.hook}</span>
                 </span>
               ))}
             </div>

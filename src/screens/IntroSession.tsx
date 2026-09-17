@@ -52,7 +52,7 @@ export function IntroSession({
       <Progressbar done={i} total={cards.length} />
 
       <div key={card.id} className="rise flex-1 flex flex-col justify-center py-6">
-        <Card tilt>
+        <Card>
           <CardVisual card={card} />
           <div className="flex flex-col items-center gap-3 pt-5">
             <p className="word text-[2.75rem] leading-none font-semibold">{card.en}</p>

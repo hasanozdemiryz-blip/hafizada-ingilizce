@@ -2,21 +2,21 @@
 
 /* --- Yazi karakterleri: yerelde, offline calisir --- */
 @font-face {
-  font-family: 'Fraunces';
+  font-family: 'Fredoka';
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/fraunces-latin-ext.woff2') format('woff2');
+  src: url('/fonts/fredoka-latin-ext.woff2') format('woff2');
   unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
     U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
     U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 @font-face {
-  font-family: 'Fraunces';
+  font-family: 'Fredoka';
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/fraunces-latin.woff2') format('woff2');
+  src: url('/fonts/fredoka-latin.woff2') format('woff2');
 }
 @font-face {
   font-family: 'Jakarta';
@@ -37,115 +37,43 @@
 }
 
 @theme {
-  /* --- Kagit ve murekkep --- */
-  --color-paper: #fbf7f0; /* sicak krem zemin */
-  --color-surface: #ffffff; /* kart yuzeyi */
-  --color-sunken: #f2eadd; /* gomulu alan: gorsel yuvasi, ilerleme yolu */
-  --color-line: #e7dccc;
+  /* --- Zemin: yumusak gokyuzu --- */
+  --color-paper: #eaf1fb;
+  --color-surface: #ffffff;
+  --color-sunken: #eef3fa;
+  --color-line: #dfe8f5;
 
-  --color-ink: #1f1b18; /* ana metin */
-  --color-ink-soft: #6b5f55; /* ikincil */
-  --color-ink-faint: #a99c90; /* ucuncul */
+  /* --- Murekkep: lacivert --- */
+  --color-ink: #16233a;
+  --color-ink-soft: #5c6b85;
+  --color-ink-faint: #9fadc2;
 
-  /* --- Marka: kanca rengi --- */
-  --color-brand: #e4572e;
-  --color-brand-deep: #b83d19;
-  --color-brand-soft: #fdece5;
+  /* --- Birincil eylem: gokyuzu mavisi --- */
+  --color-brand: #4f92f6;
+  --color-brand-deep: #2f6fd0;
+  --color-brand-soft: #e2edfd;
 
-  /* --- Kivilcim: seri, kutlama, "haa" ani --- */
-  --color-spark: #f0a818;
-  --color-spark-soft: #fff3dc;
+  /* --- Kanca: fosforlu kalem sarisi.
+         Kanca zaten "isaretlenmis" seydir — renk bunu soyluyor. --- */
+  --color-spark: #ffd23f;
+  --color-spark-soft: #fff4cf;
 
-  /* --- Buyume: dogru cevap, tamamlanan deste --- */
-  --color-grow: #2f9e70;
-  --color-grow-soft: #e6f4ec;
+  /* --- Basari: nane --- */
+  --color-grow: #2bc48a;
+  --color-grow-soft: #d9f8ec;
+
+  /* --- Ucuncul vurgu: pembe --- */
+  --color-blush: #f79ac9;
+  --color-blush-soft: #fde6f2;
 
   --font-sans: 'Jakarta', 'Segoe UI', system-ui, sans-serif;
-  --font-display: 'Fraunces', Georgia, serif;
-
-  --radius-card: 1.75rem;
-}
-
-/* ---------------------------------------------------------------
- * CESUR VARYANT  —  ?look=bold
- *
- * Ayni yapi, yuksek ses. Tek satir HTML bile degismiyor: sadece
- * token'lar doyuyor ve yuzeyler cikartma (sticker) hissine geciyor —
- * kalin koyu kenar + sert offset golge.
- *
- * Amac karsilastirma: iki gorunumu yan yana koyup secmek.
- * Secim yapilinca kaybeden taraf silinir.
- * --------------------------------------------------------------- */
-:root[data-look='bold'] {
-  --color-paper: #fff3e4;
-  --color-surface: #ffffff;
-  --color-sunken: #ffe3c9;
-  --color-line: #f0d7bb;
-
-  --color-ink: #241d18;
-  --color-ink-soft: #6d5a4a;
-  --color-ink-faint: #a8917c;
-
-  --color-brand: #ff5a1f;
-  --color-brand-deep: #c93c06;
-  --color-brand-soft: #ffe0d1;
-
-  --color-spark: #ffb302;
-  --color-spark-soft: #ffeec4;
-
-  --color-grow: #10b06a;
-  --color-grow-soft: #d5f7e7;
+  --font-display: 'Fredoka', 'Jakarta', system-ui, sans-serif;
 
   --radius-card: 2rem;
-}
 
-:root[data-look='bold'] .word {
-  font-weight: 700;
-  letter-spacing: -0.03em;
-}
-
-/* Kart: kalin kenar, sert golge — elle tutulur bir cikartma */
-:root[data-look='bold'] .rounded-card {
-  border-width: 2px;
-  border-color: var(--color-ink);
-  box-shadow: 0 6px 0 var(--color-ink);
-}
-
-/* Butonlar ve deste kareleri ayni dile gecer */
-:root[data-look='bold'] button.rounded-2xl {
-  border: 2px solid var(--color-ink);
-  box-shadow: 0 5px 0 var(--color-ink);
-  font-weight: 700;
-}
-:root[data-look='bold'] button.rounded-2xl:active {
-  box-shadow: 0 1px 0 var(--color-ink);
-}
-:root[data-look='bold'] button.rounded-2xl:disabled {
-  box-shadow: 0 5px 0 var(--color-ink);
-}
-
-/* Kanca rozeti: soluk tint degil, dolu marka rengi */
-:root[data-look='bold'] .bg-brand-soft.rounded-full {
-  background: var(--color-brand);
-  color: #fff;
-  border: 2px solid var(--color-ink);
-  box-shadow: 0 3px 0 var(--color-ink);
-}
-
-/* Seri rozeti ve kanca seridi de cikartma olur */
-:root[data-look='bold'] .bg-spark-soft.rounded-full {
-  border: 2px solid var(--color-ink);
-  box-shadow: 0 3px 0 var(--color-ink);
-}
-:root[data-look='bold'] .rounded-full.border {
-  border-width: 2px;
-  border-color: var(--color-ink);
-}
-
-/* Ilerleme cubugu kalinlasir ve cerceveye girer */
-:root[data-look='bold'] .bg-sunken.rounded-full {
-  height: 0.75rem;
-  border: 2px solid var(--color-ink);
+  /* Kartlarin yumusak, yayvan golgesi */
+  --shadow-soft: 0 10px 30px -12px rgba(22, 35, 58, 0.22);
+  --shadow-lift: 0 18px 40px -16px rgba(22, 35, 58, 0.3);
 }
 
 html,
@@ -156,11 +84,16 @@ body,
 
 body {
   margin: 0;
-  background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+
+  /* Referanstaki gibi: acik gokyuzu, ustte hafif isik */
+  background:
+    radial-gradient(120% 70% at 50% -10%, #ffffff 0%, rgba(255, 255, 255, 0) 55%),
+    linear-gradient(180deg, #e3edfb 0%, var(--color-paper) 45%, #f3f7fd 100%);
+  background-attachment: fixed;
 }
 
 button {
@@ -169,25 +102,38 @@ button {
 }
 
 /*
- * Kahraman kelime: baslik karakteri.
- *
- * font-variant-ligatures: none — ogrenilen kelimenin harfleri ayri ayri
- * gorunmeli. "fish", "office", "flower" gibi kelimelerde fi/fl ligaturu
- * iki harfi tek gliphe birlestiriyor; kelime ogreten bir uygulamada
- * bu istenmez.
+ * Kahraman kelime: yuvarlak hatli baslik karakteri.
+ * font-variant-ligatures: none — ogrenilen kelimenin harfleri
+ * ayri ayri gorunmeli ("fish", "office" fi/fl ligaturu istemiyoruz).
  */
 .word {
   font-family: var(--font-display);
-  font-variation-settings: 'opsz' 100;
+  font-weight: 600;
   font-variant-ligatures: none;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.005em;
+}
+
+/* Fosforlu kalem izi — kancanin altini cizer */
+.marker {
+  position: relative;
+  display: inline-block;
+  z-index: 0;
+}
+.marker::before {
+  content: '';
+  position: absolute;
+  inset: 0.1em -0.35em 0.08em -0.35em;
+  background: var(--color-spark);
+  border-radius: 0.6em;
+  transform: rotate(-1.2deg);
+  z-index: -1;
 }
 
 /* --- Hareket --- */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -197,49 +143,49 @@ button {
 @keyframes pop {
   0% {
     opacity: 0;
-    transform: scale(0.92);
+    transform: scale(0.9);
   }
   60% {
-    transform: scale(1.02);
+    transform: scale(1.04);
   }
   100% {
     opacity: 1;
     transform: scale(1);
   }
 }
-@keyframes sparkle {
+@keyframes bob {
   0%,
   100% {
-    transform: rotate(-6deg) scale(1);
+    transform: translateY(0) rotate(-3deg);
   }
   50% {
-    transform: rotate(6deg) scale(1.12);
+    transform: translateY(-6px) rotate(3deg);
   }
 }
 
 .rise {
-  animation: rise 260ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  animation: rise 300ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
 .pop {
-  animation: pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  animation: pop 360ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
-.sparkle {
-  animation: sparkle 1.6s ease-in-out infinite;
+.bob {
+  animation: bob 2.6s ease-in-out infinite;
 }
 .delay-1 {
-  animation-delay: 70ms;
+  animation-delay: 80ms;
 }
 .delay-2 {
-  animation-delay: 150ms;
+  animation-delay: 170ms;
 }
 .delay-3 {
-  animation-delay: 230ms;
+  animation-delay: 260ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .rise,
   .pop,
-  .sparkle {
+  .bob {
     animation: none;
   }
 }

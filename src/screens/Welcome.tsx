@@ -24,7 +24,7 @@ export function Welcome({ onDone }: { onDone: () => void }) {
           </p>
         </div>
 
-        <Card className="rise delay-1" tilt>
+        <Card className="rise delay-1">
           <CardVisual card={card} />
           <div className="flex flex-col items-center gap-3 pt-5">
             <p className="word text-[2.5rem] leading-none font-semibold">{card.en}</p>

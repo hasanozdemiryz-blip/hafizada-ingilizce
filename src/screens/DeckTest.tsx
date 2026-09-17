@@ -122,19 +122,19 @@ export function DeckTest({ deck, onExit }: { deck: number; onExit: () => void })
           const isCorrect = opt === q.card.tr;
           const tone =
             picked === null
-              ? 'bg-surface border-line text-ink shadow-[0_2px_0_var(--color-line)]'
+              ? 'bg-white text-ink shadow-[var(--shadow-soft)]'
               : isCorrect
-                ? 'bg-grow-soft border-grow text-grow'
+                ? 'bg-grow text-white shadow-[var(--shadow-soft)]'
                 : picked === opt
-                  ? 'bg-brand-soft border-brand text-brand-deep'
-                  : 'bg-sunken border-transparent text-ink-faint';
+                  ? 'bg-blush text-white shadow-[var(--shadow-soft)]'
+                  : 'bg-white/50 text-ink-faint';
 
           return (
             <button
               key={opt}
               onClick={() => void pick(opt)}
               disabled={picked !== null}
-              className={`rounded-2xl border px-5 py-4 font-semibold text-left transition-all active:translate-y-[2px] ${tone}`}
+              className={`rounded-full px-5 py-4 font-bold text-left transition-all active:scale-[0.98] ${tone}`}
             >
               {opt}
             </button>

@@ -8,10 +8,10 @@ import type { Progress } from '../types';
 import type { Grade } from 'ts-fsrs';
 
 const RATINGS: { grade: Grade; label: string; tone: string }[] = [
-  { grade: Rating.Again, label: 'Unuttum', tone: 'bg-brand-soft text-brand-deep' },
-  { grade: Rating.Hard, label: 'Zor', tone: 'bg-spark-soft text-ink' },
-  { grade: Rating.Good, label: 'İyi', tone: 'bg-surface text-ink border border-line' },
-  { grade: Rating.Easy, label: 'Kolay', tone: 'bg-grow-soft text-grow' },
+  { grade: Rating.Again, label: 'Unuttum', tone: 'bg-blush-soft text-[#c2417f]' },
+  { grade: Rating.Hard, label: 'Zor', tone: 'bg-spark-soft text-[#9a6f00]' },
+  { grade: Rating.Good, label: 'İyi', tone: 'bg-brand-soft text-brand-deep' },
+  { grade: Rating.Easy, label: 'Kolay', tone: 'bg-grow-soft text-[#128a5f]' },
 ];
 
 /**
@@ -88,7 +88,7 @@ export function ReviewSession({
               {current.support < 3 && !hookRevealed && (
                 <button
                   onClick={() => setHookRevealed(true)}
-                  className="px-4 py-2 text-sm font-medium text-brand rounded-xl hover:bg-brand-soft transition-colors"
+                  className="px-4 py-2 text-sm font-bold text-brand-deep rounded-full bg-white/70 shadow-[var(--shadow-soft)] hover:bg-white transition"
                 >
                   Kancayı göster
                 </button>
@@ -105,7 +105,7 @@ export function ReviewSession({
                 key={r.grade}
                 onClick={() => rate(r.grade)}
                 disabled={busy}
-                className={`rounded-2xl px-4 py-4 font-semibold transition-all active:translate-y-[2px] disabled:opacity-40 ${r.tone}`}
+                className={`rounded-2xl px-4 py-4 font-bold transition-all active:scale-95 disabled:opacity-40 shadow-[var(--shadow-soft)] ${r.tone}`}
               >
                 {r.label}
               </button>
