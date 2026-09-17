@@ -1,4 +1,4 @@
-import { Button, Card, Screen, Streak } from '../components/ui';
+import { Button, Card, Logo, Screen, Streak } from '../components/ui';
 import { TAB_SPACE } from '../components/TabBar';
 import {
   CARDS,
@@ -89,7 +89,7 @@ export function Home({
   return (
     <Screen>
       <header className="flex items-center justify-between h-14 shrink-0">
-        <span className="word text-lg font-semibold">Hafızada İngilizce</span>
+        <Logo className="h-7" />
         {state.streakCount > 0 && <Streak count={state.streakCount} />}
       </header>
 

@@ -20,7 +20,7 @@ npm run dev        # http://localhost:5173
 | `npm run preview` | Build'i servis eder (PWA'yı test etmek için tek yol) |
 | `npm test` | Çekirdek mantık testleri (59 test) |
 | `npm run import:cards` | `mnemonik-aday-havuzu.xlsx` → `content/cards.json` |
-| `npm run icons` | `public/icon.svg` → PWA ikonları |
+| `npm run icons` | `brand/kilit-kaynak.png` → tüm ikon ve marka türevleri |
 
 Yeni bilgisayarda: repoyu klonla, `npm install`, `npm run dev`. Başka kurulum yok — backend, API anahtarı, veritabanı yok.
 
@@ -80,7 +80,10 @@ Hangi kartın revize edileceğini tahminle değil bu verilerle seçmek için.
 
 ```
 content/cards.json     İçeriğin tek kaynağı (xlsx'ten üretilir)
-brand/                 Sosyal medya için yüksek çözünürlüklü görseller
+brand/                 Marka kaynağı + sosyal medya görselleri
+  kilit-kaynak.png     Tek kaynak: işaret + isim (şeffaf). Her şey bundan üretilir.
+  kilit.png            Kırpılmış kilit — sosyal medya
+  logo-isaret.png      Kare işaret — profil fotoğrafı, filigran
 src/
   assets/cards/        Kart görselleri — dosya adı kart id'si (snake.webp)
   content.ts           Kart havuzu, desteler, sabitler
@@ -103,7 +106,7 @@ tools/
 
 ## Durum
 
-**Bitti:** Logo (vektör, ikonlar ondan türetiliyor) · iki modlu çekirdek · aşamalı iskele · 10'arlı desteler + sıralı kilit · deste bitirme testi · karşılama ekranı · hafif seri + seri koruma · günlük takip (ısı haritası) · Kelimelerim + arama + kanca panosu · yedekleme · PWA (kurulabilir, çevrimdışı).
+**Bitti:** Logo + marka kilidi (tek kaynaktan; app simgesi, favicon ve sosyal görseller aynı işareti taşıyor) · iki modlu çekirdek · aşamalı iskele · 10'arlı desteler + sıralı kilit · deste bitirme testi · karşılama ekranı · hafif seri + seri koruma · günlük takip (ısı haritası) · Kelimelerim + arama + kanca panosu · yedekleme · PWA (kurulabilir, çevrimdışı).
 
 **Yapılmadı ve nedeni:**
 

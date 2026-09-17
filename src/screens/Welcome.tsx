@@ -1,5 +1,5 @@
 import { CardVisual } from '../components/CardVisual';
-import { Button, Card, HookChip, Screen } from '../components/ui';
+import { Button, Card, HookChip, Logo, Screen } from '../components/ui';
 import { SHOWCASE_CARD } from '../content';
 import { setState } from '../db';
 
@@ -17,6 +17,7 @@ export function Welcome({ onDone }: { onDone: () => void }) {
     <Screen>
       <div className="flex-1 flex flex-col justify-center gap-6 py-6">
         <div className="rise text-center">
+          <Logo className="h-8 mx-auto mb-5" />
           <h1 className="word text-3xl font-semibold leading-tight">Ezberlemeyeceksin.</h1>
           <p className="text-ink-soft mt-2 leading-relaxed max-w-[30ch] mx-auto">
             Her İngilizce kelimeyi benzer sesli bir Türkçe kelimeye ve tek bir görüntüye

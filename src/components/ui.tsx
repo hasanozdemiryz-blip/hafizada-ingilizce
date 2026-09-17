@@ -1,4 +1,13 @@
 import type { ReactNode } from 'react';
+import kilit from '../assets/brand/kilit.webp';
+
+/**
+ * Marka kilidi: isaret + isim.
+ * brand/kilit-kaynak.png'den uretiliyor — uygulama simgesiyle ayni isaret.
+ */
+export function Logo({ className = 'h-7' }: { className?: string }) {
+  return <img src={kilit} alt="Hafızada İngilizce" className={`${className} w-auto`} />;
+}
 
 export function Screen({ children }: { children: ReactNode }) {
   return (

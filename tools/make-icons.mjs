@@ -1,72 +1,103 @@
 /**
- * public/icon.svg -> PWA ikonlari (PNG).
- * Vektor rasterlestirme; uretim degil, donusum.
+ * brand/kilit-kaynak.png (isaret + isim, seffaf) -> markanin tum turevleri.
  *
- * Logo tuvalinde bos kenar payi olabilir; ikon icin isaret tuvali
- * doldurmali. O yuzden once gercek sinirlar olculup viewBox daraltilir.
+ * Tek kaynak dosyadan uretilir ki uygulama simgesi ile sosyal medyadaki
+ * kilit ayni isareti tasisin. Uretim degil, kirpma/olcekleme.
+ *
+ * Uretilenler:
+ *   public/icon-192.png, icon-512.png, icon-512-maskable.png,
+ *   public/apple-touch-icon.png      -> PWA / cihaz simgeleri
+ *   brand/logo-isaret.png            -> kare isaret (profil foto, filigran)
+ *   brand/kilit.png                  -> kirpilmis kilit (sosyal medya)
+ *   src/assets/brand/kilit.webp      -> uygulama basligi
  *
  * Kullanim: npm run icons
  */
-import { Resvg } from '@resvg/resvg-js';
-import { readFile, writeFile } from 'node:fs/promises';
+import sharp from 'sharp';
+import { mkdir } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PUBLIC = resolve(dirname(fileURLToPath(import.meta.url)), '../public');
+const KOK = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const y = (...p) => resolve(KOK, ...p);
 
-/** Maskable ikonun kenarlara tasan zemini — logonun mavisi */
-const BLEED = '#3f92f5';
+/** Maskable ikonun kenarlara tasan zemini — rozetin mavisi */
+const ZEMIN = { r: 0x3f, g: 0x92, b: 0xf5, alpha: 1 };
 /** Maskable guvenli alan: isaret tuvalin %78'ini kaplar */
-const SAFE = 0.78;
+const GUVENLI = 0.78;
 
-const svg = await readFile(resolve(PUBLIC, 'icon.svg'), 'utf8');
+const kaynak = sharp(y('brand/kilit-kaynak.png'));
+const { width: W, height: H } = await kaynak.metadata();
 
-/** Kok <svg ...> etiketini ve ic icerigi ayir */
-function parcala(s) {
-  const m = s.match(/<svg\b[^>]*>/i);
-  if (!m) throw new Error('svg kok etiketi bulunamadi');
-  const ic = s.slice(m.index + m[0].length, s.lastIndexOf('</svg>'));
-  const vb = m[0].match(/viewBox="([^"]+)"/i);
-  if (!vb) throw new Error('viewBox yok');
-  const [x, y, w, h] = vb[1].trim().split(/\s+/).map(Number);
-  return { ic, kutu: { x, y, w, h } };
+/** Alfa kanalindan dolu sutunlari cikar */
+const alfa = await kaynak.clone().ensureAlpha().extractChannel('alpha').raw().toBuffer();
+const doluSutun = new Array(W).fill(false);
+const doluSatir = new Array(H).fill(false);
+for (let satir = 0; satir < H; satir++) {
+  for (let sutun = 0; sutun < W; sutun++) {
+    if (alfa[satir * W + sutun] > 12) {
+      doluSutun[sutun] = true;
+      doluSatir[satir] = true;
+    }
+  }
 }
 
-const { ic, kutu } = parcala(svg);
+const ilk = (a) => a.indexOf(true);
+const son = (a) => a.lastIndexOf(true);
 
-/** Isaretin gercek sinirlari (bos kenar payi atilir) */
-const olcu = new Resvg(svg, { fitTo: { mode: 'width', value: kutu.w } });
-const bb = olcu.getBBox();
-const sinir = bb
-  ? { x: bb.x, y: bb.y, w: bb.width, h: bb.height }
-  : { x: kutu.x, y: kutu.y, w: kutu.w, h: kutu.h };
+/**
+ * Rozet, soldaki ilk kesintisiz dolu sutun bloku.
+ * Onunla yazi arasinda tamamen bos bir seritten yararlaniyoruz.
+ */
+const solKenar = ilk(doluSutun);
+let sagKenar = solKenar;
+while (sagKenar + 1 < W && doluSutun[sagKenar + 1]) sagKenar++;
 
-/** Kareye tamamla — ikonlar kare */
-const kenar = Math.max(sinir.w, sinir.h);
-const kare = {
-  x: sinir.x - (kenar - sinir.w) / 2,
-  y: sinir.y - (kenar - sinir.h) / 2,
-  k: kenar,
+const ustKenar = ilk(doluSatir);
+const altKenar = son(doluSatir);
+
+// Rozeti kareye tamamla
+const gen = sagKenar - solKenar + 1;
+const yuk = altKenar - ustKenar + 1;
+const kenar = Math.max(gen, yuk);
+const isaret = {
+  left: Math.max(0, Math.round(solKenar - (kenar - gen) / 2)),
+  top: Math.max(0, Math.round(ustKenar - (kenar - yuk) / 2)),
+  width: kenar,
+  height: kenar,
 };
 
-const kirpilmis = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${kare.x} ${kare.y} ${kare.k} ${kare.k}">${ic}</svg>`;
+console.log(`kaynak ${W}x${H} · isaret ${isaret.width}x${isaret.height} @ ${isaret.left},${isaret.top}`);
 
-/** Maskable: koseleri kirpilabilecegi icin zemin tasar, isaret kuculur */
-const bosluk = (kare.k * (1 / SAFE - 1)) / 2;
-const maskable = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${kare.k} ${kare.k}">
-  <rect width="${kare.k}" height="${kare.k}" fill="${BLEED}"/>
-  <svg x="${bosluk}" y="${bosluk}" width="${kare.k - bosluk * 2}" height="${kare.k - bosluk * 2}" viewBox="${kare.x} ${kare.y} ${kare.k} ${kare.k}">${ic}</svg>
-</svg>`;
+await mkdir(y('src/assets/brand'), { recursive: true });
 
-const hedefler = [
-  { ad: 'icon-192.png', boy: 192, kaynak: kirpilmis },
-  { ad: 'icon-512.png', boy: 512, kaynak: kirpilmis },
-  { ad: 'icon-512-maskable.png', boy: 512, kaynak: maskable },
-  { ad: 'apple-touch-icon.png', boy: 180, kaynak: maskable }, // iOS koseleri kendi yuvarlar
-];
+const isaretPng = await sharp(y('brand/kilit-kaynak.png')).extract(isaret).png().toBuffer();
+await sharp(isaretPng).toFile(y('brand/logo-isaret.png'));
 
-for (const { ad, boy, kaynak } of hedefler) {
-  const png = new Resvg(kaynak, { fitTo: { mode: 'width', value: boy } }).render().asPng();
-  await writeFile(resolve(PUBLIC, ad), png);
-  console.log(`${ad}  ${boy}x${boy}  ${(png.length / 1024).toFixed(1)} KB`);
+/** Duz ikon: isaret tuvali doldurur */
+async function duz(ad, boy) {
+  await sharp(isaretPng).resize(boy, boy, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toFile(y('public', ad));
+  console.log(`  ${ad}  ${boy}x${boy}`);
 }
+
+/** Maskable: koseler kirpilabilir, zemin tasar ve isaret kuculur */
+async function maskable(ad, boy) {
+  const ic = Math.round(boy * GUVENLI);
+  const kucuk = await sharp(isaretPng).resize(ic, ic).png().toBuffer();
+  await sharp({ create: { width: boy, height: boy, channels: 4, background: ZEMIN } })
+    .composite([{ input: kucuk, left: Math.round((boy - ic) / 2), top: Math.round((boy - ic) / 2) }])
+    .png()
+    .toFile(y('public', ad));
+  console.log(`  ${ad}  ${boy}x${boy}  (zemin tasan)`);
+}
+
+await duz('icon-192.png', 192);
+await duz('icon-512.png', 512);
+await maskable('icon-512-maskable.png', 512);
+await maskable('apple-touch-icon.png', 180);
+
+/** Kilit: seffaf kenar paylari atilmis hali */
+const kilit = { left: solKenar, top: ustKenar, width: son(doluSutun) - solKenar + 1, height: yuk };
+await sharp(y('brand/kilit-kaynak.png')).extract(kilit).png().toFile(y('brand/kilit.png'));
+await sharp(y('brand/kilit-kaynak.png')).extract(kilit).resize({ width: 720 }).webp({ quality: 92 }).toFile(y('src/assets/brand/kilit.webp'));
+console.log(`  brand/logo-isaret.png · brand/kilit.png · src/assets/brand/kilit.webp`);
