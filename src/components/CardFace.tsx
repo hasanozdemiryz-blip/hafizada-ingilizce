@@ -1,4 +1,5 @@
 import { CardVisual } from './CardVisual';
+import { Card as CardShell, HookChip } from './ui';
 import type { Card, SupportLevel } from '../types';
 
 /**
@@ -18,42 +19,43 @@ export function QuestionFace({
   const level: SupportLevel = hookRevealed ? 3 : support;
 
   return (
-    <div className="flex flex-col items-center gap-5 w-full">
+    <CardShell className="w-full">
       {level >= 2 && <CardVisual card={card} />}
 
-      <p className="text-4xl font-semibold tracking-tight">{card.en}</p>
+      <div className={`flex flex-col items-center gap-3 ${level >= 2 ? 'pt-5' : 'py-6'}`}>
+        <p className="word text-[2.75rem] leading-none font-semibold">{card.en}</p>
 
-      {level >= 1 && (
-        <span className="rise rounded-full bg-accent-soft text-accent px-3 py-1 text-sm font-medium">
-          {card.hook}
-        </span>
-      )}
+        {level >= 1 && (
+          <span className={hookRevealed ? 'pop' : ''}>
+            <HookChip>{card.hook}</HookChip>
+          </span>
+        )}
 
-      {level >= 3 && (
-        <p className="rise text-center text-ink-soft leading-relaxed max-w-[30ch]">
-          “{card.sentence}”
-        </p>
-      )}
-    </div>
+        {level >= 3 && (
+          <p className="rise text-center text-ink-soft leading-relaxed max-w-[30ch]">
+            “{card.sentence}”
+          </p>
+        )}
+      </div>
+    </CardShell>
   );
 }
 
 export function AnswerFace({ card }: { card: Card }) {
   return (
-    <div className="flex flex-col items-center gap-4 w-full rise">
+    <CardShell className="w-full rise">
       <CardVisual card={card} size="compact" />
 
-      <div className="text-center">
-        <p className="text-2xl font-medium text-ink-soft">{card.en}</p>
-        <p className="text-4xl font-semibold tracking-tight mt-1">{card.tr}</p>
-      </div>
+      <div className="flex flex-col items-center gap-3 pt-5">
+        <p className="word text-xl leading-none text-ink-faint">{card.en}</p>
+        <p className="word text-[2.5rem] leading-none font-semibold text-center">{card.tr}</p>
 
-      <div className="flex flex-col items-center gap-2">
-        <span className="rounded-full bg-accent-soft text-accent px-3 py-1 text-sm font-medium">
+        <HookChip>
           {card.en} ≈ {card.hook}
-        </span>
+        </HookChip>
+
         <p className="text-center text-ink-soft leading-relaxed max-w-[30ch]">“{card.sentence}”</p>
       </div>
-    </div>
+    </CardShell>
   );
 }

@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { isYesterday, nextStreak, todayKey } from './dates';
+import { isYesterday, nextStreak, relativeDue, todayKey } from './dates';
+
+describe('siradaki tekrar metni', () => {
+  const now = new Date(2026, 2, 10, 9, 0);
+  const sonra = (ms: number) => relativeDue(new Date(now.getTime() + ms), now);
+
+  it('gecmisteki vade "simdi"', () => expect(sonra(-5000)).toBe('şimdi'));
+  it('dakikalar', () => expect(sonra(25 * 60_000)).toBe('25 dakika sonra'));
+  it('ayni gun saatler', () => expect(sonra(4 * 3_600_000)).toBe('4 saat sonra'));
+  it('ertesi gun "yarin"', () => expect(sonra(24 * 3_600_000)).toBe('yarın'));
+  it('birkac gun', () => expect(sonra(3 * 86_400_000)).toBe('3 gün sonra'));
+  it('haftalar', () => expect(sonra(14 * 86_400_000)).toBe('2 hafta sonra'));
+  it('aylar', () => expect(sonra(60 * 86_400_000)).toBe('2 ay sonra'));
+});
 
 describe('seri', () => {
   const now = new Date('2026-03-10T21:00:00');

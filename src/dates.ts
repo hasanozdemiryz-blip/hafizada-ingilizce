@@ -10,6 +10,27 @@ export function isYesterday(dateKey: string, now = new Date()): boolean {
 }
 
 /**
+ * "Siradaki tekrar ne zaman" — sayi degil, insan dili.
+ * Birikmis borc yerine yaklasan seyi gostermek icin.
+ */
+export function relativeDue(due: Date, now = new Date()): string {
+  const ms = due.getTime() - now.getTime();
+  if (ms <= 0) return 'şimdi';
+
+  const dk = Math.round(ms / 60_000);
+  if (dk < 60) return `${dk} dakika sonra`;
+
+  const saat = Math.round(dk / 60);
+  if (saat < 24 && todayKey(due) === todayKey(now)) return `${saat} saat sonra`;
+
+  const gun = Math.round((new Date(todayKey(due)).getTime() - new Date(todayKey(now)).getTime()) / 86_400_000);
+  if (gun <= 1) return 'yarın';
+  if (gun < 7) return `${gun} gün sonra`;
+  if (gun < 30) return `${Math.round(gun / 7)} hafta sonra`;
+  return `${Math.round(gun / 30)} ay sonra`;
+}
+
+/**
  * Seri: odul var, ceza yok.
  * Bugun zaten sayildiysa degismez; dun varsa +1; bosluk varsa sessizce 1.
  */

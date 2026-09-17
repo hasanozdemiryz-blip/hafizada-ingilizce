@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnswerFace, QuestionFace } from '../components/CardFace';
-import { BackButton, Progressbar, Screen, TopBar } from '../components/ui';
+import { BackButton, Button, Progressbar, Screen, TopBar } from '../components/ui';
 import { CARD_BY_ID } from '../content';
 import { db, touchStreak } from '../db';
 import { Rating, reviewCard } from '../scheduler';
@@ -8,10 +8,10 @@ import type { Progress } from '../types';
 import type { Grade } from 'ts-fsrs';
 
 const RATINGS: { grade: Grade; label: string; tone: string }[] = [
-  { grade: Rating.Again, label: 'Unuttum', tone: 'bg-accent-soft text-accent' },
-  { grade: Rating.Hard, label: 'Zor', tone: 'bg-paper-2 text-ink border border-line' },
-  { grade: Rating.Good, label: 'İyi', tone: 'bg-paper-2 text-ink border border-line' },
-  { grade: Rating.Easy, label: 'Kolay', tone: 'bg-good-soft text-good' },
+  { grade: Rating.Again, label: 'Unuttum', tone: 'bg-brand-soft text-brand-deep' },
+  { grade: Rating.Hard, label: 'Zor', tone: 'bg-spark-soft text-ink' },
+  { grade: Rating.Good, label: 'İyi', tone: 'bg-surface text-ink border border-line' },
+  { grade: Rating.Easy, label: 'Kolay', tone: 'bg-grow-soft text-grow' },
 ];
 
 /**
@@ -21,9 +21,11 @@ const RATINGS: { grade: Grade; label: string; tone: string }[] = [
 export function ReviewSession({
   queue: initial,
   onExit,
+  onFinish,
 }: {
   queue: Progress[];
   onExit: () => void;
+  onFinish: (count: number, streak: number) => void;
 }) {
   const [pending, setPending] = useState<Progress[]>(initial);
   const [revealed, setRevealed] = useState(false);
@@ -47,8 +49,8 @@ export function ReviewSession({
     const next = requeue ? [...rest, progress] : rest;
 
     if (next.length === 0) {
-      await touchStreak();
-      onExit();
+      const state = await touchStreak();
+      onFinish(total, state.streakCount);
       return;
     }
 
@@ -65,47 +67,45 @@ export function ReviewSession({
       <TopBar left={<BackButton onClick={onExit} />} right={<span>{remaining} kaldı</span>} />
       <Progressbar done={total - remaining} total={total} />
 
-      <button
-        key={`${current.cardId}-${revealed}`}
-        onClick={() => !revealed && setRevealed(true)}
-        className="flex-1 flex flex-col justify-center py-8 text-left cursor-pointer"
-        aria-label={revealed ? 'Cevap' : 'Cevabı göster'}
-      >
-        {revealed ? (
-          <AnswerFace card={card} />
-        ) : (
-          <QuestionFace card={card} support={current.support} hookRevealed={hookRevealed} />
-        )}
-      </button>
+      <div className="flex-1 flex flex-col justify-center py-6">
+        <div
+          key={`${current.cardId}-${revealed}`}
+          onClick={() => !revealed && setRevealed(true)}
+          className={revealed ? '' : 'cursor-pointer'}
+        >
+          {revealed ? (
+            <AnswerFace card={card} />
+          ) : (
+            <QuestionFace card={card} support={current.support} hookRevealed={hookRevealed} />
+          )}
+        </div>
+      </div>
 
-      <div className="shrink-0 space-y-3">
+      <div className="shrink-0 space-y-2">
         {!revealed && (
           <>
-            {current.support < 3 && !hookRevealed && (
-              <button
-                onClick={() => setHookRevealed(true)}
-                className="w-full py-2 text-sm text-ink-soft rounded-xl hover:bg-paper-2"
-              >
-                Kancayı göster
-              </button>
-            )}
-            <button
-              onClick={() => setRevealed(true)}
-              className="w-full rounded-2xl px-5 py-4 font-medium bg-ink text-paper active:scale-[0.985] transition"
-            >
-              Göster
-            </button>
+            <div className="h-10 flex items-center justify-center">
+              {current.support < 3 && !hookRevealed && (
+                <button
+                  onClick={() => setHookRevealed(true)}
+                  className="px-4 py-2 text-sm font-medium text-brand rounded-xl hover:bg-brand-soft transition-colors"
+                >
+                  Kancayı göster
+                </button>
+              )}
+            </div>
+            <Button onClick={() => setRevealed(true)}>Göster</Button>
           </>
         )}
 
         {revealed && (
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2.5">
             {RATINGS.map((r) => (
               <button
                 key={r.grade}
                 onClick={() => rate(r.grade)}
                 disabled={busy}
-                className={`rounded-2xl px-4 py-4 font-medium transition active:scale-[0.985] disabled:opacity-40 ${r.tone}`}
+                className={`rounded-2xl px-4 py-4 font-semibold transition-all active:translate-y-[2px] disabled:opacity-40 ${r.tone}`}
               >
                 {r.label}
               </button>

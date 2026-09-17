@@ -39,6 +39,20 @@ describe('icerik', () => {
   it('kart idleri benzersiz', () => {
     expect(new Set(CARDS.map((c) => c.id)).size).toBe(CARDS.length);
   });
+
+  // Ilk on kart yontemin ne yaptigini gostermeli. "far ≈ far" gibi
+  // kancasi kelimenin aynisi olan kartlar vitrin degil.
+  it('Deste 1de kancasi kelimenin aynisi olan kart yok', () => {
+    const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[^a-zçğıöşü]/g, '');
+    const zayif = DECKS[0].cards.filter((c) => norm(c.en) === norm(c.hook));
+    expect(zayif.map((c) => c.en)).toEqual([]);
+  });
+
+  it('zayif kancali kartlar setten atilmaz, sadece Deste 1in arkasina kayar', () => {
+    const far = CARDS.find((c) => c.en === 'far');
+    expect(far).toBeDefined();
+    expect(far!.order).toBeGreaterThan(DECK_SIZE);
+  });
 });
 
 describe('Tanis', () => {

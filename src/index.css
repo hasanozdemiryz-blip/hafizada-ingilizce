@@ -1,18 +1,69 @@
 @import 'tailwindcss';
 
-@theme {
-  --color-paper: #faf7f2;
-  --color-paper-2: #f2ece3;
-  --color-ink: #1c1917;
-  --color-ink-soft: #57534e;
-  --color-ink-faint: #a8a29e;
-  --color-line: #e3dbd0;
-  --color-accent: #b4451f;
-  --color-accent-soft: #fdf0e9;
-  --color-good: #15803d;
-  --color-good-soft: #eaf5ee;
+/* --- Yazi karakterleri: yerelde, offline calisir --- */
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/fraunces-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Fraunces';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/fraunces-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Jakarta';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/jakarta-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304,
+    U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Jakarta';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/jakarta-latin.woff2') format('woff2');
+}
 
-  --font-sans: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+@theme {
+  /* --- Kagit ve murekkep --- */
+  --color-paper: #fbf7f0; /* sicak krem zemin */
+  --color-surface: #ffffff; /* kart yuzeyi */
+  --color-sunken: #f2eadd; /* gomulu alan: gorsel yuvasi, ilerleme yolu */
+  --color-line: #e7dccc;
+
+  --color-ink: #1f1b18; /* ana metin */
+  --color-ink-soft: #6b5f55; /* ikincil */
+  --color-ink-faint: #a99c90; /* ucuncul */
+
+  /* --- Marka: kanca rengi --- */
+  --color-brand: #e4572e;
+  --color-brand-deep: #b83d19;
+  --color-brand-soft: #fdece5;
+
+  /* --- Kivilcim: seri, kutlama, "haa" ani --- */
+  --color-spark: #f0a818;
+  --color-spark-soft: #fff3dc;
+
+  /* --- Buyume: dogru cevap, tamamlanan deste --- */
+  --color-grow: #2f9e70;
+  --color-grow-soft: #e6f4ec;
+
+  --font-sans: 'Jakarta', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+
+  --radius-card: 1.75rem;
 }
 
 html,
@@ -30,22 +81,83 @@ body {
   overscroll-behavior-y: none;
 }
 
-/* Tekrar butonlarinda cift dokunusla zoom olmasin */
 button {
+  font-family: inherit;
   touch-action: manipulation;
 }
 
+/*
+ * Kahraman kelime: baslik karakteri.
+ *
+ * font-variant-ligatures: none — ogrenilen kelimenin harfleri ayri ayri
+ * gorunmeli. "fish", "office", "flower" gibi kelimelerde fi/fl ligaturu
+ * iki harfi tek gliphe birlestiriyor; kelime ogreten bir uygulamada
+ * bu istenmez.
+ */
+.word {
+  font-family: var(--font-display);
+  font-variation-settings: 'opsz' 100;
+  font-variant-ligatures: none;
+  letter-spacing: -0.015em;
+}
+
+/* --- Hareket --- */
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
     transform: none;
   }
 }
+@keyframes pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes sparkle {
+  0%,
+  100% {
+    transform: rotate(-6deg) scale(1);
+  }
+  50% {
+    transform: rotate(6deg) scale(1.12);
+  }
+}
 
 .rise {
-  animation: rise 220ms ease-out both;
+  animation: rise 260ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.pop {
+  animation: pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.sparkle {
+  animation: sparkle 1.6s ease-in-out infinite;
+}
+.delay-1 {
+  animation-delay: 70ms;
+}
+.delay-2 {
+  animation-delay: 150ms;
+}
+.delay-3 {
+  animation-delay: 230ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise,
+  .pop,
+  .sparkle {
+    animation: none;
+  }
 }

@@ -52,6 +52,8 @@ export type DeckTestResult = {
 };
 
 export type AppState = {
+  /** Karsilama ekrani goruldu mu */
+  onboarded: boolean;
   streakCount: number;
   /** YYYY-MM-DD, yerel saat */
   lastSessionDate: string | null;

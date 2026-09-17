@@ -23,6 +23,7 @@ export const db = new AppDB();
 const APP_KEY = 'app';
 
 export const EMPTY_STATE: AppState = {
+  onboarded: false,
   streakCount: 0,
   lastSessionDate: null,
   deckTests: {},

@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { BackButton, Button, Progressbar, Screen, TopBar } from '../components/ui';
+import { BackButton, Button, Card, Progressbar, Screen, TopBar } from '../components/ui';
 import { CARDS, TEST_PASS_SCORE, cardsOfDeck } from '../content';
 import { recordDeckTest } from '../db';
 import { shareResult } from '../share';
-import type { Card } from '../types';
+import type { Card as CardType } from '../types';
 
-type Question = { card: Card; options: string[] };
+type Question = { card: CardType; options: string[] };
 
 function shuffle<T>(xs: T[]): T[] {
   const a = [...xs];
@@ -68,22 +68,27 @@ export function DeckTest({ deck, onExit }: { deck: number; onExit: () => void })
     return (
       <Screen>
         <TopBar left={<BackButton onClick={onExit} />} />
-        <div className="flex-1 flex flex-col justify-center items-center gap-6 text-center rise">
-          <span className="text-sm uppercase tracking-[0.14em] text-ink-faint">Deste {deck}</span>
-          <p className="text-7xl font-bold tracking-tight">
-            {score}/{questions.length}
-          </p>
-          <p className="text-lg text-ink-soft max-w-[26ch]">
+        <div className="flex-1 flex flex-col justify-center items-center gap-5 text-center">
+          <div className="pop text-6xl">{passed ? '🎉' : '🌱'}</div>
+          <div className="rise delay-1">
+            <span className="text-sm font-semibold uppercase tracking-[0.16em] text-ink-faint">
+              Deste {deck}
+            </span>
+            <p className={`word text-7xl font-bold mt-2 ${passed ? 'text-grow' : 'text-ink'}`}>
+              {score}/{questions.length}
+            </p>
+          </div>
+          <p className="rise delay-2 text-lg text-ink-soft max-w-[26ch]">
             {passed
               ? `${deck * 10} kelime, ezbersiz. Deste tamam.`
               : 'Biraz daha tekrar iyi gelir. Deste açık kalıyor.'}
           </p>
         </div>
-        <div className="shrink-0 space-y-3">
-          <Button onClick={() => void shareResult(deck, score, questions.length)}>
+        <div className="shrink-0 space-y-3 rise delay-3">
+          <Button variant="brand" onClick={() => void shareResult(deck, score, questions.length)}>
             Sonucu paylaş
           </Button>
-          <Button variant="ghost" onClick={onExit}>
+          <Button variant="soft" onClick={onExit}>
             Ana ekran
           </Button>
         </div>
@@ -105,29 +110,31 @@ export function DeckTest({ deck, onExit }: { deck: number; onExit: () => void })
       />
       <Progressbar done={i} total={questions.length} />
 
-      <div key={q.card.id} className="rise flex-1 flex flex-col justify-center items-center gap-3">
-        <span className="text-sm text-ink-faint">Türkçesi hangisi?</span>
-        <p className="text-5xl font-semibold tracking-tight">{q.card.en}</p>
+      <div className="flex-1 flex flex-col justify-center py-6">
+        <Card key={q.card.id} className="rise text-center py-10">
+          <span className="text-sm text-ink-faint">Türkçesi hangisi?</span>
+          <p className="word text-5xl font-semibold mt-3">{q.card.en}</p>
+        </Card>
       </div>
 
-      <div className="shrink-0 grid gap-2">
+      <div className="shrink-0 grid gap-2.5">
         {q.options.map((opt) => {
           const isCorrect = opt === q.card.tr;
-          const state =
+          const tone =
             picked === null
-              ? 'bg-paper-2 border border-line text-ink'
+              ? 'bg-surface border-line text-ink shadow-[0_2px_0_var(--color-line)]'
               : isCorrect
-                ? 'bg-good-soft border border-good text-good'
+                ? 'bg-grow-soft border-grow text-grow'
                 : picked === opt
-                  ? 'bg-accent-soft border border-accent text-accent'
-                  : 'bg-paper-2 border border-line text-ink-faint';
+                  ? 'bg-brand-soft border-brand text-brand-deep'
+                  : 'bg-sunken border-transparent text-ink-faint';
 
           return (
             <button
               key={opt}
               onClick={() => void pick(opt)}
               disabled={picked !== null}
-              className={`rounded-2xl px-5 py-4 font-medium text-left transition active:scale-[0.985] ${state}`}
+              className={`rounded-2xl border px-5 py-4 font-semibold text-left transition-all active:translate-y-[2px] ${tone}`}
             >
               {opt}
             </button>

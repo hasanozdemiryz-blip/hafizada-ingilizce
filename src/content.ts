@@ -3,22 +3,49 @@ import type { Card } from './types';
 
 export const DECK_SIZE = 10;
 export const NEW_PER_DAY = 5;
-export const DAILY_REVIEW_CAP = 60;
+/** Gunluk tavan. Birikmis borc kullaniciya HIC gosterilmez — bkz. Home. */
+export const DAILY_REVIEW_CAP = 40;
 /** Deste testinin acilmasi icin her kartin gormesi gereken tekrar sayisi */
 export const TEST_UNLOCK_REPS = 2;
 export const TEST_PASS_SCORE = 8;
 
+const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[^a-zçğıöşü]/g, '');
+
 /**
- * v1 seti: sadece "Tutan" sinifi (100 kart).
- * "Kurtarilabilir" olanlar 2. set icin bekliyor — Faz 5.
- * Siklik sirasi tablodaki sira; yeniden numaralanir ki desteler 1..10 olsun.
+ * Kancasi kelimenin AYNISI olan kartlar (far ≈ far, put ≈ put).
+ * Bunlar aslinda mnemonik degil, Turkceye gecmis kelimeler — yontemin
+ * ne yaptigini GOSTERMIYORLAR. Kart olarak degerliler ama vitrin degiller.
  */
-export const CARDS: Card[] = (raw as Card[])
+const zayifKanca = (c: Card) => norm(c.en) === norm(c.hook);
+
+const frekansSirasi = (raw as Card[])
   .filter((c) => c.klass === 'tutan')
-  .sort((a, b) => a.order - b.order)
-  .map((c, i) => ({ ...c, order: i + 1 }));
+  .sort((a, b) => a.order - b.order);
+
+/**
+ * v1 seti: 100 "Tutan" kart. "Kurtarilabilir" olanlar 2. set icin bekliyor.
+ *
+ * Siralama siklik sirasi — TEK istisna: Deste 1'e zayif kanca girmez.
+ * Uygulamayi ilk acan insanin gordugu ilk on kart, yontemin ne yaptigini
+ * anlatan kartlar olmali. Zayif kancalar Deste 1'in hemen arkasina kayar,
+ * geri kalan her sey siklik sirasinda kalir.
+ */
+export const CARDS: Card[] = (() => {
+  const guclu = frekansSirasi.filter((c) => !zayifKanca(c));
+  const zayif = frekansSirasi.filter(zayifKanca);
+  const deste1 = guclu.slice(0, DECK_SIZE);
+  const kalan = [...guclu.slice(DECK_SIZE), ...zayif].sort((a, b) => a.order - b.order);
+  return [...deste1, ...kalan].map((c, i) => ({ ...c, order: i + 1 }));
+})();
 
 export const CARD_BY_ID = new Map(CARDS.map((c) => [c.id, c]));
+
+/**
+ * Karsilama ekraninda gosterilen ornek kart.
+ * Deste 1'in disindan secilir ki kullanici ayni karti iki kez "yeni" gormesin.
+ */
+export const SHOWCASE_CARD =
+  CARDS.find((c) => c.id === 'snake' && c.order > DECK_SIZE) ?? CARDS[DECK_SIZE];
 
 export const deckOf = (order: number) => Math.floor((order - 1) / DECK_SIZE) + 1;
 
