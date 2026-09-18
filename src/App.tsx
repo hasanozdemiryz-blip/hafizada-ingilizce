@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TabBar, type Tab } from './components/TabBar';
-import { AHEAD_BATCH, DAILY_REVIEW_CAP, ogrenilenKancalar, setBittiMi } from './content';
+import {
+  AHEAD_BATCH,
+  DAILY_REVIEW_CAP,
+  ogrenilenKancalar,
+  setBittiMi,
+  setteOlanlar,
+} from './content';
 import { db, getState } from './db';
 import {
   aheadQueue,
@@ -43,8 +49,9 @@ export default function App() {
   const [egzersizde, setEgzersizde] = useState(false);
 
   const data = useLiveQuery(async () => {
-    const [progress, state] = await Promise.all([db.progress.toArray(), getState()]);
-    return { progress, state };
+    const [hepsi, state] = await Promise.all([db.progress.toArray(), getState()]);
+    // Setten cikmis kartlarin kaydi burada elenir; tek kapi (bkz. content.ts)
+    return { progress: setteOlanlar(hepsi), state };
   }, []);
 
   if (!data) return <Splash />;

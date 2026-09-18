@@ -8,6 +8,7 @@ import {
   LIMIT_MAX,
   ogrenilenKancalar,
   setBittiMi,
+  setteOlanlar,
 } from './content';
 import {
   aheadQueue,
@@ -87,6 +88,29 @@ describe('set sonu', () => {
 
   it('tanisilmamis kart panoya girmez', () => {
     expect(ogrenilenKancalar([])).toEqual([]);
+  });
+
+  /*
+   * Set 100'den 26'ya indi; onceden kurulmus cihazlarda artik sette olmayan
+   * kartlarin kaydi duruyor. Elenmezse sayilar sisiyor ve set daha ilk gun
+   * "bitmis" gorunebiliyor — kullanici o 26 kelimeyi hic gormeden.
+   */
+  const disaridakiler = Array.from({ length: CARDS.length }, (_, i) => ({
+    ...introduceCard(CARDS[0], NOW),
+    cardId: `eski-set-${i}`,
+  }));
+
+  it('setten cikmis kartin kaydi elenir', () => {
+    const karisik = [...introduceMany(3), ...disaridakiler];
+    expect(setteOlanlar(karisik)).toHaveLength(3);
+  });
+
+  it('setten cikmis kayitlar seti "bitmis" gostermez', () => {
+    const karisik = [...introduceMany(3), ...disaridakiler];
+    // ham liste yaniltiyor...
+    expect(setBittiMi(karisik)).toBe(true);
+    // ...elendiginde dogru cevap
+    expect(setBittiMi(setteOlanlar(karisik))).toBe(false);
   });
 });
 

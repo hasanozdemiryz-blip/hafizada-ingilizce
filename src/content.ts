@@ -108,6 +108,22 @@ export const SHOWCASE_CARD =
   CARDS.find((c) => c.id === 'snake' && c.order > BATCH) ?? CARDS[BATCH];
 
 /**
+ * Settekilerin ilerlemesi. Setten CIKMIS kartin kaydi elenir — SILINMEZ.
+ *
+ * v1 seti 100 karttan 26'ya indi; daha once kurulmus bir cihazda `turn`,
+ * `put` gibi artik sette olmayan kartlarin ilerlemesi veritabaninda duruyor.
+ * Elenmezse: tekrar kuyruguna girip derste sessizce atlaniyorlar (ana ekran
+ * "5 tekrar" diyor, ders bos aciliyor), "26 kelimenin 40'i" gibi sayilar
+ * cikiyor ve set daha ilk gun "bitmis" sayilabiliyor.
+ *
+ * Kayitlar duruyor cunku o kartlar 2. setle geri gelecek; FSRS gecmisleri ve
+ * kanca kalite sinyalleri degerli. Yedege de tam haliyle giriyorlar.
+ */
+export function setteOlanlar<T extends { cardId: string }>(progress: readonly T[]): T[] {
+  return progress.filter((p) => CARD_BY_ID.has(p.cardId));
+}
+
+/**
  * Setin tamami tanisildi mi. "Bitti" kelimesini tek yerde tanimliyoruz;
  * ana ekran ve ders bitisi ayni soruyu iki turlu cevaplamasin.
  */
