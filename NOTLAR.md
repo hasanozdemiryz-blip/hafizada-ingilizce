@@ -188,6 +188,70 @@ Elle test olmadan hiçbiri görünmüyordu.
 
 ---
 
+## Kart görselleri
+
+100 kartın görseli Magnific üzerinden **Nano Banana Pro** (`imagen-nano-banana-2`)
+ile üretiliyor. 4:3, `seed 20260918`, stil referansı olarak elle üretilmiş
+`snake` kartı veriliyor.
+
+**Tutarlılık nasıl sağlanıyor.** Bu hesapta LoRA / stil eğitimi yok, kütüphane
+boş, flow tanımlı değil. Geriye üç kaldıraç kalıyor ve üçü birden gerekiyor:
+aynı **stil referansı**, aynı **prompt iskeleti**, aynı **seed**. Üçünden biri
+değişince çizgi kalınlığı ve palet kayıyor.
+
+Prompt iskeleti sabit bloklardan kuruluyor: sahne tarifi → KOMPOZİSYON →
+(insan varsa) YÜZ + KARAKTER → "beyaz kontur yok" → "kesinlikle düz dolgu" →
+kontur ağırlığı → ARKA PLAN tonu → cansız nesnenin yüzü olmaz → metin kuralı.
+Her kart yalnızca ilk satırını ve arka plan tonunu değiştiriyor.
+
+### Üretimde öğrenilenler
+
+| Ders | Neden |
+|---|---|
+| "Özne çerçeveyi doldursun" deme | Model bunu "taşır" diye anlıyor; 5 görselin 4'ü alt kenardan kesildi. Doğrusu: "%75 yükseklik, dört kenarda eşit boşluk, hiçbir şey kenarı geçmesin" |
+| İnsanı tam gövde iste | Gövdesiz uzuv (`foot` ilk hali) kesik uzuv gibi çıkıyor, rahatsız edici |
+| Kıyafeti açıkça yaz | Yazmayınca çıplak gövde çiziyor (`laugh` ilk hali) |
+| Kalabalığı tek tek yasakla | `deep`'e denizaltı, batık gemi, hazine sandığı koydu; "balık yok, denizaltı yok, batık yok" deyince düzeldi |
+| Ölçek farkını nesneyle kur | `large`'da insan + dev gömlek iki denemede de aynı boyda çıktı; iki kutu tek denemede tuttu |
+| Spor/nesne adını tarif et | "football" → Amerikan futbolu topu. "round soccer ball with black pentagon patches" → doğru |
+| Gölgeyi ayrıca yasakla | "NO drop shadow" yetmiyor, "NO ground shadow, NO ambient occlusion" da gerekiyor |
+| 3B montaj parçası yasakla | `door`'da DUR levhasını duvara metal braketle monte etti; "flat against the wall, no bracket, no shadow, no 3D depth" ile düzeldi |
+
+**Türkçe metin sorun değil.** `SATILIK`, `DUR`, `DİP`, `FUL`, `SON` hepsi ilk
+denemede doğru çıktı — `İ` dahil. Metin gereken kartlarda kelimeyi prompt'a
+yazmak güvenli.
+
+### Kredi hesabı
+
+| Aşama | Görsel | Kredi |
+|---|---:|---:|
+| İlk deneme (tuz, stil arayışı) | 2 | 150 |
+| Deste 1 ilk tur | 5 | 375 |
+| `door` + `dust` düzeltme turları | 6 | 450 |
+| Deste 1 kalan üçü | 3 | 225 |
+| Deste 2–5 | 20 | 1.500 |
+| Düzeltmeler (`eye` `foot` `laugh` `large` `deep` `sun`) | 6 | 450 |
+| Son iki düzeltme (`foot` `large`) | 2 | 150 |
+| **Toplam** | **44** | **3.300** |
+
+Görsel başına liste fiyatı 75 kredi. Teslim edilen 26 kart için 3.300 kredi
+harcandı — kart başına **~127 kredi**, yani ortalama **1,7 deneme**. Kalan 74
+kart için ham maliyet 5.550, aynı tekrar oranıyla gerçekçi tahmin **~6.700**.
+
+### Boru hattı
+
+`gorseller/<kart-id>.png` → `npm run import:images` → `src/assets/cards/<kart-id>.webp`
+(800×600, 4:3, q82). `content.ts` klasörü `import.meta.glob` ile tarıyor —
+`cards.json`'a dokunmaya gerek yok, dosyayı koyman yeter.
+
+Kart başına ortalama **14 KB**. 100 kart ≈ **1,4 MB**; bu boyutta workbox
+precache stratejisini değiştirmeye gerek yok.
+
+> exFAT tuzağı: `gorseller/` içine kopyalarken macOS `._*` gölgeleri bırakıyor,
+> importer bunları "tanınmayan kart id'si" diye uyarıyor. `find . -name '._*' -delete`.
+
+---
+
 ## Ortam
 
 `/Volumes/TwinMOS` **exFAT**. macOS her dosyanın yanına `._` gölgesi bırakıyor;
@@ -202,5 +266,5 @@ ve vitest `exclude` ile kapatıldı. Yine de çarparsa: `find . -name '._*' -del
 1. **Kanca aday üretim hattı** — havuzu ~600'e çıkaran tek kaldıraç.
    CMU fonetik sözlüğü + Türkçe kelime listesi + fonem mesafesi → sıralı aday
    listesi. "Haa testi" insanda kalır; moat orası.
-2. Kart görselleri (kullanıcı yapay zekayla üretecek).
+2. Kalan 74 kartın görseli — yukarıdaki iskele ve derslerle.
 3. Hesap + bulut senkronu — yalnızca retention verisi gerektirirse.
