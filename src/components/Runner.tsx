@@ -8,7 +8,7 @@ import { Button } from './ui';
 import { judge, type Judgement } from '../answer';
 import { CARDS, EN_HAVUZ } from '../content';
 import { ADIM, bloklaraBol, secenekler, shuffle, type Gorev } from '../exercise';
-import { seslendir, seslendirmeyiDurdur, telaffuzVar } from '../speech';
+import { seslendir, seslendirmeyiDurdur, useTelaffuz } from '../speech';
 
 
 const GERI_BILDIRIM: Record<Judgement, { baslik: string; tone: string }> = {
@@ -54,6 +54,7 @@ export function Runner({
   const [verdict, setVerdict] = useState<{ judgement: Judgement; typed?: string } | null>(null);
   const [secilen, setSecilen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const sesVar = useTelaffuz();
 
   const blok = bloklar[i];
   const tekliGorev = blok?.tip === 'tekli' ? blok.gorev : null;
@@ -105,7 +106,7 @@ export function Runner({
   const { card, step } = blok.gorev;
   const bilgi = ADIM[step];
   // Ses sentezi yoksa dinleme cevaplanamaz; kart kilitlenmesin diye yazma olarak sorulur
-  const egzersiz = bilgi.egzersiz === 'dinleme' && !telaffuzVar() ? 'yazma' : bilgi.egzersiz;
+  const egzersiz = bilgi.egzersiz === 'dinleme' && !sesVar ? 'yazma' : bilgi.egzersiz;
 
   /**
    * `temiz=false`, cevabin dogru ama YARDIMLA bulundugunu soyler.

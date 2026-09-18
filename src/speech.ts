@@ -13,6 +13,8 @@
  * dosyalara baglanabilir, cagri noktalari degismez.
  */
 
+import { useSyncExternalStore } from 'react';
+
 const AKSAN = 'en-US';
 
 /**
@@ -73,6 +75,25 @@ export function pickVoice<T extends SesAdayi>(sesler: readonly T[]): T | null {
   return temiz.find((v) => v.localService) ?? temiz[0] ?? havuz[0];
 }
 
+/**
+ * Hangi motor konusuyor.
+ *
+ *   web    — tarayicinin kendi `speechSynthesis`i
+ *   native — cihazin TTS motoru, Capacitor eklentisi uzerinden
+ *   yok    — telaffuz arayuzu hic gosterilmez
+ *
+ * Android System WebView, Web Speech API'nin SENTEZ tarafini uygulamiyor:
+ * `speechSynthesis` orada tanimsiz. Ayni kod Android Chrome'da (PWA kurulumu)
+ * konusuyor, APK icinde susuyordu — ve sustugu icin hoparlor dugmesi, Ayarlar
+ * satiri ve dinleme egzersizi kendilerini gizliyordu. Hicbiri hata degildi,
+ * hepsi "ses yok" halinin dogru davranisiydi; eksik olan motorun kendisi.
+ *
+ * iOS'un WKWebView'inda API duruyor, orada native kabukta da web yolu calisir.
+ */
+type Motor = 'web' | 'native' | 'yok';
+
+type NativeTTS = (typeof import('@capacitor-community/text-to-speech'))['TextToSpeech'];
+
 const sentez = (): SpeechSynthesis | null =>
   typeof window !== 'undefined' && 'speechSynthesis' in window ? window.speechSynthesis : null;
 
@@ -88,33 +109,107 @@ if (sentez()) {
   sentez()!.addEventListener?.('voiceschanged', seslerYenile);
 }
 
-export const telaffuzVar = () => sentez() !== null;
+let motor: Motor = sentez() ? 'web' : 'yok';
+let native: NativeTTS | null = null;
+
+const dinleyiciler = new Set<() => void>();
+const abone = (f: () => void) => {
+  dinleyiciler.add(f);
+  return () => {
+    dinleyiciler.delete(f);
+  };
+};
+
+/** Capacitor native kabukta koprusunu `window.Capacitor` olarak enjekte eder. */
+const nativeKabuk = () =>
+  typeof window !== 'undefined' &&
+  (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+    ?.isNativePlatform?.() === true;
+
+/** Motorda Ingilizce var mi. Iki yoldan sorulur; ikisi de patlarsa yok sayilir. */
+async function ingilizceVar(tts: NativeTTS): Promise<boolean> {
+  try {
+    const { voices } = await tts.getSupportedVoices();
+    if (voices.some((v) => v.lang?.replace('_', '-').startsWith('en'))) return true;
+  } catch {
+    // Bazi motorlar ses listesi vermiyor; asagidaki soru hala gecerli.
+  }
+  try {
+    return (await tts.isLanguageSupported({ lang: AKSAN })).supported;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Native motoru arar. Acilista BIR KEZ cagrilir (main.tsx).
+ *
+ * Asenkron, cunku cevap kopruden geliyor. Bu yuzden telaffuz acilista "yok"
+ * sayilir ve motor bulununca abonelere haber verilir (`useTelaffuz`).
+ * Iyimser davranip dugmeyi hemen gostermek, Ingilizce ses verisi kurulu
+ * olmayan cihazda hicbir sey yapmayan bir dugme birakirdi — sessiz kalite
+ * hatalarinin tam da kacinilmak istenen turu.
+ */
+export async function telaffuzHazirla(): Promise<void> {
+  if (motor !== 'yok' || !nativeKabuk()) return;
+  try {
+    const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
+    if (!(await ingilizceVar(TextToSpeech))) return;
+    native = TextToSpeech;
+    motor = 'native';
+    dinleyiciler.forEach((f) => f());
+  } catch {
+    // Eklenti yok ya da kopru cevap vermedi: telaffuz kapali kalir.
+  }
+}
+
+export const telaffuzVar = () => motor !== 'yok';
+
+/**
+ * Bilesenler bunu kullanir, `telaffuzVar`i degil.
+ *
+ * Native motor acilistan SONRA bulunabildigi icin duz cagri yetmiyor:
+ * bulundugunda yeniden cizim gerekiyor.
+ */
+export const useTelaffuz = () => useSyncExternalStore(abone, telaffuzVar, () => false);
 
 function enIyiSes(): SpeechSynthesisVoice | null {
   if (sesler.length === 0) seslerYenile();
   return pickVoice(sesler);
 }
 
+/** Ogrenme icin hafif yavas. Tam hizda kisa kelimeler (`cut`, `bad`) duyulmadan bitiyor. */
+const HIZ = 0.9;
+
 /**
- * Kelimeyi seslendirir. Onceki seslendirme iptal edilir — arka arkaya
+ * Kelimeyi seslendirir. Onceki seslendirme kesilir — arka arkaya
  * basildiginda sesler ust uste binmesin.
  *
- * Ogrenme icin hafif yavas: 0.9. Tam hizda kisa kelimeler (`cut`, `bad`)
- * duyulmadan bitiyor.
+ * Native tarafta ses SECILMIYOR, yalnizca dil veriliyor: `pickVoice`in
+ * cozdugu sorun (macOS'un saka sesleri) Android'de yok, oradaki varsayilan
+ * motor sesi zaten dogru tercih. Test edilemeyen bir ses indeksi gondermek
+ * iyilestirmez, bozabilir.
  */
 export function seslendir(kelime: string) {
-  const s = sentez();
-  if (!s) return;
-
-  s.cancel();
-  const u = new SpeechSynthesisUtterance(kelime);
-  u.lang = AKSAN;
-  u.rate = 0.9;
-  const ses = enIyiSes();
-  if (ses) u.voice = ses;
-  s.speak(u);
+  if (motor === 'web') {
+    const s = sentez();
+    if (!s) return;
+    s.cancel();
+    const u = new SpeechSynthesisUtterance(kelime);
+    u.lang = AKSAN;
+    u.rate = HIZ;
+    const ses = enIyiSes();
+    if (ses) u.voice = ses;
+    s.speak(u);
+    return;
+  }
+  if (motor === 'native' && native) {
+    // queueStrategy varsayilani Flush: yeni istek oncekini keser.
+    void native.speak({ text: kelime, lang: AKSAN, rate: HIZ }).catch(() => {});
+  }
 }
 
 export function seslendirmeyiDurdur() {
-  sentez()?.cancel();
+  if (motor === 'web') sentez()?.cancel();
+  else if (motor === 'native') void native?.stop().catch(() => {});
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { seslendir, telaffuzVar } from '../speech';
+import { seslendir, useTelaffuz } from '../speech';
 import kilit from '../assets/brand/kilit.webp';
 import isaret from '../assets/brand/isaret.webp';
 
@@ -155,7 +155,8 @@ export function SpeakButton({
   word: string;
   size?: 'normal' | 'small';
 }) {
-  if (!telaffuzVar()) return null;
+  const sesVar = useTelaffuz();
+  if (!sesVar) return null;
   const kucuk = size === 'small';
   return (
     <button

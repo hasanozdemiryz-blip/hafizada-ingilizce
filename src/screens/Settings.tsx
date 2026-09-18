@@ -3,7 +3,7 @@ import { TAB_SPACE } from '../components/TabBar';
 import { Button, Card, Screen } from '../components/ui';
 import { CARDS, LIMIT_CHOICES, LIMIT_MAX } from '../content';
 import { exportProgress, importProgress, resetAll, setState } from '../db';
-import { telaffuzVar } from '../speech';
+import { useTelaffuz } from '../speech';
 import { DevPanel } from './DevPanel';
 import type { AppState } from '../types';
 
@@ -18,6 +18,7 @@ export function Settings({ state, progress }: { state: AppState; progress: unkno
   const fileRef = useRef<HTMLInputElement>(null);
   const [sifirlaSoruluyor, setSifirlaSoruluyor] = useState(false);
   const [hata, setHata] = useState<string | null>(null);
+  const sesVar = useTelaffuz();
 
   return (
     <Screen>
@@ -58,7 +59,7 @@ export function Settings({ state, progress }: { state: AppState; progress: unkno
           <p className="text-xs text-ink-faint mt-3">En fazla {LIMIT_MAX} — üstü serbest değil.</p>
         </Card>
 
-        {telaffuzVar() && (
+        {sesVar && (
           <Card className="rise delay-1">
             <div className="flex items-center justify-between gap-3">
               <div>

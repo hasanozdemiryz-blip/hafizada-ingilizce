@@ -304,6 +304,40 @@ yoktur — yanıltıcı.) Çalışan yol: dosyayı Drive'a koyup telefondan indi
 
 ---
 
+### APK'da ses yoktu
+
+Derlenen pakette telaffuz tamamen kayboldu: hoparlör düğmesi yok, Ayarlar'daki
+"Telaffuz sesi" satırı yok, dinleme egzersizi yazmaya dönmüş. Hiçbiri hata
+değildi — `telaffuzVar()` false döndüğü için üç yer de kendini doğru şekilde
+gizledi. Eksik olan motorun kendisiydi.
+
+**Sebep:** Android System WebView, Web Speech API'nin sentez tarafını
+uygulamıyor; `speechSynthesis` orada tanımsız. Android **Chrome**'da var, yani
+PWA kurulumunda uygulama konuşuyor, Capacitor APK'sında susuyor. iOS'un
+WKWebView'ında API duruyor, orada sorun yok.
+
+**Çözüm:** `@capacitor-community/text-to-speech` (8.0.2, `@capacitor/core >=8`
+istiyor — bizim sürümle birebir). `speech.ts` artık üç durumlu bir motor
+tutuyor: `web` · `native` · `yok`. Çağrı noktalarının hiçbiri değişmedi;
+dosyanın başındaki *"aynı arayüz başka bir kaynağa bağlanabilir"* sözü tutuldu.
+
+**Neden asenkron bir hazırlık adımı var.** Motorun varlığı köprüden geliyor,
+render sırasında senkron sorulamıyor. İyimser davranıp düğmeyi hemen göstermek,
+İngilizce ses verisi kurulu olmayan cihazda hiçbir şey yapmayan bir düğme
+bırakırdı. Bu yüzden telaffuz açılışta "yok" sayılıyor, motor bulununca
+`useSyncExternalStore` üzerinden arayüz kendiliğinden açılıyor —
+`telaffuzVar()` yerine bileşenler `useTelaffuz()` kullanıyor.
+
+**Native tarafta ses seçilmiyor.** `pickVoice`ın çözdüğü sorun macOS'a özgü
+(şaka sesleri); Android'de varsayılan motor sesi zaten doğru tercih. Test
+edilemeyen bir ses indeksi göndermek iyileştirmez, bozabilir. Web yolu ve
+`pickVoice` testleri olduğu gibi duruyor.
+
+**Boyut:** eklenti dinamik `import` ile çağrılıyor, web paketine girmiyor —
+ayrı bir 1,7 KB parça olarak duruyor, yalnızca native kabukta indiriliyor.
+
+---
+
 ## Ortam
 
 `/Volumes/TwinMOS` **exFAT**. macOS her dosyanın yanına `._` gölgesi bırakıyor;

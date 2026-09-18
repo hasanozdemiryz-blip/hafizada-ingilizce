@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { telaffuzHazirla } from './speech';
 
 /**
  * Ilerleme yalnizca IndexedDB'de. Tarayicilar "best-effort" depolamayi
@@ -11,6 +12,13 @@ import './index.css';
  * hicbir sey bozulmaz, yedek alma zaten duruyor.
  */
 void navigator.storage?.persist?.().catch(() => {});
+
+/**
+ * Native kabukta (APK) tarayicinin ses sentezi YOK; cihazin TTS motoru
+ * kopru uzerinden aranir. Web'de hemen doner, hicbir sey geciktirmez.
+ * Bkz. speech.ts — motor bulununca arayuz kendiliginden acilir.
+ */
+void telaffuzHazirla();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
