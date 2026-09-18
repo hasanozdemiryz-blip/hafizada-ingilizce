@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
+import { LIMIT_DEFAULT } from './content';
 import { nextStreak, todayKey } from './dates';
-import type { AppState, DeckTestResult, Progress } from './types';
+import type { AppState, Progress } from './types';
 
 type MetaRow = { key: string; value: unknown };
 
@@ -15,7 +16,119 @@ class AppDB extends Dexie {
       progress: 'cardId, due, deck',
       meta: 'key',
     });
+
+    /**
+     * v2 — kalite sinyalleri degisti.
+     *
+     * Eski `firstRecallOk` ilk tekrarda, yani hala L3'te olculuyordu:
+     * soru yuzunde gorsel, kanca VE cumle vardi, cumlelerin %80'inde de
+     * Turkce karsilik geciyor. Yani neredeyse her zaman `true` doneceklerdi.
+     * Olctugu sey "hatirladin mi" degil "okuyabildin mi"ydi; tasinmasinin
+     * anlami yok, silinip yerine gercek sinyaller konuyor.
+     *
+     * Index semasi degismedi ama gecis kaydi burada durmali.
+     */
+    this.version(2)
+      .stores({
+        progress: 'cardId, due, deck',
+        meta: 'key',
+      })
+      .upgrade((tx) =>
+        tx
+          .table('progress')
+          .toCollection()
+          .modify((p: Record<string, unknown>) => {
+            delete p.firstRecallOk;
+            p.hookRecallOk ??= null;
+            p.bareRecallOk ??= null;
+            p.bareFailCount ??= 0;
+          }),
+      );
+
+    /**
+     * v3 — alistirma merdiveni.
+     * Mevcut kartlar `recall`'dan devam eder; hangi destek seviyesinde
+     * kaldilarsa oradan. Ilerleme kaybi yok.
+     */
+    this.version(3)
+      .stores({
+        progress: 'cardId, due, deck',
+        meta: 'key',
+      })
+      .upgrade((tx) =>
+        tx
+          .table('progress')
+          .toCollection()
+          .modify((p: Record<string, unknown>) => {
+            p.stage ??= 'recall';
+            p.firstProduceOk ??= null;
+          }),
+      );
+
+    /**
+     * v4 — iki eksen tek merdivene indi.
+     *
+     * Eski `support` (3..0) ve `stage` (recall/produce/listen) yerine tek
+     * `step` (1..6). Esleme, kartin gordugu YARDIM miktarini korur:
+     *   L3->1  L2->2  L1->3  L0->4  produce->5  listen->6
+     * Boylece kimse merdivende geriye atilmaz.
+     *
+     * `deck` alani ve index'i de kalkiyor — deste kavrami bitti.
+     */
+    this.version(4)
+      .stores({ progress: 'cardId, due', meta: 'key' })
+      .upgrade((tx) =>
+        tx
+          .table('progress')
+          .toCollection()
+          .modify((p: Record<string, unknown>) => {
+            const support = typeof p.support === 'number' ? p.support : 3;
+            const stage = p.stage;
+            p.step =
+              stage === 'listen' ? 6 : stage === 'produce' ? 5 : ([1, 2, 3, 4][3 - support] ?? 1);
+
+            p.firstCheckOk = p.introStuck === true ? false : null;
+            p.unaidedOk = p.bareRecallOk ?? p.hookRecallOk ?? null;
+            p.produceOk = p.firstProduceOk ?? null;
+            p.failCount = p.bareFailCount ?? 0;
+            p.hookRevealCount ??= 0;
+
+            delete p.support;
+            delete p.stage;
+            delete p.deck;
+            delete p.introStuck;
+            delete p.hookRecallOk;
+            delete p.bareRecallOk;
+            delete p.bareFailCount;
+            delete p.firstProduceOk;
+          }),
+      );
   }
+}
+
+/**
+ * Disaridan gelen kaydi bugunku sekle getirir.
+ * Yedek dosyasi v2 oncesinden olabilir — eksik alanlar `undefined` kalirsa
+ * sayimlar ve `??` zincirleri sessizce yanlis calisir.
+ */
+function normalizeProgress(p: Progress): Progress {
+  return {
+    cardId: p.cardId,
+    step: p.step ?? 1,
+    introduced: p.introduced ?? false,
+    introducedAt: p.introducedAt ?? null,
+    firstCheckOk: p.firstCheckOk ?? null,
+    unaidedOk: p.unaidedOk ?? null,
+    produceOk: p.produceOk ?? null,
+    hookRevealCount: p.hookRevealCount ?? 0,
+    failCount: p.failCount ?? 0,
+    due: new Date(p.due),
+    fsrs: {
+      ...p.fsrs,
+      due: new Date(p.fsrs.due),
+      last_review: p.fsrs.last_review ? new Date(p.fsrs.last_review) : undefined,
+    },
+  };
 }
 
 export const db = new AppDB();
@@ -24,12 +137,12 @@ const APP_KEY = 'app';
 
 export const EMPTY_STATE: AppState = {
   onboarded: false,
-  extraNew: null,
+  sound: true,
+  dailyLimit: LIMIT_DEFAULT,
   streakCount: 0,
   freezes: 0,
   days: {},
   lastSessionDate: null,
-  deckTests: {},
 };
 
 export async function getState(): Promise<AppState> {
@@ -45,12 +158,15 @@ export async function setState(patch: Partial<AppState>): Promise<AppState> {
 
 /**
  * Seans tamamlaninca cagrilir: gunluk etkinligi kaydeder ve seriyi isler.
- * Donen `freezeUsed`, koruma hakkinin harcandigini soyler — kullaniciya
- * bunu soylemek gerek, yoksa serinin nasil korundugu sihir gibi gorunur.
+ *
+ * Artik tek tur seans var (ders), o yuzden tek sayi. `days` kaydi eski
+ * {tekrar, yeni} ayrimini sekil olarak koruyor — isi haritasi ikisini
+ * zaten topluyor ve eski kayitlar bozulmasin.
  */
 export async function logSession(
-  kind: 'intro' | 'review',
   count: number,
+  dogru = 0,
+  yanlis = 0,
   now = new Date(),
 ): Promise<AppState & { freezeUsed: boolean }> {
   const state = await getState();
@@ -60,44 +176,29 @@ export async function logSession(
   const gun = state.days[key] ?? { r: 0, i: 0 };
   const days = {
     ...state.days,
-    [key]: kind === 'intro' ? { ...gun, i: gun.i + count } : { ...gun, r: gun.r + count },
+    [key]: {
+      ...gun,
+      r: gun.r + count,
+      d: (gun.d ?? 0) + dogru,
+      y: (gun.y ?? 0) + yanlis,
+    },
   };
 
   const next = await setState({ ...streak, days });
   return { ...next, freezeUsed };
 }
 
-export async function recordDeckTest(deck: number, result: DeckTestResult): Promise<AppState> {
-  const state = await getState();
-  const prev = state.deckTests[deck];
-  return setState({
-    deckTests: {
-      ...state.deckTests,
-      // bir kez gecildiyse gecilmis kalir
-      [deck]: { ...result, passedAt: prev?.passedAt ?? result.passedAt },
-    },
-  });
-}
-
 /** Tum ilerlemeyi disa aktar — local-first veri kaybina karsi. */
 export async function exportProgress(): Promise<string> {
   const [progress, state] = await Promise.all([db.progress.toArray(), getState()]);
-  return JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), state, progress }, null, 2);
+  return JSON.stringify({ version: 4, exportedAt: new Date().toISOString(), state, progress }, null, 2);
 }
 
 export async function importProgress(json: string): Promise<void> {
   const parsed = JSON.parse(json) as { state?: AppState; progress?: Progress[] };
   if (!Array.isArray(parsed.progress)) throw new Error('Gecersiz yedek dosyasi');
 
-  const progress = parsed.progress.map((p) => ({
-    ...p,
-    due: new Date(p.due),
-    fsrs: {
-      ...p.fsrs,
-      due: new Date(p.fsrs.due),
-      last_review: p.fsrs.last_review ? new Date(p.fsrs.last_review) : undefined,
-    },
-  }));
+  const progress = parsed.progress.map(normalizeProgress);
 
   await db.transaction('rw', db.progress, db.meta, async () => {
     await db.progress.clear();

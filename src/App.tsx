@@ -1,42 +1,55 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TabBar, type Tab } from './components/TabBar';
-import { CARDS, DAILY_REVIEW_CAP, DECKS, NEW_PER_DAY } from './content';
-import { db, getState, setState } from './db';
-import { todayKey } from './dates';
-import { dueQueue, isTestUnlocked, newCardsToday } from './scheduler';
-import { DeckTest } from './screens/DeckTest';
+import { AHEAD_BATCH, DAILY_REVIEW_CAP } from './content';
+import { db, getState } from './db';
+import {
+  aheadQueue,
+  dueQueue,
+  introducedToday,
+  nextBatch,
+  remainingToday,
+  todaysCards,
+} from './scheduler';
 import { Home } from './screens/Home';
-import { IntroSession } from './screens/IntroSession';
+import { Lesson } from './screens/Lesson';
+import { Practice } from './screens/Practice';
 import { ProgressScreen } from './screens/Progress';
-import { ReviewSession } from './screens/ReviewSession';
 import { SessionDone } from './screens/SessionDone';
 import { Welcome } from './screens/Welcome';
-import { Words } from './screens/Words';
+import { Settings } from './screens/Settings';
+import { Splash } from './screens/Splash';
+import { WordList } from './screens/WordList';
 import type { Card, Progress } from './types';
 
-/** Sekmeli ekranlarin disindaki akislar — alt menu bunlarda gizli. */
+/** Sekmeli ekranlarin disindaki akis — alt menu burada gizli. */
 type Flow =
-  | { name: 'intro'; cards: Card[] }
-  | { name: 'review'; queue: Progress[] }
-  | { name: 'test'; deck: number }
-  | { name: 'done'; kind: 'intro' | 'review'; count: number; streak: number }
+  | { name: 'ders'; yeni: Card[]; tekrar: Progress[]; eslestirmesiz?: boolean }
+  | {
+      name: 'done';
+      count: number;
+      streak: number;
+      dogru: number;
+      toplam: number;
+      ilerleyen: number;
+    }
+  | { name: 'kelimeler' }
   | null;
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('ogren');
   const [flow, setFlow] = useState<Flow>(null);
+  const [egzersizde, setEgzersizde] = useState(false);
 
   const data = useLiveQuery(async () => {
     const [progress, state] = await Promise.all([db.progress.toArray(), getState()]);
     return { progress, state };
   }, []);
 
-  if (!data) return null;
+  if (!data) return <Splash />;
 
   const { progress, state } = data;
   const kapat = () => setFlow(null);
-  const test = (deck: number) => setFlow({ name: 'test', deck });
 
   // Sifirlama sonrasi da buraya dusulur — kullaniciyi kaldigi sekmede
   // degil, basa dondurmek gerek.
@@ -44,56 +57,50 @@ export default function App() {
     return (
       <Welcome
         onDone={() => {
+          /*
+            Ana ekrana degil, DOGRUDAN ilk derse. Bir karar daha eksiliyor:
+            kullanici uygulamayi actiktan ~40 saniye sonra ilk bes kelimesini
+            ogrenmis oluyor. Havuz bostayken paket her zaman ilk BATCH kart.
+          */
           setTab('ogren');
-          kapat();
+          setFlow({ name: 'ders', yeni: nextBatch(progress, state.dailyLimit), tekrar: [] });
         }}
       />
     );
   }
 
-  // --- Akislar: tam ekran, alt menu yok ---
-  if (flow?.name === 'intro') {
+  if (flow?.name === 'ders') {
     return (
-      <IntroSession
-        cards={flow.cards}
+      <Lesson
+        yeniKartlar={flow.yeni}
+        tekrarKuyrugu={flow.tekrar}
+        sound={state.sound}
+        eslestirmesiz={flow.eslestirmesiz}
         onExit={kapat}
-        onFinish={(count, streak) => setFlow({ name: 'done', kind: 'intro', count, streak })}
+        onFinish={(ozet) => setFlow({ name: 'done', ...ozet })}
       />
     );
   }
-  if (flow?.name === 'review') {
-    return (
-      <ReviewSession
-        queue={flow.queue}
-        onExit={kapat}
-        onFinish={(count, streak) => setFlow({ name: 'done', kind: 'review', count, streak })}
-      />
-    );
-  }
-  if (flow?.name === 'test') {
-    return <DeckTest deck={flow.deck} onExit={kapat} />;
+  if (flow?.name === 'kelimeler') {
+    return <WordList progress={progress} onExit={kapat} />;
   }
   if (flow?.name === 'done') {
-    const byId = new Map(progress.map((p) => [p.cardId, p]));
-    const testDeck = DECKS.map((d) => d.n).find(
-      (n) => isTestUnlocked(n, byId) && !state.deckTests[n]?.passedAt,
-    );
     return (
       <SessionDone
-        kind={flow.kind}
         count={flow.count}
         streak={flow.streak}
-        testDeck={testDeck}
+        dogru={flow.dogru}
+        toplam={flow.toplam}
+        ilerleyen={flow.ilerleyen}
         onHome={kapat}
-        onTest={test}
       />
     );
   }
 
-  // --- Sekmeler ---
   const due = dueQueue(progress);
-  const newCards = newCardsToday(progress, new Date(), state.extraNew);
-  const introducedCount = progress.filter((p) => p.introduced).length;
+  const newCards = nextBatch(progress, state.dailyLimit);
+  const bugununKartlari = todaysCards(progress);
+  const ahead = aheadQueue(progress, AHEAD_BATCH);
 
   return (
     <>
@@ -103,21 +110,33 @@ export default function App() {
           state={state}
           due={due}
           newCards={newCards}
-          moreLeft={introducedCount < CARDS.length}
-          onReview={() => setFlow({ name: 'review', queue: due.slice(0, DAILY_REVIEW_CAP) })}
-          onIntro={() => setFlow({ name: 'intro', cards: newCards })}
-          onMoreNew={() => {
-            const today = todayKey();
-            const had = state.extraNew?.date === today ? state.extraNew.count : 0;
-            void setState({ extraNew: { date: today, count: had + NEW_PER_DAY } });
-          }}
-          onTest={test}
+          todayCount={introducedToday(progress)}
+          remaining={remainingToday(progress, state.dailyLimit)}
+          todaysCount={bugununKartlari.length}
+          aheadCount={ahead.length}
+          onStart={() =>
+            setFlow({ name: 'ders', yeni: newCards, tekrar: due.slice(0, DAILY_REVIEW_CAP) })
+          }
+          onQuickReview={() =>
+            setFlow({ name: 'ders', yeni: [], tekrar: bugununKartlari, eslestirmesiz: true })
+          }
+          onPractice={() => setFlow({ name: 'ders', yeni: [], tekrar: ahead })}
         />
       )}
-      {tab === 'kelimeler' && <Words progress={progress} />}
-      {tab === 'ilerleme' && <ProgressScreen state={state} progress={progress} />}
+      {tab === 'egzersiz' && (
+        <Practice progress={progress} sound={state.sound} onRunning={setEgzersizde} />
+      )}
+      {tab === 'ilerleme' && (
+        <ProgressScreen
+          state={state}
+          progress={progress}
+          onWords={() => setFlow({ name: 'kelimeler' })}
+        />
+      )}
+      {tab === 'ayarlar' && <Settings state={state} progress={progress} />}
 
-      <TabBar active={tab} onChange={setTab} />
+      {/* Egzersiz kosarken menu gizlenir: tam ekran odak, ve dugmeler menunun altinda kalmaz */}
+      {!egzersizde && <TabBar active={tab} onChange={setTab} />}
     </>
   );
 }

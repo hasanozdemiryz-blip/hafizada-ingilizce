@@ -98,3 +98,4 @@ describe('gunluk takip', () => {
     expect(lastNDays(84)).toHaveLength(84);
   });
 });
+

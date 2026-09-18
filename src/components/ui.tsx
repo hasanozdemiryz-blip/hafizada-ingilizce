@@ -1,12 +1,37 @@
 import type { ReactNode } from 'react';
+import { seslendir, telaffuzVar } from '../speech';
 import kilit from '../assets/brand/kilit.webp';
+import isaret from '../assets/brand/isaret.webp';
 
 /**
  * Marka kilidi: isaret + isim.
  * brand/kilit-kaynak.png'den uretiliyor — uygulama simgesiyle ayni isaret.
  */
-export function Logo({ className = 'h-7' }: { className?: string }) {
-  return <img src={kilit} alt="Hafızada İngilizce" className={`${className} w-auto`} />;
+/**
+ * Marka.
+ *
+ * `mark` — yalnizca kare isaret. Uygulama ici baslik icin TEK dogru bicim:
+ * yatay kilit (isaret + isim) 28px yuksekliğe sikistiginda yazi ~10px'e
+ * duser ve telefonda okunmaz, isaret de ezilir. Kilitler ~40px altinda
+ * calismaz. Uygulamanin icindeyken zaten hangi uygulamada oldugu belli.
+ *
+ * `full` — kilidin tamami. Yalnizca yer olan yerde (karsilama) ve buyuk.
+ */
+export function Logo({
+  variant = 'mark',
+  className,
+}: {
+  variant?: 'mark' | 'full';
+  className?: string;
+}) {
+  const mark = variant === 'mark';
+  return (
+    <img
+      src={mark ? isaret : kilit}
+      alt="Hafızada İngilizce"
+      className={`${className ?? (mark ? 'h-9' : 'h-12')} w-auto`}
+    />
+  );
 }
 
 export function Screen({ children }: { children: ReactNode }) {
@@ -109,10 +134,43 @@ export function Progressbar({ done, total }: { done: number; total: number }) {
 export function HookChip({ children, big = false }: { children: ReactNode; big?: boolean }) {
   return (
     <span
-      className={`marker word font-semibold text-ink ${big ? 'text-xl' : 'text-base'}`}
+      className={`marker word font-bold text-ink ${big ? 'text-xl' : 'text-base'}`}
     >
       {children}
     </span>
+  );
+}
+
+/**
+ * Telaffuz dugmesi.
+ *
+ * Kancanin ogretemedigi tek sey dogru telaffuz; bu dugme onu verir.
+ * NEREDE gorunecegine cagiran karar verir — kart yuzlerinde yalnizca
+ * kanca ekrandan kalkarken (L1/L0) cikar, bkz. speech.ts.
+ */
+export function SpeakButton({
+  word,
+  size = 'normal',
+}: {
+  word: string;
+  size?: 'normal' | 'small';
+}) {
+  if (!telaffuzVar()) return null;
+  const kucuk = size === 'small';
+  return (
+    <button
+      type="button"
+      aria-label={`${word} nasil okunur`}
+      onClick={(e) => {
+        e.stopPropagation(); // kart yuzunde "cevabi goster"i tetiklemesin
+        seslendir(word);
+      }}
+      className={`shrink-0 inline-flex items-center justify-center rounded-full bg-sunken text-ink-soft transition-all active:scale-90 hover:bg-brand-soft hover:text-brand-deep ${
+        kucuk ? 'h-8 w-8 text-sm' : 'h-11 w-11 text-lg'
+      }`}
+    >
+      🔊
+    </button>
   );
 }
 

@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
@@ -11,6 +11,13 @@ const base = process.env.BASE_PATH ?? '/';
 
 export default defineConfig({
   base,
+
+  /**
+   * macOS, xattr desteklemeyen suruculerde (exFAT USB bellek gibi) her
+   * dosyanin yanina bir `._ad` golgesi birakiyor. Vitest bunlari test
+   * dosyasi sanip parse hatasi veriyor — depodaki hicbir sey bozuk olmasa da.
+   */
+  test: { exclude: ['**/node_modules/**', '**/dist/**', '**/._*'] },
 
   // Telefonda test icin cloudflare tuneli uzerinden servis edilebilsin.
   // Sadece alt alan adlari; genel erisime acmaz.

@@ -1,120 +1,157 @@
-import { useRef } from 'react';
+import { useState } from 'react';
 import { Card, Screen, Streak } from '../components/ui';
 import { TAB_SPACE } from '../components/TabBar';
-import { CARDS, DECKS } from '../content';
-import { FREEZE_MAX, lastNDays, todayKey } from '../dates';
-import { exportProgress, importProgress, resetAll } from '../db';
+import { FREEZE_MAX } from '../dates';
+import { firstCheckRate, produceRate, unaidedRate, weakestHooks } from '../quality';
+import {
+  PENCERELER,
+  activeDays,
+  masteryRate,
+  stepGroups,
+  successRate,
+  type Pencere,
+} from '../score';
 import type { AppState, Progress as ProgressRow } from '../types';
 
-const HAFTA = 12;
-const GUN = HAFTA * 7;
-
-/** Yogunluga gore dolgu — 0 hicbir sey yapilmadi. */
-function tonOf(toplam: number): string {
-  // Bos gun de GORUNUR olmali — beyaz kart ustunde beyaz kare kaybolur
-  if (toplam === 0) return 'bg-line';
-  if (toplam < 5) return 'bg-brand/25';
-  if (toplam < 15) return 'bg-brand/50';
-  if (toplam < 30) return 'bg-brand/75';
-  return 'bg-brand';
-}
-
-const GUN_ADI = ['Pt', '', 'Ça', '', 'Cu', '', 'Pz'];
-
+/**
+ * ILERLEME — profil.
+ *
+ * Once burada 12 haftalik bir isi haritasi vardi. Kaldirildi:
+ *   · Serinin zaten soyledigi seyi 84 kareyle tekrar ediyordu
+ *   · "Seri: odul var, ceza yok" ilkesine aykiriydi — bos kareler bir
+ *     kacirilan gunler defteriydi, yeni baslayan biri hiclik duvari goruyordu
+ *   · Telefon genisligine sigmiyor, kenarlari kirpiliyordu
+ *   · Ve en onemlisi: CALISTIGINI gosteriyordu, NE KADAR IYI calistigini degil
+ *
+ * Duzenlilik bilgisi Basari panelinde tek satira indi.
+ */
 export function ProgressScreen({
   state,
   progress,
+  onWords,
 }: {
   state: AppState;
   progress: ProgressRow[];
+  onWords: () => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
-  const gunler = lastNDays(GUN);
-  const bugun = todayKey();
+  const [pencere, setPencere] = useState<Pencere>('hafta');
 
   const ogrenilen = progress.filter((p) => p.introduced).length;
-  const aktifGun = gunler.filter((g) => {
-    const d = state.days[g];
-    return d && d.r + d.i > 0;
-  }).length;
-
   const toplamTekrar = Object.values(state.days).reduce((a, d) => a + d.r, 0);
-  const bitenDeste = DECKS.filter((d) => state.deckTests[d.n]?.passedAt).length;
 
-  // Kanca kalite sinyalleri — icerigi veriyle duzeltmek icin
-  const tutmadi = progress.filter((p) => p.introStuck).length;
-  const kancaAcilan = progress.filter((p) => p.hookRevealCount > 0).length;
-  const ilkHatirlama = progress.filter((p) => p.firstRecallOk !== null);
-  const tuttuOran = ilkHatirlama.length
-    ? Math.round((ilkHatirlama.filter((p) => p.firstRecallOk).length / ilkHatirlama.length) * 100)
-    : null;
+  const basari = successRate(state.days, pencere);
+  const duzen = activeDays(state.days, pencere);
+  const ustalik = masteryRate(progress);
+  const gruplar = stepGroups(progress);
 
-  // 12 sutun x 7 satir, sutun basina bir hafta
-  const sutunlar = Array.from({ length: HAFTA }, (_, i) => gunler.slice(i * 7, i * 7 + 7));
+  const ilkOran = firstCheckRate(progress);
+  const kancasizOran = unaidedRate(progress);
+  const uretimOran = produceRate(progress);
+  const zayiflar = weakestHooks(progress);
+
+  const grupToplam = gruplar.tanima + gruplar.gecis + gruplar.uretim;
+  const pay = (n: number) => (grupToplam > 0 ? (n / grupToplam) * 100 : 0);
 
   return (
     <Screen>
       <header className="flex items-center justify-between h-14 shrink-0">
-        <span className="word text-lg font-semibold">İlerleme</span>
+        <span className="word text-lg font-bold">İlerleme</span>
         {state.streakCount > 0 && <Streak count={state.streakCount} />}
       </header>
 
       <div className={`flex-1 flex flex-col gap-3 ${TAB_SPACE}`}>
-        <div className="grid grid-cols-2 gap-3">
-          <Kutu buyuk={String(ogrenilen)} kucuk={`/ ${CARDS.length} kelime`} />
-          <Kutu buyuk={String(state.streakCount)} kucuk="günlük seri" />
-          <Kutu buyuk={String(toplamTekrar)} kucuk="toplam tekrar" />
-          <Kutu buyuk={`${bitenDeste}/${DECKS.length}`} kucuk="deste tamam" />
-        </div>
-
-        <Card className="rise">
-          <div className="flex items-baseline justify-between mb-3">
-            <h2 className="text-sm font-bold text-ink-soft">Son 12 hafta</h2>
-            <span className="text-xs text-ink-faint tabular-nums">{aktifGun} gün çalıştın</span>
+        <button
+          onClick={onWords}
+          className="rise rounded-card bg-gradient-to-br from-ink to-[#2c3d5c] p-5 text-left text-white shadow-[var(--shadow-lift)] transition-all active:scale-[0.98]"
+        >
+          <div className="flex items-center gap-4">
+            <span className="text-3xl leading-none">📖</span>
+            <span className="min-w-0 flex-1">
+              <span className="word block text-xl font-extrabold">Kelimeler</span>
+              <span className="block text-sm text-white/70 mt-0.5">
+                Öğrendiklerin, kancalarıyla · ara ve filtrele
+              </span>
+            </span>
+            <span className="text-xl text-white/60">›</span>
           </div>
+        </button>
 
-          <div className="flex gap-1.5">
-            <div className="flex flex-col gap-[3px] pr-1">
-              {GUN_ADI.map((g, i) => (
-                <span
-                  key={i}
-                  className="h-3.5 text-[9px] leading-[0.875rem] text-ink-faint w-4 text-right"
+        {/* --- Basari: donemsel yuzde --- */}
+        <Card className="rise delay-1">
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <h2 className="text-sm font-bold text-ink-soft">Başarı</h2>
+            <div className="flex gap-1 rounded-full bg-sunken p-1">
+              {PENCERELER.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => setPencere(p.id)}
+                  className={`rounded-full px-3 py-1 text-xs font-bold transition-all ${
+                    pencere === p.id ? 'bg-white text-ink shadow-[var(--shadow-soft)]' : 'text-ink-faint'
+                  }`}
                 >
-                  {g}
-                </span>
-              ))}
-            </div>
-            <div className="flex gap-[3px] overflow-x-auto">
-              {sutunlar.map((hafta, i) => (
-                <div key={i} className="flex flex-col gap-[3px]">
-                  {hafta.map((g) => {
-                    const d = state.days[g];
-                    const toplam = d ? d.r + d.i : 0;
-                    return (
-                      <div
-                        key={g}
-                        title={`${g}: ${toplam} kart`}
-                        className={`h-3.5 w-3.5 rounded-[4px] ${tonOf(toplam)} ${
-                          g === bugun ? 'ring-2 ring-ink/40' : ''
-                        }`}
-                      />
-                    );
-                  })}
-                </div>
+                  {p.ad}
+                </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 mt-3 text-[10px] text-ink-faint">
-            <span>az</span>
-            {['bg-line', 'bg-brand/25', 'bg-brand/50', 'bg-brand/75', 'bg-brand'].map((t) => (
-              <div key={t} className={`h-2.5 w-2.5 rounded-[3px] ${t}`} />
-            ))}
-            <span>çok</span>
-          </div>
+          {basari ? (
+            <>
+              <p className="word text-center text-5xl font-extrabold tabular-nums leading-none">
+                %{basari.percent}
+              </p>
+              <p className="text-center text-sm text-ink-soft mt-2">
+                {basari.dogru} doğru · {basari.toplam - basari.dogru} yanlış
+              </p>
+              <div className="h-2.5 w-full rounded-full bg-sunken overflow-hidden mt-4">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-brand to-[#7db2ff] transition-[width] duration-700"
+                  style={{ width: `${basari.percent}%` }}
+                />
+              </div>
+            </>
+          ) : (
+            <p className="text-center text-sm text-ink-faint py-6">
+              Bu dönemde henüz cevap yok.
+            </p>
+          )}
+
+          {/* Duzenlilik — takvimin yerine tek satir */}
+          <p className="text-center text-xs text-ink-faint mt-4">
+            {pencere === 'gun'
+              ? duzen.calisilan > 0
+                ? 'Bugün çalıştın.'
+                : 'Bugün henüz çalışmadın.'
+              : `Son ${duzen.toplam} günde ${duzen.calisilan} gün çalıştın.`}
+          </p>
         </Card>
 
-        <Card className="rise delay-1">
+        {/* --- Sayilar: ortalanmis --- */}
+        <div className="grid grid-cols-2 gap-3">
+          <Kutu buyuk={String(ogrenilen)} kucuk="kelime öğrendin" />
+          <Kutu buyuk={ustalik === null ? '—' : `%${ustalik}`} kucuk="ustalık" />
+          <Kutu buyuk={String(state.streakCount)} kucuk="günlük seri" />
+          <Kutu buyuk={String(toplamTekrar)} kucuk="toplam çalışma" />
+        </div>
+
+        {/* --- Ustalik dagilimi: uc anlamli grup --- */}
+        {grupToplam > 0 && (
+          <Card className="rise delay-2">
+            <h2 className="text-sm font-bold text-ink-soft mb-3">Kelimelerin nerede</h2>
+            <div className="flex h-3 w-full overflow-hidden rounded-full bg-sunken">
+              <div className="bg-brand transition-all" style={{ width: `${pay(gruplar.tanima)}%` }} />
+              <div className="bg-spark transition-all" style={{ width: `${pay(gruplar.gecis)}%` }} />
+              <div className="bg-grow transition-all" style={{ width: `${pay(gruplar.uretim)}%` }} />
+            </div>
+            <div className="flex flex-wrap justify-between gap-2 mt-3 text-xs">
+              <Efsane renk="bg-brand" ad="Tanıma" sayi={gruplar.tanima} alt="görünce anlıyorum" />
+              <Efsane renk="bg-spark" ad="Geçiş" sayi={gruplar.gecis} alt="seçebiliyorum" />
+              <Efsane renk="bg-grow" ad="Üretim" sayi={gruplar.uretim} alt="yazabiliyorum" />
+            </div>
+          </Card>
+        )}
+
+        <Card className="rise delay-2">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-bold">Seri koruma</p>
@@ -124,10 +161,7 @@ export function ProgressScreen({
             </div>
             <div className="flex gap-1 shrink-0 ml-3">
               {Array.from({ length: FREEZE_MAX }, (_, i) => (
-                <span
-                  key={i}
-                  className={`text-2xl ${i < state.freezes ? '' : 'grayscale opacity-25'}`}
-                >
+                <span key={i} className={`text-2xl ${i < state.freezes ? '' : 'grayscale opacity-25'}`}>
                   ❄️
                 </span>
               ))}
@@ -136,109 +170,101 @@ export function ProgressScreen({
         </Card>
 
         {/*
-          Kancalarin gercekte tutup tutmadigi — icerigi veriyle duzeltmek icin.
-          "Tutmadi" sinyali daha tanisma aninda olusuyor, o yuzden panel
-          tekrar beklemeden gorunur.
+          Kancalarin gercekte tutup tutmadigi.
+          Olcumun NEREDE yapildigi onemli — bkz. quality.ts.
         */}
         {ogrenilen > 0 && (
-          <Card className="rise delay-2">
+          <Card className="rise delay-3">
             <h2 className="text-sm font-bold text-ink-soft mb-3">Kancalar nasıl gidiyor</h2>
-            <Satir ad="İlk tekrarda hatırlanan" deger={tuttuOran === null ? '—' : `%${tuttuOran}`} />
-            <Satir ad="“Tutmadı” dediklerin" deger={String(tutmadi)} />
-            <Satir ad="Kancaya baktığın kartlar" deger={String(kancaAcilan)} />
+            <Satir
+              ad="İlk denemede tuttu"
+              deger={ilkOran ? `%${ilkOran.percent}` : '—'}
+              alt={ilkOran ? `${ilkOran.of} kartta ölçüldü` : 'henüz öğrenme testi yapılmadı'}
+            />
+            <Satir
+              ad="Kanca ekrandan kalkınca durdu"
+              deger={kancasizOran ? `%${kancasizOran.percent}` : '—'}
+              alt={
+                kancasizOran
+                  ? `${kancasizOran.of} kartta ölçüldü — kancanın gerçek sınavı`
+                  : 'kartlar henüz 3. basamağa gelmedi'
+              }
+            />
+            <Satir
+              ad="İlk yazmada üretildi"
+              deger={uretimOran ? `%${uretimOran.percent}` : '—'}
+              alt={uretimOran ? `${uretimOran.of} kartta ölçüldü` : 'kartlar henüz yazma basamağına gelmedi'}
+            />
           </Card>
         )}
 
-        {/*
-          Veri islemleri. Ana ekrandaydi ama alt menu ustunu kapatiyordu;
-          zaten ayar olduklari icin yeri burasi.
-        */}
-        <Card className="rise delay-3">
-          <h2 className="text-sm font-bold text-ink-soft mb-1">Verilerim</h2>
-          <p className="text-sm text-ink-soft mb-3">
-            İlerleme sadece bu cihazda tutuluyor. Taşımak veya korumak için yedek al.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Kucuk onClick={() => void disaAktar()}>Yedek al</Kucuk>
-            <Kucuk onClick={() => fileRef.current?.click()}>Geri yükle</Kucuk>
-            <Kucuk
-              tehlike
-              onClick={() => {
-                if (confirm('Tüm ilerleme silinecek. Emin misin?')) void resetAll();
-              }}
-            >
-              Sıfırla
-            </Kucuk>
-          </div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (f) void iceAktar(f);
-            }}
-          />
-        </Card>
+        {zayiflar.length > 0 && (
+          <Card className="rise delay-3">
+            <h2 className="text-sm font-bold text-ink-soft mb-1">Gözden geçirilecek kancalar</h2>
+            <p className="text-sm text-ink-soft mb-3">
+              En çok zorlandıkların. Kanca zayıfsa kart değil kanca değişmeli.
+            </p>
+            <ul className="flex flex-col divide-y divide-line">
+              {zayiflar.map(({ card, reason }) => (
+                <li key={card.id} className="py-2.5 flex items-baseline justify-between gap-3">
+                  <span className="shrink-0">
+                    <span className="word font-semibold">{card.en}</span>
+                    <span className="text-ink-faint"> ≈ </span>
+                    <span className="font-semibold bg-spark/55 rounded px-1">{card.hook}</span>
+                  </span>
+                  <span className="text-xs text-ink-faint text-right">{reason}</span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
       </div>
     </Screen>
   );
 }
 
-async function disaAktar() {
-  const url = URL.createObjectURL(new Blob([await exportProgress()], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `hafizada-yedek-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-async function iceAktar(file: File) {
-  try {
-    await importProgress(await file.text());
-  } catch {
-    alert('Yedek dosyası okunamadı.');
-  }
-}
-
-function Kucuk({
-  children,
-  onClick,
-  tehlike,
+function Efsane({
+  renk,
+  ad,
+  sayi,
+  alt,
 }: {
-  children: React.ReactNode;
-  onClick: () => void;
-  tehlike?: boolean;
+  renk: string;
+  ad: string;
+  sayi: number;
+  alt: string;
 }) {
   return (
-    <button
-      onClick={onClick}
-      className={`rounded-full px-4 py-2 text-sm font-bold transition-all active:scale-95 ${
-        tehlike ? 'bg-blush-soft text-[#c2417f]' : 'bg-sunken text-ink'
-      }`}
-    >
-      {children}
-    </button>
+    <span className="flex-1 min-w-[5.5rem]">
+      <span className="flex items-center gap-1.5">
+        <span className={`h-2 w-2 rounded-full ${renk}`} />
+        <span className="font-bold">{ad}</span>
+        <span className="tabular-nums text-ink-soft">{sayi}</span>
+      </span>
+      <span className="block text-[10px] text-ink-faint mt-0.5 ml-3.5">{alt}</span>
+    </span>
   );
 }
 
+/** Sayilar ORTALI — once sola yaslidilar ve kutular dengesiz duruyordu. */
 function Kutu({ buyuk, kucuk }: { buyuk: string; kucuk: string }) {
   return (
-    <div className="rise rounded-card bg-white p-4 shadow-[var(--shadow-soft)]">
-      <p className="word text-3xl font-semibold tabular-nums leading-none">{buyuk}</p>
+    <div className="rise rounded-card bg-white p-4 text-center shadow-[var(--shadow-soft)]">
+      <p className="word text-3xl font-extrabold tabular-nums leading-none">{buyuk}</p>
       <p className="text-xs text-ink-soft mt-1.5">{kucuk}</p>
     </div>
   );
 }
 
-function Satir({ ad, deger }: { ad: string; deger: string }) {
+/** `alt` paydayi soyler — %100'un 2 karta mi 40 karta mi dayandigi onemli. */
+function Satir({ ad, deger, alt }: { ad: string; deger: string; alt?: string }) {
   return (
-    <div className="flex items-center justify-between py-1.5 text-sm">
-      <span className="text-ink-soft">{ad}</span>
-      <span className="font-bold tabular-nums">{deger}</span>
+    <div className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
+      <span>
+        <span className="text-ink-soft">{ad}</span>
+        {alt && <span className="block text-xs text-ink-faint mt-0.5">{alt}</span>}
+      </span>
+      <span className="font-bold tabular-nums shrink-0">{deger}</span>
     </div>
   );
 }

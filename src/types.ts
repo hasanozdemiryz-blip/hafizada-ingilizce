@@ -17,51 +17,79 @@ export type Card = {
 };
 
 /**
- * Destek seviyesi — asamali iskele.
- * 3: gorsel + kelime + kanca + cumle   (Tanis sonrasi)
- * 2: gorsel + kelime + kanca           (cumle dustu)
- * 1: kelime + kanca                    (gorsel dustu)
- * 0: sadece kelime                     (ciplak)
+ * Egzersiz merdiveni — kelimenin tek ilerleme ekseni.
+ *
+ * Her basamak hem SORUNUN TIPINI hem EKRANDAKI YARDIMI belirler. Once iki
+ * ayri eksen vardi (destek seviyesi + asama); tek merdiven hem kullanici
+ * icin anlasilir hem kodda tek kavram.
+ *
+ *   1 Eslestirme      5 kelime <-> 5 karsilik      gorsel + kanca ekranda
+ *   2 Coktan secmeli  `sell` -> 4 sik              gorsel + kanca ekranda
+ *   3 Ters secmeli    `satmak` -> 4 sik            kanca yalnizca IPUCU
+ *   4 Harf dizme      `satmak` -> l·e·s·l          kanca yalnizca IPUCU
+ *   5 Yazma           `satmak` -> yaz              kanca yalnizca IPUCU
+ *   6 Dinleme         🔊 -> yaz                    kanca yalnizca IPUCU
+ *
+ * 1-2 tanima, 3-4 gecis, 5-6 uretim. Kullanilabilir kelime hazinesi
+ * uretim tarafinda olusur, o yuzden merdiven tanimada bitmez.
  */
-export type SupportLevel = 0 | 1 | 2 | 3;
+export type Step = 1 | 2 | 3 | 4 | 5 | 6;
 
 /** Kullanici ilerlemesi. IndexedDB'de, cihazda. */
 export type Progress = {
   cardId: string;
-  deck: number;
   fsrs: FSRSCard;
-  support: SupportLevel;
+  /** Merdivendeki basamak. Yardimsiz dogru cikarir, yanlis indirir. */
+  step: Step;
   introduced: boolean;
-  /** ISO tarih — gunluk yeni kart limiti ve olcum icin */
+  /** ISO tarih — gunluk sayim ve olcum icin */
   introducedAt: string | null;
-  /** Tanis'ta "Tutmadi" dendi -> kanca zayifligi sinyali */
-  introStuck: boolean;
-  /** "Kancayi goster"e kac kez basildi -> kanca zayifligi sinyali */
+
+  // --- Icerik kalite sinyalleri (bkz. quality.ts) ---
+  /**
+   * Ogrenme testinde (adim 1-2) ilk deneme tuttu mu.
+   * Once kullaniciya "Kanca tuttu mu?" diye SORULUYORDU; bu bir beyandi.
+   * Artik sorulmuyor, olculuyor.
+   */
+  firstCheckOk: boolean | null;
+  /**
+   * Kanca ekrandan kalktiktan SONRA (adim >= 3) ilk kez yardimsiz bilindi mi.
+   * Kancanin gercek sinavi: anlami kendi basina geri getiriyor mu.
+   */
+  unaidedOk: boolean | null;
+  /** Ilk yazma denemesi (adim 5) tuttu mu — tanima degil uretim sinyali */
+  produceOk: boolean | null;
+  /** Kanca ipucuna kac kez basildi (adim >= 3) */
   hookRevealCount: number;
-  /** Ilk gercek tekrarda hatirlandi mi -> "haa" oldu mu sinyali */
-  firstRecallOk: boolean | null;
+  /** Adim >= 3'te kac kez dusuldu */
+  failCount: number;
+
   /** fsrs.due aynasi — Dexie index'i icin */
   due: Date;
-};
-
-export type DeckTestResult = {
-  score: number;
-  total: number;
-  passedAt: string | null;
-  lastAttemptAt: string;
 };
 
 export type AppState = {
   /** Karsilama ekrani goruldu mu */
   onboarded: boolean;
-  /** Gunluk yeni kelime butcesine bugun eklenen ekstra */
-  extraNew: { date: string; count: number } | null;
+  /**
+   * Telaffuz sesi. Cevap acilinca kendiliginden calar; otobuste/derste
+   * aniden ses cikmasin diye kapatilabilir. Dugmeye basarak dinlemek
+   * bu ayardan bagimsiz, her zaman calisir.
+   */
+  sound: boolean;
+  /** Gunluk yeni kelime hedefi (5/10/15). LIMIT_MAX asilamaz. */
+  dailyLimit: number;
   streakCount: number;
   /** Seri koruma hakki. 7 gunde bir kazanilir, en fazla 2 tutulur. */
   freezes: number;
-  /** Gunluk etkinlik: tarih -> { r: tekrar, i: yeni kelime } */
-  days: Record<string, { r: number; i: number }>;
+  /**
+   * Gunluk etkinlik: tarih -> { r: calisilan kart, i: yeni kelime,
+   * d: dogru cevap, y: yanlis cevap }
+   *
+   * `d`/`y` basari yuzdesi icin. Once yalnizca KAC kart calisildigi
+   * tutuluyordu; "ne kadari dogruydu" sorusunun cevabi hicbir yerde yoktu.
+   */
+  days: Record<string, { r: number; i: number; d?: number; y?: number }>;
   /** YYYY-MM-DD, yerel saat */
   lastSessionDate: string | null;
-  deckTests: Record<number, DeckTestResult>;
 };

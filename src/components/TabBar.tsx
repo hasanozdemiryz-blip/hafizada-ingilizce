@@ -1,38 +1,32 @@
-export type Tab = 'ogren' | 'kelimeler' | 'ilerleme';
+export type Tab = 'ogren' | 'egzersiz' | 'ilerleme' | 'ayarlar';
 
 const TABS: { id: Tab; ad: string; ikon: string }[] = [
-  { id: 'ogren', ad: 'Öğren', ikon: '◉' },
-  { id: 'kelimeler', ad: 'Kelimelerim', ikon: '☰' },
-  { id: 'ilerleme', ad: 'İlerleme', ikon: '▦' },
+  { id: 'ogren', ad: 'Öğren', ikon: '🌱' },
+  { id: 'egzersiz', ad: 'Egzersiz', ikon: '🎯' },
+  { id: 'ilerleme', ad: 'İlerleme', ikon: '📊' },
+  { id: 'ayarlar', ad: 'Ayarlar', ikon: '⚙️' },
 ];
 
-/** Alt menu yalnizca sekmeli ekranlarda; seans akislarinda gizli. */
+/** Alt menunun kaplayacagi yer — icerik altinda kalmasin diye. */
+export const TAB_SPACE = 'pb-28';
+
 export function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-20 flex justify-center pointer-events-none">
-      <div className="w-full max-w-md px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-auto">
-        <div className="flex bg-white rounded-full p-1.5 shadow-[0_-2px_30px_-10px_rgba(22,35,58,0.35)]">
-          {TABS.map((t) => {
-            const on = t.id === active;
-            return (
-              <button
-                key={t.id}
-                onClick={() => onChange(t.id)}
-                aria-current={on ? 'page' : undefined}
-                className={`flex-1 rounded-full py-2.5 text-xs font-bold transition-all active:scale-95 ${
-                  on ? 'bg-brand text-white' : 'text-ink-faint hover:text-ink-soft'
-                }`}
-              >
-                <span className="block text-base leading-none mb-0.5">{t.ikon}</span>
-                {t.ad}
-              </button>
-            );
-          })}
-        </div>
+    <nav className="fixed inset-x-0 bottom-0 z-10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="mx-auto flex max-w-md gap-1 rounded-full bg-white/90 p-1.5 shadow-[var(--shadow-lift)] backdrop-blur">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => onChange(t.id)}
+            className={`flex-1 rounded-full py-2 text-[11px] font-bold transition-all active:scale-95 ${
+              active === t.id ? 'bg-brand text-white' : 'text-ink-faint'
+            }`}
+          >
+            <span className="block text-base leading-none mb-0.5">{t.ikon}</span>
+            {t.ad}
+          </button>
+        ))}
       </div>
     </nav>
   );
 }
-
-/** Alt menunun kapattigi alan kadar bosluk */
-export const TAB_SPACE = 'pb-28';

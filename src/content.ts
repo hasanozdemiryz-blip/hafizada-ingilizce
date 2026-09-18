@@ -1,13 +1,39 @@
 import raw from '../content/cards.json';
+import { normalize } from './answer';
 import type { Card } from './types';
 
-export const DECK_SIZE = 10;
-export const NEW_PER_DAY = 5;
+/**
+ * Bir seferde tanisilan kelime sayisi.
+ *
+ * Gunluk TAVAN degil: paket bitince "5 kelime daha" ile devam edilebilir.
+ * Birim 5 cunku bes kelime bir oturumda kodlanabilecek makul yuk;
+ * fazlasi kancalari birbirine karistiriyor.
+ */
+export const BATCH = 5;
+
+/**
+ * Gunluk yeni kelime hedefi. Ayarlardan secilir, TAVAN asilamaz.
+ *
+ * Once tavan yoktu ve isteyen istedigi kadar ilerliyordu; sonucu tekrar
+ * borcunun sessizce sismesiydi. Gunde 15'in ustu, ertesi gun kaldirilamayan
+ * bir tekrar yigini demek — sinir pedagojik, keyfi degil.
+ */
+export const LIMIT_CHOICES = [5, 10, 15] as const;
+export const LIMIT_DEFAULT = 10;
+export const LIMIT_MAX = 15;
+
+/** "Eski kelimeler" kapsami: bu kadar gun once tanisilmis olanlar. */
+export const ESKI_GUN = 7;
+
 /** Gunluk tavan. Birikmis borc kullaniciya HIC gosterilmez — bkz. Home. */
 export const DAILY_REVIEW_CAP = 40;
-/** Deste testinin acilmasi icin her kartin gormesi gereken tekrar sayisi */
-export const TEST_UNLOCK_REPS = 2;
-export const TEST_PASS_SCORE = 8;
+
+/**
+ * "Simdi tekrarla" partisi. Vadesi gelmemis kartlardan kac tanesi one alinir.
+ * Kucuk tutuluyor: amac butun havuzu ogutmek degil, calismak isteyen
+ * kullaniciya bir kapi acmak.
+ */
+export const AHEAD_BATCH = 10;
 
 const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[^a-zçğıöşü]/g, '');
 
@@ -44,17 +70,17 @@ const frekansSirasi = (raw as Card[])
 /**
  * v1 seti: 100 "Tutan" kart. "Kurtarilabilir" olanlar 2. set icin bekliyor.
  *
- * Siralama siklik sirasi — TEK istisna: Deste 1'e zayif kanca girmez.
+ * Siralama siklik sirasi — TEK istisna: ilk bes karta zayif kanca girmez.
  * Uygulamayi ilk acan insanin gordugu ilk on kart, yontemin ne yaptigini
- * anlatan kartlar olmali. Zayif kancalar Deste 1'in hemen arkasina kayar,
+ * anlatan kartlar olmali. Zayif kancalar ilk besin hemen arkasina kayar,
  * geri kalan her sey siklik sirasinda kalir.
  */
 export const CARDS: Card[] = (() => {
   const guclu = frekansSirasi.filter((c) => !zayifKanca(c));
   const zayif = frekansSirasi.filter(zayifKanca);
-  const deste1 = guclu.slice(0, DECK_SIZE);
-  const kalan = [...guclu.slice(DECK_SIZE), ...zayif].sort((a, b) => a.order - b.order);
-  return [...deste1, ...kalan].map((c, i) => ({
+  const ilkGrup = guclu.slice(0, BATCH);
+  const kalan = [...guclu.slice(BATCH), ...zayif].sort((a, b) => a.order - b.order);
+  return [...ilkGrup, ...kalan].map((c, i) => ({
     ...c,
     order: i + 1,
     image: GORSELLER.get(c.id) ?? null,
@@ -68,18 +94,18 @@ export const CARD_BY_ID = new Map(CARDS.map((c) => [c.id, c]));
  * Deste 1'in disindan secilir ki kullanici ayni karti iki kez "yeni" gormesin.
  */
 export const SHOWCASE_CARD =
-  CARDS.find((c) => c.id === 'snake' && c.order > DECK_SIZE) ?? CARDS[DECK_SIZE];
+  CARDS.find((c) => c.id === 'snake' && c.order > BATCH) ?? CARDS[BATCH];
 
-export const deckOf = (order: number) => Math.floor((order - 1) / DECK_SIZE) + 1;
 
-export const DECK_COUNT = Math.ceil(CARDS.length / DECK_SIZE);
 
-export const DECKS: { n: number; cards: Card[] }[] = Array.from(
-  { length: DECK_COUNT },
-  (_, i) => ({
-    n: i + 1,
-    cards: CARDS.filter((c) => deckOf(c.order) === i + 1),
-  }),
-);
 
-export const cardsOfDeck = (n: number) => DECKS[n - 1]?.cards ?? [];
+
+/**
+ * Setteki tum Ingilizce kelimeler, normalize halde.
+ * Yazilan cevabin "yazim hatasi mi, baska bir kelime mi" ayrimi icin —
+ * bkz. answer.ts `judge`.
+ */
+export const EN_HAVUZ: ReadonlySet<string> = new Set(CARDS.map((c) => normalize(c.en, 'en')));
+
+/** Ayni is, Turkce yonu icin — EN -> TR sorularinda kullanilir. */
+export const TR_HAVUZ: ReadonlySet<string> = new Set(CARDS.map((c) => normalize(c.tr, 'tr')));
