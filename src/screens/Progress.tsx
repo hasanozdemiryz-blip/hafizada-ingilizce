@@ -4,9 +4,9 @@ import { TAB_SPACE } from '../components/TabBar';
 import { FREEZE_MAX } from '../dates';
 import {
   PENCERELER,
+  abilities,
   activeDays,
   masteryRate,
-  stepGroups,
   successRate,
   type Pencere,
 } from '../score';
@@ -41,11 +41,9 @@ export function ProgressScreen({
   const basari = successRate(state.days, pencere);
   const duzen = activeDays(state.days, pencere);
   const ustalik = masteryRate(progress);
-  const gruplar = stepGroups(progress);
+  const yetenek = abilities(progress);
 
 
-  const grupToplam = gruplar.tanima + gruplar.gecis + gruplar.uretim;
-  const pay = (n: number) => (grupToplam > 0 ? (n / grupToplam) * 100 : 0);
 
   return (
     <Screen>
@@ -129,19 +127,29 @@ export function ProgressScreen({
           <Kutu buyuk={String(toplamTekrar)} kucuk="toplam çalışma" />
         </div>
 
-        {/* --- Ustalik dagilimi: uc anlamli grup --- */}
-        {grupToplam > 0 && (
+        {/* --- Neler yapabiliyorsun: BIRIKIMLI --- */}
+        {yetenek.toplam > 0 && (
           <Card className="rise delay-2">
-            <h2 className="text-sm font-bold text-ink-soft mb-3">Kelimelerin nerede</h2>
-            <div className="flex h-3 w-full overflow-hidden rounded-full bg-sunken">
-              <div className="bg-brand transition-all" style={{ width: `${pay(gruplar.tanima)}%` }} />
-              <div className="bg-spark transition-all" style={{ width: `${pay(gruplar.gecis)}%` }} />
-              <div className="bg-grow transition-all" style={{ width: `${pay(gruplar.uretim)}%` }} />
-            </div>
-            <div className="flex flex-wrap justify-between gap-2 mt-3 text-xs">
-              <Efsane renk="bg-brand" ad="Tanıma" sayi={gruplar.tanima} alt="görünce anlıyorum" />
-              <Efsane renk="bg-spark" ad="Geçiş" sayi={gruplar.gecis} alt="seçebiliyorum" />
-              <Efsane renk="bg-grow" ad="Üretim" sayi={gruplar.uretim} alt="yazabiliyorum" />
+            <h2 className="text-sm font-bold text-ink-soft mb-3">Neler yapabiliyorsun</h2>
+            <div className="flex flex-col gap-3">
+              <Yetenek
+                ad="Görünce anlıyorum"
+                sayi={yetenek.taniyor}
+                toplam={yetenek.toplam}
+                renk="bg-brand"
+              />
+              <Yetenek
+                ad="Türkçesinden seçebiliyorum"
+                sayi={yetenek.seciyor}
+                toplam={yetenek.toplam}
+                renk="bg-spark"
+              />
+              <Yetenek
+                ad="Baştan yazabiliyorum"
+                sayi={yetenek.yaziyor}
+                toplam={yetenek.toplam}
+                renk="bg-grow"
+              />
             </div>
           </Card>
         )}
@@ -169,26 +177,38 @@ export function ProgressScreen({
   );
 }
 
-function Efsane({
-  renk,
+/**
+ * Birikimli beceri satiri. Ust basamaktaki kelime alttakileri de
+ * yapabildigi icin cubuklar ic ice dolar — asagi indikce kisalir.
+ */
+function Yetenek({
   ad,
   sayi,
-  alt,
+  toplam,
+  renk,
 }: {
-  renk: string;
   ad: string;
   sayi: number;
-  alt: string;
+  toplam: number;
+  renk: string;
 }) {
+  const pct = toplam > 0 ? Math.round((sayi / toplam) * 100) : 0;
   return (
-    <span className="flex-1 min-w-[5.5rem]">
-      <span className="flex items-center gap-1.5">
-        <span className={`h-2 w-2 rounded-full ${renk}`} />
-        <span className="font-bold">{ad}</span>
-        <span className="tabular-nums text-ink-soft">{sayi}</span>
-      </span>
-      <span className="block text-[10px] text-ink-faint mt-0.5 ml-3.5">{alt}</span>
-    </span>
+    <div>
+      <div className="flex items-baseline justify-between gap-3 mb-1.5">
+        <span className="text-sm font-bold">{ad}</span>
+        <span className="text-sm tabular-nums shrink-0">
+          <span className="font-extrabold">{sayi}</span>
+          <span className="text-ink-faint"> / {toplam}</span>
+        </span>
+      </div>
+      <div className="h-2.5 w-full rounded-full bg-sunken overflow-hidden">
+        <div
+          className={`h-full rounded-full ${renk} transition-[width] duration-500`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
   );
 }
 

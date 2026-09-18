@@ -86,6 +86,16 @@ Ders bitişinde seansın kendi oranı, yanında **"N kelime bir basamak
 ilerledi"**. İkincisi daha önemli: doğru cevap vermek ilerlemek demek değil.
 Sıfırsa satır hiç gösterilmez.
 
+### "Kelimelerin nerede" yanıltıcıydı
+
+Panel basamakları birbirini dışlayan üç kutuya bölüyordu. Kullanıcı anlamadı;
+açıklarken asıl sorun çıktı: gösterim **yanlıştı**. *"Tanıma 2"* yazınca
+"sadece 2 kelimeyi tanıyorum" gibi okunuyor, oysa hepsini tanıyor — ikisi o
+basamakta *duruyor*.
+
+Beceri birikimli: 5. basamaktaki kelime 3'ten geçerek geldi. Panel artık
+"Neler yapabiliyorsun" ve sayım birikimli — üç çubuk iç içe doluyor.
+
 ### Kalite panelleri kullanıcıdan çekildi
 
 "Kancalar nasıl gidiyor" ve "Gözden geçirilecek kancalar" İlerleme

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CARDS } from './content';
 import { introduceCard } from './scheduler';
-import { activeDays, masteryRate, stepGroups, successRate } from './score';
+import { abilities, activeDays, masteryRate, successRate } from './score';
 import type { AppState, Progress, Step } from './types';
 
 const NOW = new Date('2026-03-10T09:00:00');
@@ -94,18 +94,43 @@ describe('ustalik', () => {
   });
 });
 
-describe('merdiven gruplari', () => {
-  it('alti basamagi uc anlamli gruba toplar', () => {
-    expect(
-      stepGroups([kart(0, 1), kart(1, 2), kart(2, 3), kart(3, 4), kart(4, 5), kart(5, 6)]),
-    ).toEqual({ tanima: 2, gecis: 2, uretim: 2 });
+describe('yetenekler', () => {
+  /*
+   * Beceri BIRIKIMLI: 5. basamaktaki kelime 3'ten gecerek geldi, yani
+   * onu hem taniyor hem secebiliyor. Once kutular birbirini disliyordu ve
+   * "Tanima 2" yazinca "sadece 2 kelimeyi taniyorum" gibi okunuyordu.
+   */
+  it('ust basamak alttakileri de sayar', () => {
+    const y = abilities([kart(0, 1), kart(1, 3), kart(2, 6)]);
+    expect(y).toEqual({ taniyor: 3, seciyor: 2, yaziyor: 1, toplam: 3 });
+  });
+
+  it('hepsi en ustteyse hepsi her satirda', () => {
+    const y = abilities([kart(0, 6), kart(1, 6)]);
+    expect(y).toEqual({ taniyor: 2, seciyor: 2, yaziyor: 2, toplam: 2 });
+  });
+
+  it('hepsi en alttaysa yalnizca taniyor', () => {
+    const y = abilities([kart(0, 1), kart(1, 2)]);
+    expect(y).toEqual({ taniyor: 2, seciyor: 0, yaziyor: 0, toplam: 2 });
+  });
+
+  // Geri dusen kart artik o beceriyi gosteremiyor demektir.
+  it('geri dusen kart ust beceriden cikar', () => {
+    expect(abilities([kart(0, 2)]).seciyor).toBe(0);
+    expect(abilities([kart(0, 4)]).yaziyor).toBe(0);
   });
 
   it('tanisilmamis kart girmez', () => {
-    expect(stepGroups([{ ...kart(0, 6), introduced: false }])).toEqual({
-      tanima: 0,
-      gecis: 0,
-      uretim: 0,
+    expect(abilities([{ ...kart(0, 6), introduced: false }])).toEqual({
+      taniyor: 0,
+      seciyor: 0,
+      yaziyor: 0,
+      toplam: 0,
     });
+  });
+
+  it('bos girdide hepsi sifir', () => {
+    expect(abilities([])).toEqual({ taniyor: 0, seciyor: 0, yaziyor: 0, toplam: 0 });
   });
 });

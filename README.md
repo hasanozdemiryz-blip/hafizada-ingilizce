@@ -252,9 +252,20 @@ tek dokunuşla değişir. Doğru–yanlış artık **gün bazında** kaydediliyo
 6. basamak %100, ortalaması alınır. "Kaç kelime biliyorum" değil, **"ne kadar
 iyi biliyorum"**.
 
-Altı basamağın dağılımı tek satırlık yığın çubukta, kullanıcının anladığı üç
-grupta: **Tanıma** (görünce anlıyorum) · **Geçiş** (seçebiliyorum) ·
-**Üretim** (yazabiliyorum).
+Altı basamak kullanıcıya **ne yapabildiği** olarak gösterilir, ve sayım
+**birikimlidir**:
+
+```
+Görünce anlıyorum             5 / 5
+Türkçesinden seçebiliyorum    3 / 5
+Baştan yazabiliyorum          1 / 5
+```
+
+Bir ara basamaklar birbirini dışlayan üç kutuya bölünüyordu (1–2 tanıma,
+3–4 geçiş, 5–6 üretim). Yanıltıyordu: *"Tanıma 2"* yazınca "sadece 2 kelimeyi
+tanıyorum" gibi okunuyor, oysa hepsini tanıyor — ikisi o basamakta *duruyor*.
+Beceri birikimli: 5. basamaktaki kelime 3'ten geçerek geldi, yani onu hem
+tanıyor hem seçebiliyor.
 
 > Bir ara burada "Nerede duruyorsun" diye altı satır sayı vardı
 > (`1. Eşleştirme: 7`…). Bu bir **dağılım**dı, bir değerlendirme değil —

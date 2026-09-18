@@ -78,20 +78,36 @@ export function masteryRate(all: Progress[]): number | null {
   return Math.round((toplam / ogrenilen.length) * 100);
 }
 
-export type Gruplar = { tanima: number; gecis: number; uretim: number };
+export type Yetenekler = {
+  /** Gorunce anliyorum */
+  taniyor: number;
+  /** Turkcesinden Ingilizcesini secebiliyorum */
+  seciyor: number;
+  /** Bastan yazabiliyorum */
+  yaziyor: number;
+  toplam: number;
+};
 
 /**
- * Merdivenin uc anlamli grubu.
- * Alti basamagi tek tek gostermek karmasik; tanima/gecis/uretim ayrimi
- * kullanicinin gercekten anladigi sey.
+ * Kullanicinin NE YAPABILDIGI — birikimli.
+ *
+ * Once basamaklar birbirini disliyan uc kutuya boluyordu (1-2 tanima,
+ * 3-4 gecis, 5-6 uretim). Yaniltiyordu: "Tanima 2" yazinca "sadece 2
+ * kelimeyi taniyorum" gibi okunuyor, oysa hepsini taniyor — ikisi o
+ * basamakta DURUYOR.
+ *
+ * Beceri birikimli: 5. basamaktaki kelime 3. basamaktan gecerek geldi,
+ * yani onu hem taniyor hem secebiliyor. Sayim da birikimli olmali.
+ *
+ * Geri dusen kart istisna degil: 5'ten 2'ye dusen kelime artik gercekten
+ * secemiyor demektir, ve `step >= 3` onu dogru sekilde saymiyor.
  */
-export function stepGroups(all: Progress[]): Gruplar {
-  const out: Gruplar = { tanima: 0, gecis: 0, uretim: 0 };
-  for (const p of all) {
-    if (!p.introduced) continue;
-    if (p.step <= 2) out.tanima++;
-    else if (p.step <= 4) out.gecis++;
-    else out.uretim++;
-  }
-  return out;
+export function abilities(all: Progress[]): Yetenekler {
+  const ogrenilen = all.filter((p) => p.introduced);
+  return {
+    taniyor: ogrenilen.length,
+    seciyor: ogrenilen.filter((p) => p.step >= 3).length,
+    yaziyor: ogrenilen.filter((p) => p.step >= 5).length,
+    toplam: ogrenilen.length,
+  };
 }
