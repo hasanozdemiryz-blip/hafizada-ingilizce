@@ -10,7 +10,8 @@
     "import:cards": "node tools/import-xlsx.mjs",
     "icons": "node tools/make-icons.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "import:images": "node tools/import-images.mjs"
   },
   "dependencies": {
     "dexie": "^4.4.6",

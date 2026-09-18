@@ -20,6 +20,8 @@ npm run dev        # http://localhost:5173
 | `npm run preview` | Build'i servis eder (PWA'yı test etmek için tek yol) |
 | `npm test` | Çekirdek mantık testleri (154 test) |
 | `npm run import:cards` | `mnemonik-aday-havuzu.xlsx` → `content/cards.json` |
+| `npm run import:images` | `gorseller/<id>.png` → `src/assets/cards/<id>.webp` (4:3, 800×600) |
+| `npm run import:images -- --brief` | Görseli olmayan kartların brief listesini `gorsel-brief.tsv` olarak döker |
 | `npm run icons` | `brand/kilit-kaynak.png` → tüm ikon ve marka türevleri |
 
 Yeni bilgisayarda: repoyu klonla, `npm install`, `npm run dev`. Başka kurulum yok — backend, API anahtarı, veritabanı yok.
@@ -332,7 +334,12 @@ koşulsuz siliyor. İlerleme sekmesindeki **Yedek al / Geri yükle** ile taşın
 
 **Yapılmadı ve nedeni:**
 
-- **Kart görselleri** — 100'ün 1'i hazır (`snake`). Görseli olmayan kartta brief metni duruyor, akış eksiksiz çalışıyor. Yeni görsel eklemek için tek iş: `src/assets/cards/<kart-id>.webp` — kod veya JSON düzenlemesi yok.
+- **Kart görselleri** — 100'ün 1'i hazır (`snake`). Görseli olmayan kartta brief
+  metni duruyor, akış eksiksiz çalışıyor. Eklemek için: `npm run import:images
+  -- --brief` ile brief listesini al, üretilenleri `gorseller/<kart-id>.png`
+  olarak kaydet, `npm run import:images` çalıştır. Kod veya JSON düzenlemesi yok.
+  *(Havuz dolunca workbox ayarı gözden geçirilmeli: şu an tüm `.webp`
+  precache ediliyor, 100 görsel ≈ 5 MB'lık ilk indirme demek.)*
 - **Hatırlatma bildirimi** — PWA'da kapalıyken bildirim göndermek sunucu gerektiriyor (Web Push). Backend'siz mümkün değil. Aynı sınır ana ekran widget'ı için de geçerli (o native istiyor).
 - **Telaffuz kaydı** — tarayıcının ses sentezi kullanılıyor, kayıt kalitesinde değil. Yetmezse aynı arayüz önceden üretilmiş ses dosyalarına bağlanır; çağrı noktaları değişmez.
 

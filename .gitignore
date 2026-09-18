@@ -7,3 +7,7 @@ dev-dist/
 # macOS'un exFAT/ag suruculerde biraktigi AppleDouble golgeleri. Git bunlari
 # .git/objects icinde gercek pack sanip "non-monotonic index" hatasi veriyor.
 ._*
+
+# Gorsel uretim klasoru — ciktilar import:images ile src/assets/cards altina gecer
+gorseller/
+gorsel-brief.tsv
