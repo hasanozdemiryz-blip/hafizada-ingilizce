@@ -283,9 +283,14 @@ işe yarayıp yaramadığını söylemez. Gerçek sınav 3'te başlar.
 | `hookRevealCount` | Adım ≥ 3 | Kaç kez ipucuna dönüldü |
 | `failCount` | Adım ≥ 3 | Kancasız kaç kez düşüldü |
 
-İlerleme sekmesindeki panel bunları birleştirip **"Gözden geçirilecek kancalar"**
-listesini isimle çıkarır. Oranların yanında kaç karta dayandığı da yazar;
-2 kartlık %100 bir şey söylemez.
+Bu paneller **kullanıcıya gösterilmiyor**, geliştirme panelinde duruyor. İki
+sebeple: öğrenen için gürültü ("kanca ekrandan kalkınca durdu %62" cümlesi
+İngilizce öğrenen birine hiçbir şey söylemiyor), yazar için de tek kişinin
+verisi karar vermeye yetmiyor — bu ölçüm ancak çok kullanıcıdan toplanınca
+anlam kazanır ve local-first olduğu sürece yazara zaten ulaşmıyor.
+
+Sinyaller toplanmaya devam ediyor ve yedeğe giriyor; yalnızca ekrandan çekildi.
+Oranların yanında kaç karta dayandığı da yazar; 2 kartlık %100 bir şey söylemez.
 
 ---
 

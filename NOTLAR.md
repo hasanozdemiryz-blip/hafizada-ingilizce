@@ -86,6 +86,19 @@ Ders bitişinde seansın kendi oranı, yanında **"N kelime bir basamak
 ilerledi"**. İkincisi daha önemli: doğru cevap vermek ilerlemek demek değil.
 Sıfırsa satır hiç gösterilmez.
 
+### Kalite panelleri kullanıcıdan çekildi
+
+"Kancalar nasıl gidiyor" ve "Gözden geçirilecek kancalar" İlerleme
+sekmesindeydi. Kullanıcı ikisini de anlamadığını söyledi — haklıydı, çünkü
+ikisi de **öğrenene değil içerik yazarına** bakıyordu.
+
+İki ayrı sorun vardı: öğrenen için gürültü, yazar için de tek kişinin verisi
+karar vermeye yetmiyor. Bu ölçüm ancak çok kullanıcıdan toplanınca anlam
+kazanır ve local-first olduğu sürece yazara zaten ulaşmıyor.
+
+Sinyaller toplanmaya devam ediyor (yedeğe de giriyor), paneller geliştirme
+panelinde duruyor. Backend geldiğinde asıl yerine oturur.
+
 ### Isı haritası kaldırıldı
 
 12 haftalık takvim: serinin zaten söylediğini 84 kareyle tekrar ediyordu,

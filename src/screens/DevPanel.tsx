@@ -1,4 +1,6 @@
 import { CARDS, BATCH } from '../content';
+import { firstCheckRate, produceRate, unaidedRate, weakestHooks } from '../quality';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { Card } from '../components/ui';
 import type { Progress, Step } from '../types';
@@ -18,6 +20,27 @@ import type { Progress, Step } from '../types';
  * uretim derlemesine tek satiri girmez.
  */
 export function DevPanel() {
+  const progress = useLiveQuery(() => db.progress.toArray(), [], []);
+
+  /**
+   * Kanca kalite sinyalleri.
+   *
+   * Once Ilerleme sekmesinde, kullaniciya gosteriliyordu. Iki sebeple
+   * buraya tasindi:
+   *   · Ogrenen icin gurultu — "kanca ekrandan kalkinca durdu %62" cumlesi
+   *     Ingilizce ogrenen birine hicbir sey soylemiyor
+   *   · Yazar icin de tek kisinin verisi karar vermeye yetmiyor; bu olcum
+   *     ancak cok kullanicidan toplanınca anlam kazanir (local-first oldugu
+   *     surece yazara zaten ulasmiyor)
+   *
+   * Sinyaller toplanmaya devam ediyor ve yedege giriyor; yalnizca ekrandan
+   * cekildi.
+   */
+  const ilk = firstCheckRate(progress);
+  const kancasiz = unaidedRate(progress);
+  const uretim = produceRate(progress);
+  const zayiflar = weakestHooks(progress, 6);
+
   async function ileriSar(gun: number) {
     const ms = gun * 86_400_000;
     const geri = (d: Date) => new Date(d.getTime() - ms);
@@ -88,9 +111,39 @@ export function DevPanel() {
         ))}
       </div>
 
+      <p className="text-xs font-bold text-ink-faint mb-1.5">KANCA KALİTESİ</p>
+      <div className="mb-3 rounded-2xl bg-white/60 p-3 text-xs">
+        <Oran ad="İlk denemede tuttu" v={ilk} />
+        <Oran ad="Kanca kalkınca durdu" v={kancasiz} />
+        <Oran ad="İlk yazmada üretildi" v={uretim} />
+        {zayiflar.length > 0 && (
+          <ul className="mt-2 border-t border-line pt-2">
+            {zayiflar.map(({ card, reason }) => (
+              <li key={card.id} className="flex justify-between gap-2 py-0.5">
+                <span className="font-bold">
+                  {card.en} ≈ {card.hook}
+                </span>
+                <span className="text-ink-faint text-right">{reason}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <p className="text-xs font-bold text-ink-faint mb-1.5">KISAYOL</p>
       <Dugme onClick={() => void desteyiDoldur()}>İlk paketi tanıştır</Dugme>
     </Card>
+  );
+}
+
+function Oran({ ad, v }: { ad: string; v: { percent: number; of: number } | null }) {
+  return (
+    <div className="flex justify-between gap-2 py-0.5">
+      <span className="text-ink-soft">{ad}</span>
+      <span className="tabular-nums font-bold">
+        {v ? `%${v.percent} (${v.of})` : '—'}
+      </span>
+    </div>
   );
 }
 

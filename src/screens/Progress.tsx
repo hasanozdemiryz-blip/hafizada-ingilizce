@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Card, Screen, Streak } from '../components/ui';
 import { TAB_SPACE } from '../components/TabBar';
 import { FREEZE_MAX } from '../dates';
-import { firstCheckRate, produceRate, unaidedRate, weakestHooks } from '../quality';
 import {
   PENCERELER,
   activeDays,
@@ -44,10 +43,6 @@ export function ProgressScreen({
   const ustalik = masteryRate(progress);
   const gruplar = stepGroups(progress);
 
-  const ilkOran = firstCheckRate(progress);
-  const kancasizOran = unaidedRate(progress);
-  const uretimOran = produceRate(progress);
-  const zayiflar = weakestHooks(progress);
 
   const grupToplam = gruplar.tanima + gruplar.gecis + gruplar.uretim;
   const pay = (n: number) => (grupToplam > 0 ? (n / grupToplam) * 100 : 0);
@@ -169,55 +164,6 @@ export function ProgressScreen({
           </div>
         </Card>
 
-        {/*
-          Kancalarin gercekte tutup tutmadigi.
-          Olcumun NEREDE yapildigi onemli — bkz. quality.ts.
-        */}
-        {ogrenilen > 0 && (
-          <Card className="rise delay-3">
-            <h2 className="text-sm font-bold text-ink-soft mb-3">Kancalar nasıl gidiyor</h2>
-            <Satir
-              ad="İlk denemede tuttu"
-              deger={ilkOran ? `%${ilkOran.percent}` : '—'}
-              alt={ilkOran ? `${ilkOran.of} kartta ölçüldü` : 'henüz öğrenme testi yapılmadı'}
-            />
-            <Satir
-              ad="Kanca ekrandan kalkınca durdu"
-              deger={kancasizOran ? `%${kancasizOran.percent}` : '—'}
-              alt={
-                kancasizOran
-                  ? `${kancasizOran.of} kartta ölçüldü — kancanın gerçek sınavı`
-                  : 'kartlar henüz 3. basamağa gelmedi'
-              }
-            />
-            <Satir
-              ad="İlk yazmada üretildi"
-              deger={uretimOran ? `%${uretimOran.percent}` : '—'}
-              alt={uretimOran ? `${uretimOran.of} kartta ölçüldü` : 'kartlar henüz yazma basamağına gelmedi'}
-            />
-          </Card>
-        )}
-
-        {zayiflar.length > 0 && (
-          <Card className="rise delay-3">
-            <h2 className="text-sm font-bold text-ink-soft mb-1">Gözden geçirilecek kancalar</h2>
-            <p className="text-sm text-ink-soft mb-3">
-              En çok zorlandıkların. Kanca zayıfsa kart değil kanca değişmeli.
-            </p>
-            <ul className="flex flex-col divide-y divide-line">
-              {zayiflar.map(({ card, reason }) => (
-                <li key={card.id} className="py-2.5 flex items-baseline justify-between gap-3">
-                  <span className="shrink-0">
-                    <span className="word font-semibold">{card.en}</span>
-                    <span className="text-ink-faint"> ≈ </span>
-                    <span className="font-semibold bg-spark/55 rounded px-1">{card.hook}</span>
-                  </span>
-                  <span className="text-xs text-ink-faint text-right">{reason}</span>
-                </li>
-              ))}
-            </ul>
-          </Card>
-        )}
       </div>
     </Screen>
   );
@@ -256,15 +202,3 @@ function Kutu({ buyuk, kucuk }: { buyuk: string; kucuk: string }) {
   );
 }
 
-/** `alt` paydayi soyler — %100'un 2 karta mi 40 karta mi dayandigi onemli. */
-function Satir({ ad, deger, alt }: { ad: string; deger: string; alt?: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 py-1.5 text-sm">
-      <span>
-        <span className="text-ink-soft">{ad}</span>
-        {alt && <span className="block text-xs text-ink-faint mt-0.5">{alt}</span>}
-      </span>
-      <span className="font-bold tabular-nums shrink-0">{deger}</span>
-    </div>
-  );
-}
