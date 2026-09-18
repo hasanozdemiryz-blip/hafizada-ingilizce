@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { State } from 'ts-fsrs';
-import { BATCH, CARDS, ESKI_GUN, LIMIT_DEFAULT, LIMIT_MAX } from './content';
+import {
+  BATCH,
+  CARDS,
+  ESKI_GUN,
+  LIMIT_DEFAULT,
+  LIMIT_MAX,
+  ogrenilenKancalar,
+  setBittiMi,
+} from './content';
 import {
   aheadQueue,
   dueQueue,
@@ -31,12 +39,18 @@ const cikar = (hedef: number) => {
 };
 
 describe('icerik', () => {
-  it('v1 seti 100 "Tutan" karttan olusur', () => {
-    expect(CARDS).toHaveLength(100);
+  /*
+   * v1 setinin sinirini GORSEL cizer: gorseli olmayan kart yontemi
+   * anlatmadigi icin sete hic girmez. Kural bu — sayi degil; gorsel
+   * eklendikce set kendiliginden buyur.
+   */
+  it('setteki her kartin gorseli var ve hepsi "Tutan"', () => {
+    expect(CARDS.length).toBeGreaterThan(0);
+    expect(CARDS.filter((c) => !c.image)).toEqual([]);
     expect(CARDS.every((c) => c.klass === 'tutan')).toBe(true);
   });
 
-  it('siklik sirasi 1..100, bosluksuz', () => {
+  it('siklik sirasi 1..N, bosluksuz', () => {
     expect(CARDS.map((c) => c.order)).toEqual(CARDS.map((_, i) => i + 1));
   });
 
@@ -54,6 +68,25 @@ describe('icerik', () => {
 
   it('gorseli olan kart cards.json elle duzenlenmeden baglanir', () => {
     expect(CARDS.find((c) => c.id === 'snake')?.image).toBeTruthy();
+  });
+});
+
+describe('set sonu', () => {
+  it('son kelime tanisilmadan "bitti" demez', () => {
+    expect(setBittiMi([])).toBe(false);
+    expect(setBittiMi(introduceMany(CARDS.length - 1))).toBe(false);
+    expect(setBittiMi(introduceMany(CARDS.length))).toBe(true);
+  });
+
+  // Paylasilan pano kelime listesi degil KANCA listesi; sirasi da sabit
+  // olmali ki ayni kullanicinin panosu her seferinde ayni gorunsun.
+  it('kanca panosu yalnizca tanisilanlari, siklik sirasinda verir', () => {
+    const kancalar = ogrenilenKancalar(introduceMany(3));
+    expect(kancalar).toEqual(CARDS.slice(0, 3).map((c) => ({ en: c.en, hook: c.hook })));
+  });
+
+  it('tanisilmamis kart panoya girmez', () => {
+    expect(ogrenilenKancalar([])).toEqual([]);
   });
 });
 

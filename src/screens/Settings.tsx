@@ -115,7 +115,7 @@ export function Settings({ state, progress }: { state: AppState; progress: unkno
 
         <Card className="rise delay-3">
           <h2 className="text-sm font-bold text-ink-soft mb-2">Hakkında</h2>
-          <Satir ad="Havuzdaki kelime" deger={String(CARDS.length)} />
+          <Satir ad="Setteki kelime" deger={String(CARDS.length)} />
           <Satir ad="Öğrendiğin" deger={String(progress.length)} />
           <Satir ad="Sürüm" deger="0.1.0" />
         </Card>

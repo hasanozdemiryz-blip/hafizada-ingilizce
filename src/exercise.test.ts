@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import raw from '../content/cards.json';
 import { CARDS } from './content';
+import type { Card } from './types';
 import {
   ADIM,
   ADIMLAR,
@@ -81,11 +83,15 @@ describe('coktan secmeli siklar', () => {
   /*
    * turn ve spin ikisi de "dönmek". Celdirici olarak girseydi iki sikkin
    * da dogru oldugu bir soru cikardi.
+   *
+   * Soru TUM havuza sorulur, v1 setine degil: turn/spin cifti su an
+   * gorselsiz oldugu icin sette yok, ama gorselleri gelince girecek.
    */
   it('ayni metni tasiyan kart celdirici olamaz', () => {
-    const turn = CARDS.find((c) => c.en === 'turn')!;
+    const havuz = (raw as Card[]).filter((c) => c.klass === 'tutan');
+    const turn = havuz.find((c) => c.en === 'turn')!;
     for (let i = 0; i < 200; i++) {
-      const s = secenekler(turn, CARDS, 'tr');
+      const s = secenekler(turn, havuz, 'tr');
       expect(s.filter((o) => o === 'dönmek')).toHaveLength(1);
     }
   });

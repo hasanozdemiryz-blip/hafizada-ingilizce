@@ -51,6 +51,8 @@ export function Lesson({
     dogru: number;
     toplam: number;
     ilerleyen: number;
+    /** Bu derste TANISILAN kelime sayisi — set sonu ani buradan anlasiliyor */
+    yeni: number;
   }) => void;
 }) {
   const [bolum, setBolum] = useState<Bolum>(yeniKartlar.length > 0 ? 'yeni' : 'tekrar');
@@ -147,7 +149,14 @@ export function Lesson({
     setBusy(true);
     const { dogru, toplam: cevap, ilerleyen } = sayac.current;
     const state = await logSession(toplam, dogru, cevap - dogru);
-    onFinish({ count: toplam, streak: state.streakCount, dogru, toplam: cevap, ilerleyen });
+    onFinish({
+      count: toplam,
+      streak: state.streakCount,
+      dogru,
+      toplam: cevap,
+      ilerleyen,
+      yeni: yeniKartlar.length,
+    });
   }
 
   const basilik = { yeni: 'Yeni kelimeler', ogrenme: 'Öğrenme testi', tekrar: 'Tekrar', bitti: '' };

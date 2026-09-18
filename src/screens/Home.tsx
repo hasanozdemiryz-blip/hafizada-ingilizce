@@ -1,6 +1,7 @@
 import { Button, Card, Screen, Streak } from '../components/ui';
+import { SetFinale } from '../components/SetFinale';
 import { TAB_SPACE } from '../components/TabBar';
-import { CARD_BY_ID } from '../content';
+import { CARD_BY_ID, CARDS, ogrenilenKancalar, setBittiMi } from '../content';
 import { relativeDue } from '../dates';
 import type { AppState, Card as CardType, Progress } from '../types';
 
@@ -50,6 +51,7 @@ export function Home({
   const tekrar = due.length;
   const limitDoldu = remaining === 0;
   const bosGun = tekrar === 0 && newCards.length === 0;
+  const setBitti = setBittiMi(progress);
 
   const siradaki = progress
     .filter((p) => p.introduced)
@@ -81,19 +83,28 @@ export function Home({
 
       {/* Kahraman blok dikey ORTADA — ekran bos gorunmesin, karar tek olsun */}
       <div className={`flex-1 flex flex-col justify-center gap-4 ${TAB_SPACE}`}>
+        {/*
+          Set bitince gunluk hedef cubugu YALAN soyluyor: yeni kelime
+          kalmadigi icin "0 / 10" her gun boyle kalacak ve kullanici
+          yapmadigi bir sey icin eksik gorunecek. Yerine setin kendisi.
+        */}
         <section>
           <div className="flex items-baseline justify-between mb-2 px-1">
-            <span className="text-sm font-semibold text-ink-soft">Bugünün hedefi</span>
+            <span className="text-sm font-semibold text-ink-soft">
+              {setBitti ? 'Set tamamlandı' : 'Bugünün hedefi'}
+            </span>
             <span className="text-sm text-ink-faint tabular-nums">
-              {todayCount} / {state.dailyLimit} kelime
+              {setBitti
+                ? `${CARDS.length} / ${CARDS.length} kelime`
+                : `${todayCount} / ${state.dailyLimit} kelime`}
             </span>
           </div>
           <div className="h-3 w-full rounded-full bg-white/70 overflow-hidden">
             <div
               className={`h-full rounded-full transition-[width] duration-700 ease-out ${
-                limitDoldu ? 'bg-grow' : 'bg-gradient-to-r from-brand to-[#7db2ff]'
+                limitDoldu || setBitti ? 'bg-grow' : 'bg-gradient-to-r from-brand to-[#7db2ff]'
               }`}
-              style={{ width: `${gunlukPct}%` }}
+              style={{ width: `${setBitti ? 100 : gunlukPct}%` }}
             />
           </div>
         </section>
@@ -117,6 +128,20 @@ export function Home({
             <Button variant="soft" onClick={todaysCount > 0 ? onQuickReview : onStart}>
               Hızlı tekrar
             </Button>
+          </div>
+        ) : bosGun && setBitti ? (
+          /*
+            Havuzun sonu: "Bugunluk tamam 🌿" burada YETMEZ. Kullanici
+            setin sonuna geldi ve bunu bir daha hic gormeyecek — bkz.
+            SetFinale. "Yine de tekrar et" kapisi altta acik kaliyor.
+          */
+          <div className="flex flex-col gap-3">
+            <SetFinale kancalar={ogrenilenKancalar(progress)} variant="kart" />
+            {aheadCount > 0 && (
+              <Button variant="soft" onClick={onPractice}>
+                Yine de tekrar et
+              </Button>
+            )}
           </div>
         ) : bosGun ? (
           <Card className="rise text-center py-10">

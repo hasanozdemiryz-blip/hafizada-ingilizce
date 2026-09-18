@@ -29,13 +29,21 @@ async function fontuHazirla() {
 }
 
 /**
+ * Panoya sigan kanca sayisi. v1 seti 26 kart oldugu icin tam set tek
+ * panoya giriyor — seti bitiren kullanicinin paylastigi sey EKSIKSIZ olsun.
+ * (Onceki sinir 24'tu ve baslik yine `pairs.length` yaziyordu: 26 kelime
+ * diyen bir panoda 24 satir vardi.)
+ */
+export const PANO_MAX = 26;
+
+/**
  * Kanca panosu — ogrenilen kelimelerin kancalari tek gorselde.
  * Bu, baskasinin kopyalayamayacagi icerik: kancalar bize ait.
  */
 export async function renderHookBoard(pairs: { en: string; hook: string }[]): Promise<Blob> {
   await fontuHazirla();
 
-  const goster = pairs.slice(0, 24);
+  const goster = pairs.slice(0, PANO_MAX);
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
@@ -50,7 +58,8 @@ export async function renderHookBoard(pairs: { en: string; hook: string }[]): Pr
   ctx.textAlign = 'center';
   ctx.fillStyle = '#16233a';
   ctx.font = `800 62px ${YAZI}`;
-  ctx.fillText(`${pairs.length} kelime, ${pairs.length} kanca`, W / 2, 150);
+  // Baslik CIZILEN satiri sayar, verilen listeyi degil — pano eksik kalirsa yalan olmasin
+  ctx.fillText(`${goster.length} kelime, ${goster.length} kanca`, W / 2, 150);
 
   ctx.fillStyle = '#5c6b85';
   ctx.font = `400 34px ${YAZI}`;
@@ -106,7 +115,8 @@ export async function renderHookBoard(pairs: { en: string; hook: string }[]): Pr
 }
 
 export async function shareHookBoard(pairs: { en: string; hook: string }[]): Promise<void> {
-  await paylas(await renderHookBoard(pairs), 'kanca-panosu.png', `${pairs.length} kelime, ${pairs.length} kanca`);
+  const sayi = Math.min(pairs.length, PANO_MAX);
+  await paylas(await renderHookBoard(pairs), 'kanca-panosu.png', `${sayi} kelime, ${sayi} kanca`);
 }
 
 /** Paylasim sayfasini ac; desteklenmiyorsa dosyayi indir. */

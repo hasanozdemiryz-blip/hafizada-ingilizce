@@ -68,16 +68,27 @@ const frekansSirasi = (raw as Card[])
   .sort((a, b) => a.order - b.order);
 
 /**
- * v1 seti: 100 "Tutan" kart. "Kurtarilabilir" olanlar 2. set icin bekliyor.
+ * v1 seti: GORSELI HAZIR olan kartlar — su an 26.
+ *
+ * Kapsami gorsel belirliyor, cunku gorsel bu urunde susleme degil yontemin
+ * kendisi: kancayi kelimeye baglayan sey o tek resim. Gorseli olmayan kartta
+ * ekranda brief metni duruyordu; o kart yontemi HIC anlatmiyor, sadece bir
+ * kelime listesi oluyor.
+ *
+ * Kalan 74 kart cards.json'da duruyor ve beklemede: gorseli uretilip
+ * `src/assets/cards/<id>.webp` olarak konulan kart kendiliginden sete girer —
+ * burada elle liste tutulmuyor. "Kurtarilabilir" sinifi hala 2. set icin bekliyor.
  *
  * Siralama siklik sirasi — TEK istisna: ilk bes karta zayif kanca girmez.
  * Uygulamayi ilk acan insanin gordugu ilk on kart, yontemin ne yaptigini
  * anlatan kartlar olmali. Zayif kancalar ilk besin hemen arkasina kayar,
  * geri kalan her sey siklik sirasinda kalir.
  */
+const v1Seti = frekansSirasi.filter((c) => GORSELLER.has(c.id));
+
 export const CARDS: Card[] = (() => {
-  const guclu = frekansSirasi.filter((c) => !zayifKanca(c));
-  const zayif = frekansSirasi.filter(zayifKanca);
+  const guclu = v1Seti.filter((c) => !zayifKanca(c));
+  const zayif = v1Seti.filter(zayifKanca);
   const ilkGrup = guclu.slice(0, BATCH);
   const kalan = [...guclu.slice(BATCH), ...zayif].sort((a, b) => a.order - b.order);
   return [...ilkGrup, ...kalan].map((c, i) => ({
@@ -96,8 +107,25 @@ export const CARD_BY_ID = new Map(CARDS.map((c) => [c.id, c]));
 export const SHOWCASE_CARD =
   CARDS.find((c) => c.id === 'snake' && c.order > BATCH) ?? CARDS[BATCH];
 
+/**
+ * Setin tamami tanisildi mi. "Bitti" kelimesini tek yerde tanimliyoruz;
+ * ana ekran ve ders bitisi ayni soruyu iki turlu cevaplamasin.
+ */
+export const setBittiMi = (progress: readonly { introduced: boolean }[]) =>
+  progress.filter((p) => p.introduced).length >= CARDS.length;
 
-
+/**
+ * Tanisilan kartlarin kanca ciftleri, siklik sirasinda.
+ * Paylasim panosunun icerigi bu — bkz. share.ts `renderHookBoard`.
+ */
+export function ogrenilenKancalar(progress: readonly { cardId: string; introduced: boolean }[]) {
+  return progress
+    .filter((p) => p.introduced)
+    .map((p) => CARD_BY_ID.get(p.cardId))
+    .filter((c): c is Card => Boolean(c))
+    .sort((a, b) => a.order - b.order)
+    .map((c) => ({ en: c.en, hook: c.hook }));
+}
 
 
 /**

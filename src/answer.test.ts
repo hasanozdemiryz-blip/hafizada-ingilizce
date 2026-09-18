@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
+import raw from '../content/cards.json';
 import { CARDS, EN_HAVUZ, TR_HAVUZ } from './content';
 import { distance, judge, normalize } from './answer';
+import type { Card } from './types';
+
+/**
+ * TUM havuz — v1 setini degil, cards.json'un tamamini kapsar.
+ *
+ * Asagida iki soru `judge`in havuzla nasil davrandigini olcuyor ve ornek
+ * ciftleri (short/shore, dönmek/dövmek) gercek icerikten aliyor. Bu ciftlerin
+ * yarisi su an gorselsiz oldugu icin v1 setinde yok; soru ise setin kapsami
+ * hakkinda degil. Setin KENDI icindeki carpisma kontrolu ayri bir test.
+ */
+const TUM = (raw as Card[]).filter((c) => c.klass === 'tutan');
+const TUM_EN: ReadonlySet<string> = new Set(TUM.map((c) => normalize(c.en, 'en')));
+const TUM_TR: ReadonlySet<string> = new Set(TUM.map((c) => normalize(c.tr, 'tr')));
 
 describe('normalize', () => {
   it('buyuk/kucuk, bosluk ve noktalamayi siler', () => {
@@ -47,8 +61,8 @@ describe('judge', () => {
     // havuz verilmezse tek harf farki yazim hatasi sanilir...
     expect(judge('shake', 'snake')).toBe('yakin');
     // ...ama ikisi de gercek kelime: havuzla birlikte yanlis
-    expect(judge('shake', 'snake', { havuz: EN_HAVUZ })).toBe('yanlis');
-    expect(judge('short', 'shore', { havuz: EN_HAVUZ })).toBe('yanlis');
+    expect(judge('shake', 'snake', { havuz: TUM_EN })).toBe('yanlis');
+    expect(judge('short', 'shore', { havuz: TUM_EN })).toBe('yanlis');
   });
 
   it('kisa kelimede tek harf farki yanlis sayilir', () => {
@@ -109,7 +123,7 @@ describe('Türkçe yön', () => {
   });
 
   it('havuzdaki başka bir Türkçe karşılık "yakın" sayılmaz', () => {
-    expect(judge('dönmek', 'dövmek', { havuz: TR_HAVUZ, dil: 'tr' })).toBe('yanlis');
+    expect(judge('dönmek', 'dövmek', { havuz: TUM_TR, dil: 'tr' })).toBe('yanlis');
   });
 
   it('setteki her Türkçe karşılık kendini doğru kabul eder', () => {

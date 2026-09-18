@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TabBar, type Tab } from './components/TabBar';
-import { AHEAD_BATCH, DAILY_REVIEW_CAP } from './content';
+import { AHEAD_BATCH, DAILY_REVIEW_CAP, ogrenilenKancalar, setBittiMi } from './content';
 import { db, getState } from './db';
 import {
   aheadQueue,
@@ -32,6 +32,7 @@ type Flow =
       dogru: number;
       toplam: number;
       ilerleyen: number;
+      yeni: number;
     }
   | { name: 'kelimeler' }
   | null;
@@ -92,6 +93,13 @@ export default function App() {
         dogru={flow.dogru}
         toplam={flow.toplam}
         ilerleyen={flow.ilerleyen}
+        /*
+          Final YALNIZCA seti bitiren derste. Yeni kelime getirmeyen bir
+          tekrar dersi de "set bitmis" durumda biter; her seferinde kutlarsa
+          kutlama anlamini yitirir.
+        */
+        setBitti={flow.yeni > 0 && setBittiMi(progress)}
+        kancalar={ogrenilenKancalar(progress)}
         onHome={kapat}
       />
     );

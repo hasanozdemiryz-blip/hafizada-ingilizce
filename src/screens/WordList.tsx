@@ -11,7 +11,7 @@ const FILTRELER = [
   { id: 'tanima', ad: 'Tanıma (1–2)' },
   { id: 'gecis', ad: 'Geçiş (3–4)' },
   { id: 'uretim', ad: 'Üretim (5–6)' },
-  { id: 'havuz', ad: 'Tüm havuz' },
+  { id: 'havuz', ad: 'Tüm set' },
 ] as const;
 type Filtre = (typeof FILTRELER)[number]['id'];
 

@@ -1,3 +1,4 @@
+import { SetFinale } from '../components/SetFinale';
 import { Button, Screen, Streak } from '../components/ui';
 
 /**
@@ -18,6 +19,8 @@ export function SessionDone({
   dogru,
   toplam,
   ilerleyen,
+  setBitti,
+  kancalar,
   onHome,
 }: {
   count: number;
@@ -26,6 +29,9 @@ export function SessionDone({
   toplam: number;
   /** Bu seansta bir basamak yukari cikan kelime sayisi */
   ilerleyen: number;
+  /** Bu ders setin SON kelimelerini getirdiyse true — bir kez yasanan an */
+  setBitti: boolean;
+  kancalar: { en: string; hook: string }[];
   onHome: () => void;
 }) {
   const yuzde = toplam > 0 ? Math.round((dogru / toplam) * 100) : null;
@@ -33,14 +39,27 @@ export function SessionDone({
   return (
     <Screen>
       <div className="flex-1 flex flex-col justify-center items-center gap-5 text-center">
-        <div className="pop text-6xl">🌿</div>
+        {/*
+          Seti bitiren ders: seans yuzdesi geri cekiliyor. O an "%80 aldin"
+          degil "bitirdin" ani; iki basligi yan yana koymak ikisini de
+          kuculturdu. Yuzde zaten Ilerleme'de duruyor.
+        */}
+        {setBitti ? (
+          <div className="rise">
+            <SetFinale kancalar={kancalar} variant="ekran" />
+          </div>
+        ) : (
+          <>
+            <div className="pop text-6xl">🌿</div>
 
-        <div className="rise delay-1">
-          <h1 className="word text-3xl font-bold">Ders bitti</h1>
-          <p className="text-ink-soft mt-2">{count} kelime çalıştın.</p>
-        </div>
+            <div className="rise delay-1">
+              <h1 className="word text-3xl font-bold">Ders bitti</h1>
+              <p className="text-ink-soft mt-2">{count} kelime çalıştın.</p>
+            </div>
+          </>
+        )}
 
-        {yuzde !== null && (
+        {!setBitti && yuzde !== null && (
           <div className="rise delay-2 w-full max-w-[16rem]">
             <p className="word text-5xl font-extrabold tabular-nums leading-none">%{yuzde}</p>
             <p className="text-sm text-ink-soft mt-2">

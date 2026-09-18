@@ -338,6 +338,73 @@ ayrı bir 1,7 KB parça olarak duruyor, yalnızca native kabukta indiriliyor.
 
 ---
 
+## 2026-09-19 — v1 kapsamı: 26 kart ve tasarlanmış final
+
+### Kapsamı görsel çiziyor
+
+v1 artık 100 kart değil, **görseli hazır olan 26 kart**. Sebep parasal:
+kalan 74 kartın görseli ~6.700 kredi ve elimizde tek bir D1/D7 verisi yok.
+Kimsenin ulaşmadığı kartlara ödeme yapmak yerine küçük ama tam bir ürünle
+çıkıp veriyi toplamak seçildi.
+
+Kod tarafında sınır **elle tutulan bir liste değil**: `content.ts` yalnızca
+`src/assets/cards/<id>.webp` dosyası olan kartları sete alıyor. Görsel
+konulan kart kendiliğinden girer, `cards.json`'a dokunulmaz. Kalan 74 kart
+dosyada duruyor, sette görünmüyor.
+
+Neden ölçüt görsel: bu üründe görsel süsleme değil **yöntemin kendisi**.
+Görseli olmayan kartta ekranda brief metni duruyordu — o kart kancayı
+anlatmıyor, sadece bir kelime listesi oluyor. Yarım bir kartla çıkmak
+yöntemin kendisini zayıf gösterirdi.
+
+### Havuzun bitmesi bir kusur değil
+
+26 kart, günde 10 hedefle ~3 günde biter. Eskiden o noktada ekran sıradan
+bir *"Bugünlük tamam 🌿"*e düşüyordu — kullanıcı setin sonuna geldiğini
+hiç anlamıyordu.
+
+Artık iki yerde **final** var (`SetFinale`):
+
+- **Seti bitiren dersin sonunda** — o dersin yüzdesi geri çekiliyor. O an
+  "%80 aldın" anı değil "bitirdin" anı; iki başlık yan yana ikisini de
+  küçültürdü. Yüzde zaten İlerleme'de duruyor.
+- **Ana ekranda**, sonraki günlerde tekrar da kalmadığında.
+
+Final yalnızca **yeni kelime getiren** derste çıkıyor. Set bittikten sonraki
+tekrar dersleri de "set bitmiş" durumda biter; her seferinde kutlarsa
+kutlama anlamını yitirir.
+
+Finalin ortasındaki düğme **kanca panosu paylaşımı**. Gelir modeli kitle
+üzerinden olduğu için paylaşım bir ekstra değil dağıtım kanalı, ve seti
+bitiren kullanıcı paylaşmaya en yakın kişi. Altındaki satır bilinçli:
+*"tekrarların devam ediyor"* — yoksa "bitti" kelimesi uygulamayı silmenin
+davetiyesi olur.
+
+Ana ekranda günlük hedef çubuğu da değişti: yeni kelime kalmadığı için
+"0 / 10" her gün öyle kalacak ve kullanıcı yapmadığı bir şey yüzünden eksik
+görünecekti. Set bitince çubuk "Set tamamlandı · 26 / 26" oluyor.
+
+### Panoda 24 satır, başlıkta 26 yazıyordu
+
+Kanca panosu en fazla 24 çift çiziyor ama başlığı `pairs.length`'ten
+alıyordu. 26 kartlık sette bu, **"26 kelime, 26 kanca"** yazan ve 24 satır
+gösteren bir görsel demekti — tarayıcıda çizdirmeden görünmüyordu. Sınır
+26'ya çıkarıldı (tam set tek panoya sığsın) ve başlık artık çizilen satırı
+sayıyor.
+
+### Havuz testleri hangi havuza soruluyor
+
+`judge`'ın "havuzdaki başka bir kelime asla *yakın* değil" davranışı
+`short/shore` ve `dönmek/dövmek` çiftleriyle ölçülüyordu. Çiftlerin yarısı
+görselsiz olduğu için artık v1 setinde yok; setin havuzuyla sorulunca
+testler haklı olarak düştü.
+
+Ayrım şu: **`judge`'ın sözleşmesi** tüm havuza sorulur (2. set geldiğinde de
+geçerli olmalı), **setin kendi içinde çarpışma var mı** sorusu ise yalnızca
+v1 setine. İkisi ayrı testler olarak duruyor.
+
+---
+
 ## Ortam
 
 `/Volumes/TwinMOS` **exFAT**. macOS her dosyanın yanına `._` gölgesi bırakıyor;
@@ -349,8 +416,14 @@ ve vitest `exclude` ile kapatıldı. Yine de çarparsa: `find . -name '._*' -del
 
 ## Sırada
 
-1. **Kanca aday üretim hattı** — havuzu ~600'e çıkaran tek kaldıraç.
+Kapsam kararı gereği sıra **veriden sonra** açılıyor: 26 kartlık set yayına
+çıkacak, D1/D7 ölçülecek, kalan işler ondan sonra sıralanacak.
+
+1. **Yayın** — GitHub Pages + telefonda PWA kurulumu; APK'daki telaffuz
+   gerçek cihazda doğrulanacak (kod yazıldı, cihazda denenmedi).
+2. **Kanca aday üretim hattı** — havuzu ~600'e çıkaran tek kaldıraç.
    CMU fonetik sözlüğü + Türkçe kelime listesi + fonem mesafesi → sıralı aday
    listesi. "Haa testi" insanda kalır; moat orası.
-2. Kalan 74 kartın görseli — yukarıdaki iskele ve derslerle.
-3. Hesap + bulut senkronu — yalnızca retention verisi gerektirirse.
+3. Kalan 74 kartın görseli — yukarıdaki iskele ve derslerle. Veri gelmeden
+   ~6.700 kredi harcanmıyor.
+4. Hesap + bulut senkronu — yalnızca retention verisi gerektirirse.
