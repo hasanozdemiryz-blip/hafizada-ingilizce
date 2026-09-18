@@ -252,6 +252,58 @@ precache stratejisini değiştirmeye gerek yok.
 
 ---
 
+## Android paketi
+
+PWA iki yoldan telefona giriyor:
+
+- **PWA kurulumu** — GitHub Pages adresini Chrome'da aç, "Uygulamayı yükle".
+  `main`'e her push'ta kendini günceller. Günlük kullanım için bu.
+- **APK** — Capacitor ile WebView'a sarılmış native paket. Sabit sürüm;
+  kod değişince yeniden derlemek gerekir. Test ve paylaşım için.
+
+**Neden Capacitor, neden TWA değil.** TWA'da adres çubuğunun kalkması için
+`assetlinks.json`'un alan adının **kökünde** durması gerekiyor. GitHub Pages
+projeyi `/hafizada-ingilizce/` alt dizininde servis ediyor; köke dosya koymak
+ayrı bir `<kullanici>.github.io` deposu ister. Capacitor'da bu sorun hiç yok.
+
+### APK nasıl çıkar
+
+```
+npm install
+npm run build
+npx cap add android          # android/ .gitignore'da, her seferinde üretilir
+cd android && ./gradlew assembleDebug
+```
+
+Çıktı: `~/Library/Caches/hafizada-android/_app/outputs/apk/debug/app-debug.apk`
+(~5 MB, 26 kart görseli dahil tamamen çevrimdışı).
+
+### İki tuzak
+
+**Gradle ara çıktıları exFAT'te duramıyor.** macOS her yeni dizinin yanına
+`._ad` gölgesi bırakıyor, Gradle kaynak tarayıcısı bunu gerçek dizin sanıp
+`'._drawable' is not a directory` ile patlıyor. `android/build.gradle`
+`buildDirectory`'yi `~/Library/Caches/hafizada-android` altına alıyor — bu
+blok `cap add android` sonrası **elle geri konmalı**, çünkü `android/`
+depoda tutulmuyor.
+
+**Capacitor 8 Java 21+ istiyor.** Homebrew'daki JDK 17 `invalid source
+release: 21` veriyor. Android Studio'nun kendi JDK'si kullanılmalı:
+
+```
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export ANDROID_HOME=~/Library/Android/sdk
+```
+
+### APK'yı telefona ulaştırmak
+
+Tünel üzerinden **çalışmıyor**: uygulamanın service worker'ı o kaynağa kurulu
+ve `navigateFallback: index.html` ayarı yüzünden `/hafizada.apk` isteğini
+yakalayıp APK yerine uygulamayı açıyor. (`curl` bunu yaşamaz, service worker'ı
+yoktur — yanıltıcı.) Çalışan yol: dosyayı Drive'a koyup telefondan indirmek.
+
+---
+
 ## Ortam
 
 `/Volumes/TwinMOS` **exFAT**. macOS her dosyanın yanına `._` gölgesi bırakıyor;
