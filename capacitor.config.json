@@ -1,0 +1,8 @@
+{
+  "appId": "com.hafizada.ingilizce",
+  "appName": "Hafızada İngilizce",
+  "webDir": "dist",
+  "android": {
+    "backgroundColor": "#eaf1fb"
+  }
+}

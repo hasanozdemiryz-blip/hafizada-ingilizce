@@ -11,3 +11,6 @@ dev-dist/
 # Gorsel uretim klasoru — ciktilar import:images ile src/assets/cards altina gecer
 gorseller/
 gorsel-brief.tsv
+
+# Capacitor Android projesi — cap add android ile yeniden uretilir
+android/
