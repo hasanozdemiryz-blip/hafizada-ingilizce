@@ -251,7 +251,8 @@ export async function exportProgress(): Promise<string> {
     getAnswers(),
   ]);
   return JSON.stringify(
-    { version: 5, exportedAt: new Date().toISOString(), state, progress, answers },
+    // Semadaki sürümle AYNI kalmali: yedek hangi sekille yazildigini soyler
+    { version: 6, exportedAt: new Date().toISOString(), state, progress, answers },
     null,
     2,
   );
