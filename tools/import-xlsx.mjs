@@ -1,5 +1,5 @@
 /**
- * mnemonik-aday-havuzu.xlsx -> content/cards.json
+ * kart-havuzu-300.xlsx -> content/cards.json
  *
  * Tablo icerigin tek kaynagi. Bu script onu uygulamanin okudugu
  * normalize JSON'a cevirir ve veriyi dogrular.
@@ -12,10 +12,31 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const SRC = resolve(ROOT, 'mnemonik-aday-havuzu.xlsx');
+const SRC = resolve(ROOT, 'kart-havuzu-300.xlsx');
 const OUT = resolve(ROOT, 'content/cards.json');
 
-const COL = { no: 1, en: 2, tr: 3, hook: 4, sentence: 5, klass: 6, imageNote: 7, decision: 8 };
+/**
+ * Sutun haritasi TABLOYA BAGLI ve tablo degisti.
+ *
+ * Havuz 145'ten 300'e cikarken sayfa adi "Aday Havuzu" -> "Kart Havuzu"
+ * oldu ve 4. sutuna "Zorluk" eklendi; kanca, cumle, sinif, gorsel notu ve
+ * karar birer kaydi. Eski harita sessizce yanlis sutunu okuyordu — kanca
+ * alanina "Kolay" yaziyordu. Basliklar artik DOGRULANIYOR (bkz. asagida),
+ * bir daha sessizce kaymasin.
+ *
+ * "Zorluk" bilerek alinmiyor: uygulamada kullanan yok, tablo tek kaynak
+ * oldugu icin gerektiginde yeniden ice aktarmak yeter.
+ */
+const SAYFA = 'Kart Havuzu';
+const COL = { no: 1, en: 2, tr: 3, zorluk: 4, hook: 5, sentence: 6, klass: 7, imageNote: 8, decision: 9 };
+const BASLIK = {
+  [COL.en]: 'Kelime (EN)',
+  [COL.tr]: 'Anlam (TR)',
+  [COL.hook]: 'Ses Kancası',
+  [COL.sentence]: 'Mnemonik Cümle',
+  [COL.klass]: 'Sınıf',
+  [COL.imageNote]: 'Kart Görseli Notu',
+};
 
 const text = (cell) => String(cell?.text ?? cell?.value ?? '').trim();
 
@@ -40,8 +61,18 @@ function makeId(en, taken) {
 const wb = new ExcelJS.Workbook();
 await wb.xlsx.readFile(SRC);
 
-const sheet = wb.getWorksheet('Aday Havuzu');
-if (!sheet) throw new Error("'Aday Havuzu' sayfasi bulunamadi");
+const sheet = wb.getWorksheet(SAYFA);
+if (!sheet) throw new Error(`'${SAYFA}' sayfasi bulunamadi`);
+
+// Sutunlar kaymissa BURADA dur — yanlis sutundan uretilmis 300 kart, sessizce
+// bozuk bir havuz demek.
+const basliklar = sheet.getRow(1);
+for (const [sutun, beklenen] of Object.entries(BASLIK)) {
+  const bulunan = text(basliklar.getCell(Number(sutun)));
+  if (bulunan !== beklenen) {
+    throw new Error(`Sutun ${sutun}: "${beklenen}" bekleniyordu, "${bulunan}" bulundu — tablo duzeni degismis.`);
+  }
+}
 
 const cards = [];
 const problems = [];

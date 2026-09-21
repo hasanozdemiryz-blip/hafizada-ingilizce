@@ -17,3 +17,6 @@ android/
 
 # Elenen logo adaylari — 21 MB, depoya girmesin (diskte duruyor)
 brand/denemeler/
+
+# Ham havuz disa aktarimi — tek kaynak kart-havuzu-300.xlsx, bu ondan turuyor
+/cards.json
