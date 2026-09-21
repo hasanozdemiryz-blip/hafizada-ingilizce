@@ -22,7 +22,8 @@ npm run dev        # http://localhost:5173
 | `npm run import:cards` | `mnemonik-aday-havuzu.xlsx` → `content/cards.json` |
 | `npm run import:images` | `gorseller/<id>.png` → `src/assets/cards/<id>.webp` (4:3, 800×600) |
 | `npm run import:images -- --brief` | Görseli olmayan kartların brief listesini `gorsel-brief.tsv` olarak döker |
-| `npm run icons` | `brand/kilit-kaynak.png` → tüm ikon ve marka türevleri |
+| `npm run icons` | `brand/logo-isaret.svg` → tüm ikon ve marka türevleri |
+| `npm run lockup` | işaret + isim → yazılı kilit ve profil görselleri |
 
 Yeni bilgisayarda: repoyu klonla, `npm install`, `npm run dev`. Başka kurulum yok — backend, API anahtarı, veritabanı yok.
 
@@ -32,7 +33,7 @@ Yeni bilgisayarda: repoyu klonla, `npm install`, `npm run dev`. Başka kurulum y
 
 ### İlk karşılaşma
 
-Üç adım, ~30 saniye, sonunda doğrudan ilk derse:
+Üç adım, ~30 saniye, sonunda ana ekranda bekleyen ilk ders:
 
 | | | |
 |---|---|---|
@@ -46,9 +47,13 @@ kendi denemedi. Şimdi 15 saniyede kendi hafızasının çalıştığını gör�
 Anlatmıyoruz, yaşatıyoruz. (Yanlış bilirse suçlayıcı değil: *"Olsun — kanca
 birkaç tekrarda oturuyor."*)
 
-3. adımdan sonra ana ekrana değil **doğrudan ilk derse** girilir: bir karar daha
-eksilir, kullanıcı uygulamayı açtıktan ~40 saniye sonra ilk beş kelimesini
-öğrenmiş olur.
+3. adımdan sonra **ana ekrana** düşülür; ilk ders orada kendi kartı olarak
+bekler (*"İlk dersin hazır · 5 kelime"*) ve başlatan kullanıcı olur.
+
+> Bir süre buradan **doğrudan ilk derse** giriliyordu — bir karar eksiltmek
+> için. Kötü tarafı: kullanıcı hazır olup olmadığı sorulmadan derse düşüyordu
+> ve geri çıkmanın tek yolu *"ders yarıda kalacak"* uyarısıydı. Başlama kararı
+> kullanıcıya geri verildi; ana ekran da boş değil, ilk ders orada duruyor.
 
 **Eklenmeyenler ve nedeni:** isim sorma (hesap yok, karşılığı olmayan sürtünme) ·
 seviye testi (havuz sıklık sırasında, test edilecek seviye yok) · çok ekranlı
@@ -121,6 +126,14 @@ Geçiş kuralı üç durumlu:
   sonra tahmin etmeye iter
 - **yardımsız doğru** → bir basamak ileri
 
+**Aynı gün ikinci kez doğru bilmek aralığı uzatmaz.** Hızlı tekrar ve "Dersi
+tekrar et" aynı kelimeyi gün içinde defalarca sorabiliyor; her doğru cevap
+FSRS'e yazılsaydı çalışkan kullanıcı kendi zamanlamasını haftalar öteye atardı
+— Egzersiz sekmesi için zaten geçerli olan kuralın aynısı. **Yanlış cevap her
+zaman sayılır**: bilmediğin bir kelimenin aralığı uzamamalı. Kural yalnızca
+mezun olmuş (Review) kartlar için; öğrenme adımındaki kart gün içinde birkaç
+kez sorulmak üzere tasarlanmıştır.
+
 *Eşleştirme bir grup egzersizi: 5'erli sorulur, tek kartla sorulamaz. Gruptan
 tek kart artarsa çoktan seçmeliye kaydırılır.*
 
@@ -146,9 +159,41 @@ amaç yeni kurulan bağı aynı oturumda her yönden bir kez kullandırmak.
 Sıra korunur: `Runner`'a `sirali` verilir, karıştırma kapanır. Tekrar
 bölümünde tersi doğru — orada kartlar birbirinden bağımsız, karışık gelir.
 
-Merdiveni yine de **oynatmaz** — kelime hâlâ kısa süreli hafızada, buradan
-gelen başarı "öğrenildi" demek değil. İki iş yapar: FSRS'i gerçek bir cevapla
-başlatmak ve **kancanın ilk denemede tutup tutmadığını ölçmek**.
+Merdiveni **sırasında** oynatmaz — kelime hâlâ kısa süreli hafızada, buradan
+gelen başarı "öğrenildi" demek değil.
+
+**FSRS'e tek not verilir, o da testin sonunda.** Altı sorunun her biri ayrı bir
+not olarak yazılıyordu ve kelime iki dakika içinde altı kez "hatırlanmış"
+sayılıyordu:
+
+| | Altı not | Tek not |
+|---|---|---|
+| 1 ders sonrası | reps 6 · stabilite 2,3 gün | reps 1 · 2,3 gün |
+| 1 tekrar sonrası | **13,9 gün** → vade 12–15 gün | **7,3 gün** |
+| Ortalama sıradaki vade | 7 gün (max 15) | 3,2 gün (max 7) |
+| Tekrarlar ne zaman başlar | **4. gün** | **2. gün** |
+
+Ölçüm altı günlük gerçek bir turda alındı. Aralıklı tekrarın vaadi buydu ve
+çalışmıyordu: kelime daha ilk gün iki güne, ilk tekrardan sonra iki haftaya
+fırlıyordu. Bu, kitaptaki *"cramming aralıkları şişirir"* hatası — FSRS her
+notu **aralıklı** bir hatırlama sayar, oysa altısı da aynı oturumdaydı.
+Anki'deki "öğrenme adımları → mezuniyet" düzeninin karşılığı: oturumun tamamı
+tek bir not.
+
+**2. basamağı (çoktan seçmeli) kancaya basmadan doğru** yapan kelime, test
+biterken **bir basamak** kazanır (1 → 2). Tek basamak ve tanıma tarafında
+kalıyor: 2. basamakta görsel ve kanca hâlâ ekranda, yani bu bir üretim iddiası
+değil.
+
+> Bir süre hiçbir basamak verilmiyordu ve sonucu şuydu: ilk gün hiçbir şey
+> ilerlemiyordu. Kullanıcı testte kelimeyi baştan yazmış, dinleyip yazmış
+> oluyor, ders sonunda yine *"0 kelime ilerledi"* görüyordu.
+>
+> Sonra ölçüt *"testin altı görevi de temiz"* oldu ve o da tutmadı: gerçek bir
+> derste beş kelimenin beşinde de en az bir hata çıktı, **hiçbiri ilerlemedi**.
+> Altı görev gittikçe zorlaşıyor; en üstteki dinlemeyi ilk gün tutturamamak
+> tanımayı bilmediği anlamına gelmiyor. Aynı veriyle bugünkü ölçüt 5 kelimenin
+> **4'ünü** ilerletiyor.
 
 Önceki sürümde kullanıcıya *"Kanca tuttu mu?"* diye soruluyor ve cevabı ilk
 FSRS notu oluyordu. Bu bir **beyandı**. Artık sorulmuyor, ölçülüyor.
@@ -169,6 +214,25 @@ tekrar bitince vadesi gelen kart kalmadığı için ekran *"Bugünlük tamam ·
 Sıradaki tekrar 1 dakika sonra"*ya düşüyordu. Hedefi dolmuş bir günde
 söylenecek tek şey var: istediğin kadar pekiştir.
 
+### Günün değişmesi
+
+Ana ekran **günün değiştiğini fark eder**. Gün anahtarı tek bir yerde tutulur
+(`today.ts`): sekmeye dönüşte, pencere odağında ve dakikada bir kontrol edilir,
+haber **yalnızca gün gerçekten değişince** verilir — her tikte vermek bütün
+ekranı dakika başı boşuna yeniden çizerdi.
+
+> Önce bunu yapan hiçbir şey yoktu: `new Date()` sadece render anında
+> okunuyordu, render ise ancak veritabanı değişince oluyordu. Uygulama açık
+> dururken gece yarısı geçilince ekran dünün durumunda donuyordu — günlük
+> hedefi dolduran bir günün ertesinde ana ekran hâlâ **"Hızlı tekrar"**
+> diyordu.
+
+O günün ilk girişinde ana ekranın kartı **"Yeni güne başla"** olur, altında
+günün paketi (`5 yeni · 8 tekrar`). Bu bir **an**, sürekli bir etiket değil:
+ilk ders bitince kart normal *"Bugünün dersi"*ne döner, yoksa "yeni gün" sözü
+gün içinde tekrarlanıp anlamını yitirir. Havuz boşken aynı yer *"İlk dersin
+hazır"* olur.
+
 Hızlı tekrarda **eşleştirme sorulmaz** — 1. basamaktakiler çoktan seçmeli
 gelir. Eşleştirme beş kartı bir arada gösterir ve doğru cevap ekranda durur;
 yeni kelimeyle ilk temas için doğru, aynı gün üçüncü kez görülen kelime için
@@ -187,13 +251,28 @@ uzun bir listeyi kaydırmak gerekiyordu. Artık İlerleme'nin en üstündeki bü
 **📖 Kelimeler** düğmesinden açılan kendi ekranı — arama ve basamak filtreleri
 (Tanıma 1–2 · Geçiş 3–4 · Üretim 5–6 · Tüm havuz) orada.
 
+Kapsam birimi takvim günü değil **ders**:
+
 | Kapsam | | Sınır |
 |---|---|---|
-| ☀️ **Bugün** | bugün öğrendiklerim — tam satır, en üstte | **sınırsız** (gün kaç kelimeyse) |
-| 🌙 Dün | dün öğrendiklerim | 10 |
+| ☀️ **Bugün / Son ders** | en son dersin kelimeleri — tam satır, en üstte | **sınırsız** (ders kaç kelimeyse) |
+| 🌙 Önceki ders | bir önceki dersin kelimeleri | sınırsız |
+| ⏰ Bekleyen tekrarlar | vadesi gelmiş | 10 |
 | 🩹 Zorlandıklarım | en çok düştüklerim | 10 |
 | 🕰️ Eski kelimeler | 7+ günlük, **rastgele** | 10 |
-| ✋ **Seç** | kendin işaretle | **sınırsız** |
+| ✋ **Seç** | kendin işaretle — kendi satırında | **sınırsız** |
+
+> Birinci kutu bir süre sabit **"Bugün"**dü ve ikincisi **"Dün"**. İkisi de
+> yapısal olarak boşalıyordu: "Dün" bir gün ara verildiğinde ya da o gün
+> yalnızca tekrar yapıldığında boş kalıyor, "Bugün" ise **set bitince
+> sonsuza kadar** boş kalıyordu — artık hiçbir gün yeni kelime gelmiyor.
+> Birim ders olunca kural tek cümleye indi: *birinci kutu en son ders,
+> ikincisi ondan önceki.* Tanım gereği çakışmazlar ve iki dersi olan
+> herkeste ikisi de doludur. Bugün yeni kelime geldiyse birinci kutunun
+> başlığı **"Bugün"**, gelmediyse **"Son ders"**.
+
+Boş kapsam kutusu **basılamaz** (soluk durur); önce basılıyor ve hiçbir şey
+olmuyordu.
 
 **"Tümü" yok.** Havuz 600'e çıkınca tek tuşla yüzlerce kelime başlatmak
 kimsenin istediği şey değil; isteyen **Seç**'e girip istediği kadarını
@@ -202,10 +281,16 @@ işaretler.
 Eski kelimeler **rastgele** seçilir. Hep en eskiden başlamak aynı kelimeleri
 döndürüp durur; havuz büyüdükçe arkadaki yüzlerce kelime hiç görünmez.
 
-Egzersiz tipi merdivenin altı basamağı, artı iki tane:
-**🎲 Karışık** (her kelime kendi basamağında) ve **🃏 Kartlar** — kelimenin
-kartını (görsel + kanca + cümle) soru sormadan yeniden gösterir. Aylar önce
-öğrenilen bir kelimenin kancasını tazelemenin yolu bu.
+Egzersiz tipi merdivenin altı basamağı, artı üç tane:
+
+- **🎓 Dersi tekrar et** — dersin kendisi: önce kartlar gösterilir, sonra
+  **altı basamak sırayla** koşar. Öğrenme testiyle aynı görev listesi, aynı
+  sıra (`Runner`'a `sirali` verilir). Seçili kapsam hangisiyse onu ders gibi
+  işler; varsayılan kapsamla birlikte "bugünün dersini baştan yap" demek olur.
+- **🎲 Karışık** — her kelime kendi basamağında
+- **🃏 Kartlar** — kelimenin kartını (görsel + kanca + cümle) soru sormadan
+  yeniden gösterir. Aylar önce öğrenilen bir kelimenin kancasını tazelemenin
+  yolu bu.
 
 **FSRS'e ve merdivene dokunmaz.** Sebebi önemli: egzersiz öğütüp duran bir
 kullanıcı bütün kartları öne çeker ve aralıklı tekrarın tüm faydası yok olur.
@@ -243,23 +328,74 @@ sadece duyularak tanınmalı.
 
 İlerleme sekmesinde iki yüzde var ve ikisi ayrı soruya cevap veriyor.
 
-**Başarı** — verdiğin cevapların ne kadarı doğru. Gün / Hafta / Ay penceresi
-tek dokunuşla değişir. Doğru–yanlış artık **gün bazında** kaydediliyor
-(`days[gün] = { r, i, d, y }`); önce yalnızca kaç kart çalışıldığı tutuluyordu,
-"ne kadarı doğruydu" sorusunun cevabı hiçbir yerde yoktu.
+**Başarı** — penceredeki her **alıştırmanın** (`kelime × basamak`) en son cevabı.
+Gün / Hafta / Ay / **Toplam** penceresi tek dokunuşla değişir. Aynı kelimenin
+eşleştirmesi ile yazması **ayrı hücre**; her hücre bir kez sayılır:
 
-**Ustalık** — kelimelerin merdivende ne kadar yukarı çıktığı. 1. basamak %0,
+- Yanlış yaptığın alıştırmayı tekrar edip doğru yapınca oran **gerçekten yükselir**
+- Çok tekrar yapan oranı **şişiremez** — her hücrenin bir oyu var
+- **Zor basamak kolay basamağın sonucunu silmez**
+- Ham hacim yüzdenin altında ayrıca durur (`12 kelime · 48 cevap · 9 yanlış`)
+
+Bunun için her cevap **tek satır** olarak kaydedilir
+(`answers` tablosu: `cardId`, `ts`, `gun`, `ok`, `step`, `ipucu`, `kaynak`).
+
+> Önce gün bazında toplu sayaçlar tutuluyordu (`days[gün] = { r, i, d, y }`).
+> O şekille "kelimeyi yeniden çalışınca önceki yanlışı düzelsin" isteği
+> **matematiksel olarak** karşılanamaz: hangi cevabın hangi kelimeye ait
+> olduğu bilgisi atılmış oluyor, geri getirilemiyor. Bir kelimeyi yanlış
+> yapıp sonra üç kez doğru yapmak günü %75 gösteriyordu — eski yanlış hiç
+> silinmiyor, yalnızca seyreliyordu. Ham cevap durduğu sürece yüzdenin
+> tanımı sonradan da değiştirilebilir.
+>
+> Geçiş sırasında **başarı geçmişi bilerek sıfırdan başladı**: eski toplu
+> sayaçlar kelime bazında geri üretilemiyor, ikisini tek rakamda toplamak
+> iki farklı şeyi karıştırmak olurdu. Kelime ilerlemesi (step/FSRS)
+> etkilenmedi.
+>
+> Birim bir süre **kelime** idi ve gerçek bir derste çöktü: öğrenme testi
+> aynı kelimeyi altı kez, gittikçe zorlaşan basamaklarda soruyor ve en
+> sonda dinleme var. 30 cevabın 21'i doğru olan bir derste beş kelimenin
+> de **son** cevabı yanlış çıktı; ekranda **%0** yazdı. "Son cevap" daha
+> sonraki bir çalışmada anlamlı, aynı testin daha zor basamağı için değil
+> — karşılaştırma aynı basamakla yapılmalı. Birim `kelime × basamak` olunca
+> aynı ders **%83** verdi.
+
+**Kalıcılık** *(önceki adı "ustalık")* — aşağıda.
+
+**Kalıcılık** — kelimelerin merdivende ne kadar yukarı çıktığı. 1. basamak %0,
 6. basamak %100, ortalaması alınır. "Kaç kelime biliyorum" değil, **"ne kadar
 iyi biliyorum"**.
+
+> Adı **"ustalık"**tı ve ne olduğu soruldu — kimse bilmiyorsa etiket
+> çalışmıyor demektir. Kutunun altında artık tek satır tanımı duruyor:
+> *"Kelimelerin merdivende ne kadar yukarı çıktığı. Tekrarlarla yükselir."*
 
 Altı basamak kullanıcıya **ne yapabildiği** olarak gösterilir, ve sayım
 **birikimlidir**:
 
 ```
-Görünce anlıyorum             5 / 5
-Türkçesinden seçebiliyorum    3 / 5
-Baştan yazabiliyorum          1 / 5
+Neler yapabildin
+Tanıştım                      5 / 5
+Türkçesinden seçtim           3 / 5
+Baştan yazdım                 1 / 5
 ```
+
+Sayım **merdiven konumuna değil yapılana** bakar: bir kelimeyi o basamakta
+(`≥ 3` seçme, `≥ 5` yazma) **kancaya basmadan en az bir kez** doğru yaptıysan
+sayılır — cevap günlüğünden okunur.
+
+> Önce eşik merdiven konumuydu (`step ≥ 3` / `≥ 5`). Sonucu şuydu: kullanıcı
+> derste kelimeyi ters seçmeli, harf dizme ve yazmayla doğru yapıyor, panelde
+> alt iki satır yine **0** duruyordu — çünkü merdiven öğrenme testinde
+> oynamıyor ve 3. basamağa çıkmak günler sürüyor. Kullanıcı panelin bozuk
+> olduğunu düşündü; haksız da değildi: *"neler yapabildin"* sorusunun cevabı
+> "bugün baştan yazdın" olmalı.
+>
+> Bedeli bilinçli: **unutulan kelime de sayılmaya devam eder**, çünkü soru
+> "hâlâ biliyor musun" değil "yapabildin mi". "Hâlâ" sorusunun cevabı hemen
+> üstteki **kalıcılık** yüzdesi. İki panel yan yana duruyor ve ayrı şeyler
+> söylüyor.
 
 Bir ara basamaklar birbirini dışlayan üç kutuya bölünüyordu (1–2 tanıma,
 3–4 geçiş, 5–6 üretim). Yanıltıyordu: *"Tanıma 2"* yazınca "sadece 2 kelimeyi
@@ -310,29 +446,53 @@ Oranların yanında kaç karta dayandığı da yazar; 2 kartlık %100 bir şey s
 ```
 content/cards.json     İçeriğin tek kaynağı (xlsx'ten üretilir)
 brand/                 Marka kaynağı + sosyal medya görselleri
-  kilit-kaynak.png     Tek kaynak: işaret + isim (şeffaf). Her şey bundan üretilir.
-  kilit.png            Kırpılmış kilit — sosyal medya
-  logo-isaret.png      Kare işaret — profil fotoğrafı, filigran
+  logo-isaret.svg      TEK KAYNAK: işaret (şeffaf vektör). Her şey bundan üretilir.
+  logo-isaret.png      Şeffaf işaret — filigran, sunum
+  kilit.png            Yatay kilit (işaret + isim) — başlık, afiş
+  instagram-profil*.png  Profil fotoğrafı: sade/yazılı × krem/lacivert
+  fonts/Nunito-800.ttf Kilit yazısı için (resvg woff2 okumuyor)
 src/
   assets/cards/        Kart görselleri — dosya adı kart id'si (snake.webp)
   content.ts           Kart havuzu ve sabitler
   scheduler.ts         FSRS + merdiven geçişleri + kuyruklar
   exercise.ts          Egzersiz tanımları, şıklar, harf dizme (saf)
   dates.ts             Seri, seri koruma, tarih mantığı (saf)
-  score.ts             Başarı ve ustalık yüzdeleri (saf)
-  db.ts                Dexie (IndexedDB) — ilerleme cihazda
+  today.ts             Gün sınırı — gün dönünce ekran da döner
+  score.ts             Başarı ve kalıcılık yüzdeleri (saf)
+  db.ts                Dexie (IndexedDB) — ilerleme + cevap günlüğü, cihazda
   share.ts             Paylaşım görselleri (canvas)
   components/          Match, Choice, Scramble, TypeAnswer, Runner, CardFace
   screens/             Welcome, Home, Lesson, Practice, Progress,
                        WordList, Settings, SessionDone
 tools/
   import-xlsx.mjs      Tablo → JSON + doğrulama raporu
-  make-icons.mjs       SVG → PNG ikonlar
+  make-icons.mjs       Vektör işaret → PNG ikonlar
+  make-lockup.mjs      İşaret + isim → yazılı kilit, profil görselleri
 ```
 
 **Local-first.** İlerleme tamamen tarayıcıda (IndexedDB), backend yok. Açılışta
 `navigator.storage.persist()` çağrılır — yoksa Safari 7 gün kullanılmayan veriyi
 koşulsuz siliyor. İlerleme sekmesindeki **Yedek al / Geri yükle** ile taşınır.
+
+### Renk sistemi
+
+Palet zaten genişti ama tek renk (mavi) taşıyordu: `blush` hiç kullanılmıyor,
+her seçili kutu aynı maviydi. Renk artık **anlam taşıyor** ve iki eksen
+birbirine karışmıyor:
+
+| Nerede | Kural |
+|---|---|
+| Egzersiz **kapsamları** | her kapsamın kendi rengi (lacivert · nane · pembe · koyu mavi) |
+| Egzersiz **tipleri** | hepsi lacivert — tip bir eksen değiştirmez |
+| Merdiven basamakları | üç bölge üç renk: tanıma **mavi** · geçiş **sarı** · üretim **nane** |
+| İlerleme çubukları | aynı üç renk — iki ekran aynı şeyi aynı renkle söylüyor |
+| İlerleme sayı kutuları | mavi (kelime) · sarı (kalıcılık) · pembe (seri) · nane (toplam) |
+| Alt menü | her sekmenin sabit rengi |
+| **Kart yüzü ve soru ekranı** | dokunulmadı — orada tek vurgu kancanın sarısı |
+
+Son satır kuralın kendisi: `spark` (kanca sarısı) başka hiçbir yerde vurgu
+rengi olarak kullanılmıyor. Kancanın yanına ikinci bir renk girerse kanca
+dikkat çekmeyi bırakır.
 
 **Teknoloji:** Vite · React · TypeScript · Tailwind v4 · Dexie · ts-fsrs (FSRS-5) · vite-plugin-pwa. Yazı karakterleri (**Nunito** + Plus Jakarta Sans) yerelde, çevrimdışı çalışır.
 
@@ -346,7 +506,7 @@ koşulsuz siliyor. İlerleme sekmesindeki **Yedek al / Geri yükle** ile taşın
 
 ## Durum
 
-**Bitti:** Logo + marka kilidi · tek akışlı ders · altı basamaklı egzersiz merdiveni · öğrenme testi (beyan yerine ölçüm) · serbest egzersiz bölümü · telaffuz · hafif seri + seri koruma · başarı ve ustalık puanları · Kelimelerim + arama + kanca panosu · kalite ölçümü ve zayıf kanca listesi · yedekleme · PWA (kurulabilir, çevrimdışı).
+**Bitti:** Logo + marka kilidi · tek akışlı ders · altı basamaklı egzersiz merdiveni · öğrenme testi (beyan yerine ölçüm) · serbest egzersiz bölümü · telaffuz · hafif seri + seri koruma · başarı ve kalıcılık puanları · Kelimelerim + arama + kanca panosu · kalite ölçümü ve zayıf kanca listesi · yedekleme · PWA (kurulabilir, çevrimdışı).
 
 **Yapılmadı ve nedeni:**
 
@@ -389,5 +549,14 @@ koşulsuz siliyor. İlerleme sekmesindeki **Yedek al / Geri yükle** ile taşın
   öğren → hemen test et → aralıklı tekrar geri getirsin. Çok giriş noktası
   kullanıcıyı her açılışta karar vermeye zorluyor.
 - **Egzersiz bölümü ilerlemeyi değiştirmez.** Serbest pratik aralıklı tekrarı
-  bozmamalı; yoksa çalışkan kullanıcı kendi zamanlamasını yok eder.
+  bozmamalı; yoksa çalışkan kullanıcı kendi zamanlamasını yok eder. **Dersi
+  tekrar et** de bu kurala tabi: ders gibi işler, hiçbir şeyi ilerletmez.
+- **Ana ekranda ayrı "eskileri tekrar et" düğmesi yok.** İstendi, açılmadı: üç
+  giriş noktasını tek *Başla*'ya indirmek bu ürünün en büyük kazancıydı ve
+  tekrarı atlanabilir yapmak tekrar borcunu sessizce büyütür. Yerine üç küçük
+  müdahale: dersin içinde **"Bölüm 2/3 · Tekrar"** göstergesi (tekrarın derse
+  dâhil olduğu görünsün — ayrı düğme isteği buradan doğuyordu), tekrar yükü
+  ağırken *Başla*'nın altında ikincil **"Önce N tekrarı yap"** satırı (aynı
+  ders, yalnızca sıra değişir; hiçbir bölüm atlanmaz) ve Egzersiz'de
+  **⏰ Bekleyen tekrarlar** kapsamı.
 - **Arayüz kartın çerçevesi, kart kahraman.** 3D nesne/avatar bilinçli alınmadı — çerçeve bağırırsa resim kaybolur.
