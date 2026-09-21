@@ -14,3 +14,6 @@ gorsel-brief.tsv
 
 # Capacitor Android projesi — cap add android ile yeniden uretilir
 android/
+
+# Elenen logo adaylari — 21 MB, depoya girmesin (diskte duruyor)
+brand/denemeler/

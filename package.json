@@ -11,7 +11,8 @@
     "icons": "node tools/make-icons.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "import:images": "node tools/import-images.mjs"
+    "import:images": "node tools/import-images.mjs",
+    "lockup": "node tools/make-lockup.mjs"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "^8.0.2",

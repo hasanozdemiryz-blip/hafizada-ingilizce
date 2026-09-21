@@ -1,15 +1,20 @@
 /**
- * brand/kilit-kaynak.png (isaret + isim, seffaf) -> markanin tum turevleri.
+ * brand/logo-isaret.svg (seffaf isaret) -> markanin tum turevleri.
  *
- * Tek kaynak dosyadan uretilir ki uygulama simgesi ile sosyal medyadaki
- * kilit ayni isareti tasisin. Uretim degil, kirpma/olcekleme.
+ * Tek kaynak VEKTOR: uygulama simgesi, cihaz simgeleri ve sosyal medya
+ * ayni isareti tasisin ve her boyutta keskin cikssin. Uretim degil,
+ * olcekleme/yerlestirme.
+ *
+ * Once kaynak 1,1 MB'lik bir PNG'ydi (`brand/kilit-kaynak.png`) ve tum
+ * turevler ondan kirpiliyordu: 40 pikselde kenarlar daginiktı, rengi
+ * degistirmek icin dosyayi yeniden uretmek gerekiyordu.
  *
  * Uretilenler:
  *   public/icon-192.png, icon-512.png, icon-512-maskable.png,
- *   public/apple-touch-icon.png      -> PWA / cihaz simgeleri
- *   brand/logo-isaret.png            -> kare isaret (profil foto, filigran)
- *   brand/kilit.png                  -> kirpilmis kilit (sosyal medya)
- *   src/assets/brand/kilit.webp      -> uygulama basligi
+ *   public/apple-touch-icon.png          -> PWA / cihaz simgeleri
+ *   brand/logo-isaret.png                -> seffaf isaret (filigran, sunum)
+ *   brand/instagram-profil*.png          -> profil fotografi (daire guvenli)
+ *   src/assets/brand/isaret.webp         -> uygulama ici (acilis ekrani)
  *
  * Kullanim: npm run icons
  */
@@ -21,83 +26,67 @@ import { fileURLToPath } from 'node:url';
 const KOK = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const y = (...p) => resolve(KOK, ...p);
 
-/** Maskable ikonun kenarlara tasan zemini — rozetin mavisi */
-const ZEMIN = { r: 0x3f, g: 0x92, b: 0xf5, alpha: 1 };
-/** Maskable guvenli alan: isaret tuvalin %78'ini kaplar */
-const GUVENLI = 0.78;
-
-const kaynak = sharp(y('brand/kilit-kaynak.png'));
-const { width: W, height: H } = await kaynak.metadata();
-
-/** Alfa kanalindan dolu sutunlari cikar */
-const alfa = await kaynak.clone().ensureAlpha().extractChannel('alpha').raw().toBuffer();
-const doluSutun = new Array(W).fill(false);
-const doluSatir = new Array(H).fill(false);
-for (let satir = 0; satir < H; satir++) {
-  for (let sutun = 0; sutun < W; sutun++) {
-    if (alfa[satir * W + sutun] > 12) {
-      doluSutun[sutun] = true;
-      doluSatir[satir] = true;
-    }
-  }
-}
-
-const ilk = (a) => a.indexOf(true);
-const son = (a) => a.lastIndexOf(true);
+/** Marka zemini — isaretin uzerinde durdugu krem */
+const KREM = { r: 0xff, g: 0xf7, b: 0xe4, alpha: 1 };
+/** Koyu varyant — akisda beyaz/acik zeminler arasinda ayrissin diye */
+const LACI = { r: 0x16, g: 0x23, b: 0x3a, alpha: 1 };
+const SEFFAF = { r: 0, g: 0, b: 0, alpha: 0 };
 
 /**
- * Rozet, soldaki ilk kesintisiz dolu sutun bloku.
- * Onunla yazi arasinda tamamen bos bir seritten yararlaniyoruz.
+ * Isaretin tuvale orani.
+ *
+ * `maskable`: Android simgeyi daire/squircle'a kirpiyor, guvenli alan
+ * tuvalin %80'lik DAIRESI. Kare bir isaretin o dairenin icine sigmasi
+ * icin kenari en fazla 0.8/√2 ≈ 0.566 olabilir.
+ * `daire`: Instagram profil fotografi da daire — ayni hesap, biraz daha
+ * rahat bir pay.
  */
-const solKenar = ilk(doluSutun);
-let sagKenar = solKenar;
-while (sagKenar + 1 < W && doluSutun[sagKenar + 1]) sagKenar++;
+const ORAN = { normal: 0.72, maskable: 0.56, daire: 0.55 };
 
-const ustKenar = ilk(doluSatir);
-const altKenar = son(doluSatir);
+/**
+ * Kaynak vektoru cizip icerigine kirp.
+ *
+ * 2048'lik viewBox'i 600 density ile cizmek ~12k x 12k piksel ediyor ve
+ * sharp'in guvenlik sinirini asiyor; 2048 kenar her turev icin fazlasiyla
+ * yeterli (en buyuk cikti 1080).
+ */
+const isaret = await sharp(y('brand/logo-isaret.svg'))
+  .resize(2048, 2048, { fit: 'inside' })
+  .png()
+  .toBuffer()
+  .then((b) => sharp(b).trim().png().toBuffer());
 
-// Rozeti kareye tamamla
-const gen = sagKenar - solKenar + 1;
-const yuk = altKenar - ustKenar + 1;
-const kenar = Math.max(gen, yuk);
-const isaret = {
-  left: Math.max(0, Math.round(solKenar - (kenar - gen) / 2)),
-  top: Math.max(0, Math.round(ustKenar - (kenar - yuk) / 2)),
-  width: kenar,
-  height: kenar,
-};
+/** Isareti verilen tuvalin ortasina, verilen oranda yerlestirir. */
+async function kare(boyut, { zemin, oran, cikti }) {
+  const hedef = Math.round(boyut * oran);
+  const ic = await sharp(isaret)
+    .resize(hedef, hedef, { fit: 'contain', background: SEFFAF })
+    .toBuffer();
 
-console.log(`kaynak ${W}x${H} · isaret ${isaret.width}x${isaret.height} @ ${isaret.left},${isaret.top}`);
+  const tuval = sharp({
+    create: { width: boyut, height: boyut, channels: 4, background: zemin },
+  }).composite([{ input: ic, gravity: 'centre' }]);
 
-await mkdir(y('src/assets/brand'), { recursive: true });
-
-const isaretPng = await sharp(y('brand/kilit-kaynak.png')).extract(isaret).png().toBuffer();
-await sharp(isaretPng).toFile(y('brand/logo-isaret.png'));
-
-/** Duz ikon: isaret tuvali doldurur */
-async function duz(ad, boy) {
-  await sharp(isaretPng).resize(boy, boy, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toFile(y('public', ad));
-  console.log(`  ${ad}  ${boy}x${boy}`);
+  await mkdir(dirname(y(cikti)), { recursive: true });
+  if (cikti.endsWith('.webp')) await tuval.webp({ quality: 92 }).toFile(y(cikti));
+  else await tuval.png().toFile(y(cikti));
+  return cikti;
 }
 
-/** Maskable: koseler kirpilabilir, zemin tasar ve isaret kuculur */
-async function maskable(ad, boy) {
-  const ic = Math.round(boy * GUVENLI);
-  const kucuk = await sharp(isaretPng).resize(ic, ic).png().toBuffer();
-  await sharp({ create: { width: boy, height: boy, channels: 4, background: ZEMIN } })
-    .composite([{ input: kucuk, left: Math.round((boy - ic) / 2), top: Math.round((boy - ic) / 2) }])
-    .png()
-    .toFile(y('public', ad));
-  console.log(`  ${ad}  ${boy}x${boy}  (zemin tasan)`);
-}
+const isler = [
+  // --- PWA / cihaz ---
+  kare(192, { zemin: KREM, oran: ORAN.normal, cikti: 'public/icon-192.png' }),
+  kare(512, { zemin: KREM, oran: ORAN.normal, cikti: 'public/icon-512.png' }),
+  kare(512, { zemin: KREM, oran: ORAN.maskable, cikti: 'public/icon-512-maskable.png' }),
+  kare(180, { zemin: KREM, oran: ORAN.normal, cikti: 'public/apple-touch-icon.png' }),
 
-await duz('icon-192.png', 192);
-await duz('icon-512.png', 512);
-await maskable('icon-512-maskable.png', 512);
-await maskable('apple-touch-icon.png', 180);
+  // --- Uygulama ici (acilis ekrani) ---
+  kare(512, { zemin: SEFFAF, oran: 1, cikti: 'src/assets/brand/isaret.webp' }),
 
-/** Kilit: seffaf kenar paylari atilmis hali */
-const kilit = { left: solKenar, top: ustKenar, width: son(doluSutun) - solKenar + 1, height: yuk };
-await sharp(y('brand/kilit-kaynak.png')).extract(kilit).png().toFile(y('brand/kilit.png'));
-await sharp(y('brand/kilit-kaynak.png')).extract(kilit).resize({ width: 720 }).webp({ quality: 92 }).toFile(y('src/assets/brand/kilit.webp'));
-console.log(`  brand/logo-isaret.png · brand/kilit.png · src/assets/brand/kilit.webp`);
+  // --- Marka / sosyal ---
+  kare(1024, { zemin: SEFFAF, oran: 1, cikti: 'brand/logo-isaret.png' }),
+  kare(1080, { zemin: KREM, oran: ORAN.daire, cikti: 'brand/instagram-profil.png' }),
+  kare(1080, { zemin: LACI, oran: ORAN.daire, cikti: 'brand/instagram-profil-lacivert.png' }),
+];
+
+for (const c of await Promise.all(isler)) console.log('✓', c);
