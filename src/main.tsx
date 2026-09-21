@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { hatirlatmaHazirla } from './reminder';
 import { telaffuzHazirla } from './speech';
 
 /**
@@ -19,6 +20,12 @@ void navigator.storage?.persist?.().catch(() => {});
  * Bkz. speech.ts — motor bulununca arayuz kendiliginden acilir.
  */
 void telaffuzHazirla();
+
+/**
+ * Gunluk hatirlatma da yalnizca native kabukta var; web'de bu cagri
+ * hemen doner (bkz. reminder.ts).
+ */
+void hatirlatmaHazirla();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

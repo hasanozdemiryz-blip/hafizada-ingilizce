@@ -124,6 +124,11 @@ export type AppState = {
    * tutuluyordu; "ne kadari dogruydu" sorusunun cevabi hicbir yerde yoktu.
    */
   days: Record<string, { r: number; i: number; d?: number; y?: number }>;
+  /**
+   * Gunluk hatirlatma saati (0-23) — `null` kapali.
+   * Yalnizca native kabukta anlamli (bkz. reminder.ts).
+   */
+  reminderHour: number | null;
   /** YYYY-MM-DD, yerel saat */
   lastSessionDate: string | null;
 };

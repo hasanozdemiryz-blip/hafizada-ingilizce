@@ -3,6 +3,12 @@
   "appName": "Hafızada İngilizce",
   "webDir": "dist",
   "android": {
-    "backgroundColor": "#eaf1fb"
+    "backgroundColor": "#fff7e4"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_icon_config_sample",
+      "iconColor": "#16233A"
+    }
   }
 }

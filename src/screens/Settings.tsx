@@ -3,6 +3,12 @@ import { TAB_SPACE } from '../components/TabBar';
 import { Button, Card, Screen } from '../components/ui';
 import { CARDS, LIMIT_CHOICES, LIMIT_MAX } from '../content';
 import { exportProgress, importProgress, resetAll, setState } from '../db';
+import {
+  HATIRLATMA_SAATLERI,
+  hatirlatmayiKapat,
+  hatirlatmayiKur,
+  useHatirlatma,
+} from '../reminder';
 import { useTelaffuz } from '../speech';
 import { DevPanel } from './DevPanel';
 import type { AppState } from '../types';
@@ -19,6 +25,20 @@ export function Settings({ state, progress }: { state: AppState; progress: unkno
   const [sifirlaSoruluyor, setSifirlaSoruluyor] = useState(false);
   const [hata, setHata] = useState<string | null>(null);
   const sesVar = useTelaffuz();
+  const hatirlatmaVarMi = useHatirlatma();
+
+  /**
+   * Ayari SONUCA gore yaziyoruz: izin verilmezse anahtar acik gorunup
+   * hicbir sey yapmamali.
+   */
+  async function hatirlatmayiAyarla(saat: number | null) {
+    if (saat === null) {
+      await hatirlatmayiKapat();
+      await setState({ reminderHour: null });
+      return;
+    }
+    if (await hatirlatmayiKur(saat)) await setState({ reminderHour: saat });
+  }
 
   return (
     <Screen>
@@ -84,6 +104,64 @@ export function Settings({ state, progress }: { state: AppState; progress: unkno
                 />
               </button>
             </div>
+          </Card>
+        )}
+
+        {/*
+          Gunluk hatirlatma — yalnizca native kabukta (APK).
+          Tarayicida bir PWA kapaliyken kendi kendine bildirim gonderemez;
+          sunucu ister. Motor yoksa satir hic acilmiyor (bkz. reminder.ts).
+        */}
+        {hatirlatmaVarMi && (
+          <Card className="rise delay-1">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-bold">Günlük hatırlatma</p>
+                <p className="text-sm text-ink-soft mt-0.5">
+                  Seçtiğin saatte kısa bir bildirim. Kaçırırsan bir şey olmaz.
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={state.reminderHour !== null}
+                aria-label="Günlük hatırlatma"
+                onClick={() =>
+                  void hatirlatmayiAyarla(
+                    state.reminderHour === null ? HATIRLATMA_SAATLERI[2] : null,
+                  )
+                }
+                className={`shrink-0 h-8 w-14 rounded-full p-1 transition-colors ${
+                  state.reminderHour !== null ? 'bg-grow' : 'bg-line'
+                }`}
+              >
+                <span
+                  className={`block h-6 w-6 rounded-full bg-white shadow-[var(--shadow-soft)] transition-transform ${
+                    state.reminderHour !== null ? 'translate-x-6' : ''
+                  }`}
+                />
+              </button>
+            </div>
+
+            {state.reminderHour !== null && (
+              <div className="mt-4 flex gap-2">
+                {HATIRLATMA_SAATLERI.map((sa) => {
+                  const secili = state.reminderHour === sa;
+                  return (
+                    <button
+                      key={sa}
+                      onClick={() => void hatirlatmayiAyarla(sa)}
+                      className={`flex-1 rounded-2xl py-3 text-sm font-bold tabular-nums transition-all active:scale-95 ${
+                        secili
+                          ? 'bg-brand text-white shadow-[0_8px_18px_-8px_rgba(79,146,246,0.85)]'
+                          : 'bg-sunken text-ink'
+                      }`}
+                    >
+                      {String(sa).padStart(2, '0')}:00
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </Card>
         )}
 
