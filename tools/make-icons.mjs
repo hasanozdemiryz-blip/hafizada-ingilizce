@@ -15,11 +15,12 @@
  *   brand/logo-isaret.png                -> seffaf isaret (filigran, sunum)
  *   brand/instagram-profil*.png          -> profil fotografi (daire guvenli)
  *   src/assets/brand/isaret.webp         -> uygulama ici (acilis ekrani)
+ *   resources/*                          -> Android launcher ikonu (bkz. asagi)
  *
  * Kullanim: npm run icons
  */
 import sharp from 'sharp';
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -50,16 +51,30 @@ const ORAN = { normal: 0.72, maskable: 0.56, daire: 0.55 };
  * sharp'in guvenlik sinirini asiyor; 2048 kenar her turev icin fazlasiyla
  * yeterli (en buyuk cikti 1080).
  */
-const isaret = await sharp(y('brand/logo-isaret.svg'))
-  .resize(2048, 2048, { fit: 'inside' })
-  .png()
-  .toBuffer()
-  .then((b) => sharp(b).trim().png().toBuffer());
+const kaynakSvg = await readFile(y('brand/logo-isaret.svg'), 'utf8');
+
+const cizim = (svg) =>
+  sharp(Buffer.from(svg))
+    .resize(2048, 2048, { fit: 'inside' })
+    .png()
+    .toBuffer()
+    .then((b) => sharp(b).trim().png().toBuffer());
+
+const isaret = await cizim(kaynakSvg);
+/** Koyu zeminde laciverт yari kayboluyor; orada yerini krem aliyor. */
+const isaretTers = await cizim(kaynakSvg.replaceAll('#16233A', '#FFF7E4'));
 
 /** Isareti verilen tuvalin ortasina, verilen oranda yerlestirir. */
-async function kare(boyut, { zemin, oran, cikti }) {
+async function kare(boyut, { zemin, oran, cikti, ters = false }) {
   const hedef = Math.round(boyut * oran);
-  const ic = await sharp(isaret)
+  if (oran === 0) {
+    // Yalnizca duz zemin — uyarlanabilir ikonun arka plani gibi
+    const bos = sharp({ create: { width: boyut, height: boyut, channels: 4, background: zemin } });
+    await mkdir(dirname(y(cikti)), { recursive: true });
+    await bos.png().toFile(y(cikti));
+    return cikti;
+  }
+  const ic = await sharp(ters ? isaretTers : isaret)
     .resize(hedef, hedef, { fit: 'contain', background: SEFFAF })
     .toBuffer();
 
@@ -72,6 +87,31 @@ async function kare(boyut, { zemin, oran, cikti }) {
   else await tuval.png().toFile(y(cikti));
   return cikti;
 }
+
+/**
+ * Android launcher ikonu AYRI bir is.
+ *
+ * `public/icon-*.png` yalnizca PWA'nin ikonu; Android kendi
+ * `mipmap` klasorlerindeki `ic_launcher` dosyalarini istiyor ve onlari
+ * Capacitor'un sablonu dolduruyor. Uzun sure APK'da VARSAYILAN ikon
+ * durdu — kimse uretmemisti.
+ *
+ * `android/` depoda tutulmadigi (her seferinde `cap add` ile uretildigi)
+ * icin ikonlari oraya elle koymak kalici degil. Dogru yer `resources/`:
+ * `npx @capacitor/assets generate --android` bu klasorden butun
+ * yogunluklari uretip android projesine yaziyor.
+ *
+ * Uyarlanabilir (adaptive) ikon on plan + arka plan istiyor: on planda
+ * isaret, arkada duz krem. Sistem bunu daire/squircle'a kirptigi icin
+ * on plandaki isaret guvenli alanda kaliyor.
+ */
+const ANDROID = [
+  kare(1024, { zemin: KREM, oran: ORAN.normal, cikti: 'resources/icon.png' }),
+  kare(1024, { zemin: SEFFAF, oran: ORAN.maskable, cikti: 'resources/icon-foreground.png' }),
+  kare(1024, { zemin: KREM, oran: 0, cikti: 'resources/icon-background.png' }),
+  kare(2732, { zemin: KREM, oran: 0.22, cikti: 'resources/splash.png' }),
+  kare(2732, { zemin: LACI, oran: 0.22, cikti: 'resources/splash-dark.png', ters: true }),
+];
 
 const isler = [
   // --- PWA / cihaz ---
@@ -89,4 +129,4 @@ const isler = [
   kare(1080, { zemin: LACI, oran: ORAN.daire, cikti: 'brand/instagram-profil-lacivert.png' }),
 ];
 
-for (const c of await Promise.all(isler)) console.log('✓', c);
+for (const c of await Promise.all([...isler, ...ANDROID])) console.log('✓', c);
