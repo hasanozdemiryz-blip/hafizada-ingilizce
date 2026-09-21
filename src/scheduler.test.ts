@@ -15,14 +15,17 @@ import {
   dueQueue,
   introduceCard,
   introducedToday,
+  latestLessonCards,
   learningCheck,
+  learningDone,
+  lessonDays,
   nextBatch,
   olderThan,
+  previousLessonCards,
   randomOld,
   remainingToday,
   reviewCard,
   todaysCards,
-  yesterdaysCards,
 } from './scheduler';
 import type { Progress } from './types';
 
@@ -125,27 +128,30 @@ describe('tanisma', () => {
 });
 
 describe('ogrenme testi', () => {
-  // Ilk gercek notu burasi verir; once kullaniciya sorulup beyan aliniyordu.
-  it('kartin ilk FSRS notunu verir', () => {
-    const p = learningCheck(introduceCard(CARDS[0], NOW), true, NOW);
+  // Ilk gercek notu testin SONU verir; once kullaniciya sorulup beyan aliniyordu.
+  it('kartin ilk FSRS notunu testin sonu verir', () => {
+    const p = learningDone(introduceCard(CARDS[0], NOW), true, NOW);
     expect(p.fsrs.reps).toBe(1);
   });
 
   it('sonucu firstCheckOka yazar', () => {
-    expect(learningCheck(introduceCard(CARDS[0], NOW), true, NOW).firstCheckOk).toBe(true);
-    expect(learningCheck(introduceCard(CARDS[0], NOW), false, NOW).firstCheckOk).toBe(false);
+    expect(learningCheck(introduceCard(CARDS[0], NOW), true).firstCheckOk).toBe(true);
+    expect(learningCheck(introduceCard(CARDS[0], NOW), false).firstCheckOk).toBe(false);
   });
 
   it('firstCheckOk sonraki kontrollerde degismez', () => {
-    let p = learningCheck(introduceCard(CARDS[0], NOW), false, NOW);
-    p = learningCheck(p, true, NOW);
+    let p = learningCheck(introduceCard(CARDS[0], NOW), false);
+    p = learningCheck(p, true);
     expect(p.firstCheckOk).toBe(false);
   });
 
-  // Kelime hala kisa sureli hafizada; buradan gelen basari "ogrenildi" demek degil.
-  it('merdiveni OYNATMAZ', () => {
-    const p = learningCheck(introduceCard(CARDS[0], NOW), true, NOW);
+  // Kelime hala kisa sureli hafizada; tek tek cevaplar ne merdiveni ne
+  // zamanlamayi oynatir. Ikisi de testin sonunda, bir kez.
+  it('tek cevap merdiveni de zamanlamayi da OYNATMAZ', () => {
+    const bos = introduceCard(CARDS[0], NOW);
+    const p = learningCheck(bos, true);
     expect(p.step).toBe(1);
+    expect(p.fsrs.reps).toBe(0);
   });
 });
 
@@ -331,7 +337,7 @@ describe('gunluk sayim', () => {
 
 describe('kuyruklar', () => {
   it('vadesi gecmis kartlari erken olandan siralar', () => {
-    const ps = introduceMany(3).map((p) => learningCheck(p, true, NOW));
+    const ps = introduceMany(3).map((p) => learningDone(p, true, NOW));
     const q = dueQueue(ps, day(30));
     expect(q).toHaveLength(3);
     const t = q.map((p) => p.due.getTime());
@@ -339,13 +345,13 @@ describe('kuyruklar', () => {
   });
 
   it('erken kuyruk vadesi GELMEMIS kartlari verir', () => {
-    const ps = introduceMany(5).map((p) => learningCheck(p, true, NOW));
+    const ps = introduceMany(5).map((p) => learningDone(p, true, NOW));
     expect(aheadQueue(ps, 10, NOW)).toHaveLength(5);
     expect(aheadQueue(ps, 10, day(30))).toEqual([]);
   });
 
   it('erken kuyruk parti boyutunu asmaz', () => {
-    const ps = introduceMany(20).map((p) => learningCheck(p, true, NOW));
+    const ps = introduceMany(20).map((p) => learningDone(p, true, NOW));
     expect(aheadQueue(ps, 10, NOW)).toHaveLength(10);
   });
 
@@ -361,15 +367,117 @@ describe('kuyruklar', () => {
    * seanstan sessizce dusuyordu. Tarayicida yakalandi.
    */
   it('Review durumundaki kart da yanlis deyince ayni seansa doner', () => {
-    let p = learningCheck(introduceCard(CARDS[0], NOW), true, NOW);
+    let p = learningDone(introduceCard(CARDS[0], NOW), true, NOW);
     p = reviewCard(p, true, false, day(1)).progress;
     expect(p.fsrs.state).toBe(State.Review);
     expect(reviewCard(p, false, false, day(30)).requeue).toBe(true);
   });
 
   it('dogru cevaplanan kart seanstan cikar', () => {
-    const p = learningCheck(introduceCard(CARDS[0], NOW), true, NOW);
+    const p = learningDone(introduceCard(CARDS[0], NOW), true, NOW);
     expect(reviewCard(p, true, false, day(1)).requeue).toBe(false);
+  });
+});
+
+describe('ogrenme testi bitisi', () => {
+  /*
+   * Ogrenme testi merdiveni SIRASINDA oynatmiyor (bkz. learningCheck) ama
+   * 2. basamagi yardimsiz gecen kelime ilk gun de bir basamak kazaniyor.
+   *
+   * Olcut once "testin ALTI gorevi de temiz"ti ve pratikte hic tutmadi:
+   * gercek bir derste bes kelimenin besinde de en az bir hata cikti,
+   * hicbiri ilerlemedi. Ayni veriyle yeni olcut 5 kelimenin 4'unu
+   * ilerletiyor.
+   */
+  it('tanimayi gecen kelime bir basamak ilerler', () => {
+    const p = introduceCard(CARDS[0], NOW);
+    expect(p.step).toBe(1);
+    expect(learningDone(p, true).step).toBe(2);
+  });
+
+  it('tanimayi gecemeyen yerinde kalir', () => {
+    const p = introduceCard(CARDS[0], NOW);
+    expect(learningDone(p, false).step).toBe(1);
+  });
+
+  // Kazanilan basamak TANIMA tarafinda kaliyor: uretim iddiasi degil.
+  it('kazanilan basamak uretim basamagi degildir', () => {
+    expect(learningDone(introduceCard(CARDS[0], NOW), true).step).toBeLessThan(3);
+  });
+
+  /*
+   * Testin ALTI sorusu FSRS'e ALTI not yaziyordu ve kelime iki dakikada
+   * "alti kez hatirlandi" sayilip haftalar oteye atiliyordu (olculdu:
+   * 1 ders sonrasi stabilite 2,3 gun, ilk tekrardan sonra 13,9 gun).
+   * Artik tek not var ve o da testin sonunda.
+   */
+  it('cevaplar zamanlamaya dokunmaz, not testin sonunda verilir', () => {
+    const bos = introduceCard(CARDS[0], NOW);
+    let p = bos;
+    for (let i = 0; i < 6; i++) p = learningCheck(p, true);
+    expect(p.fsrs).toEqual(bos.fsrs);
+    expect(p.due).toEqual(bos.due);
+
+    const sonra = learningDone(p, true, NOW);
+    expect(sonra.fsrs.reps).toBe(1);
+    expect(sonra.due.getTime()).toBeGreaterThan(NOW.getTime());
+  });
+
+  it('ilk denemenin sonucu olculmeye devam eder', () => {
+    let p = learningCheck(introduceCard(CARDS[0], NOW), false);
+    p = learningCheck(p, true);
+    expect(p.firstCheckOk).toBe(false);
+  });
+
+  it('gecemeyen kelime de not alir — ama Again notu', () => {
+    const gecen = learningDone(introduceCard(CARDS[0], NOW), true, NOW);
+    const kalan = learningDone(introduceCard(CARDS[0], NOW), false, NOW);
+    expect(kalan.due.getTime()).toBeLessThan(gecen.due.getTime());
+  });
+});
+
+describe('ayni gun tekrari', () => {
+  /*
+   * Hizli tekrar ve ders tekrari ayni kelimeyi gun icinde defalarca
+   * sorabiliyor. Her dogru cevap FSRS'e yazilsaydi caliskan kullanici
+   * kendi zamanlamasini haftalar oteye atardi.
+   */
+  const mezun = () => {
+    let p = learningDone(introduceCard(CARDS[0], NOW), true, NOW);
+    p = reviewCard(p, true, false, day(1)).progress;
+    p = reviewCard(p, true, false, day(20)).progress;
+    return p;
+  };
+
+  it('ayni gun ikinci kez dogru bilmek araligi uzatmaz', () => {
+    const p = mezun();
+    expect(p.fsrs.state).toBe(State.Review);
+    const bugun = new Date(p.fsrs.last_review!.getTime() + 60_000);
+    const sonra = reviewCard(p, true, false, bugun).progress;
+    expect(sonra.due).toEqual(p.due);
+    expect(sonra.fsrs.reps).toBe(p.fsrs.reps);
+  });
+
+  it('ama merdiven yine de ilerler', () => {
+    const p = mezun();
+    const bugun = new Date(p.fsrs.last_review!.getTime() + 60_000);
+    expect(reviewCard(p, true, false, bugun).progress.step).toBe(p.step + 1);
+  });
+
+  it('YANLIS cevap ayni gun de sayilir', () => {
+    const p = mezun();
+    const bugun = new Date(p.fsrs.last_review!.getTime() + 60_000);
+    const sonra = reviewCard(p, false, false, bugun).progress;
+    expect(sonra.due.getTime()).toBeLessThan(p.due.getTime());
+    expect(sonra.step).toBe(p.step - 1);
+  });
+
+  // Ogrenme adimindaki kart gun icinde birkac kez sorulmak uzere tasarlanmis
+  it('mezun olmamis kart icin kural islemez', () => {
+    const p = learningDone(introduceCard(CARDS[0], NOW), true, NOW);
+    expect(p.fsrs.state).not.toBe(State.Review);
+    const sonra = reviewCard(p, true, false, new Date(NOW.getTime() + 60_000)).progress;
+    expect(sonra.fsrs.reps).toBe(p.fsrs.reps + 1);
   });
 });
 
@@ -377,14 +485,45 @@ describe('egzersiz kapsamlari', () => {
   const kartlarla = (n: number, when: Date) =>
     CARDS.slice(0, n).map((c) => introduceCard(c, when));
 
-  it('dun tanisilanlari verir, bugunkuleri degil', () => {
+  /*
+   * Kapsam birimi TAKVIM GUNU degil DERS. Eski "Dun" kutusu bir gun ara
+   * verilince yapisal olarak bos kaliyordu; "onceki ders" bos kalmaz.
+   */
+  it('en son ders bugunku ders, onceki ders bir oncekidir', () => {
     const ps = [...introduceMany(3, NOW), ...CARDS.slice(3, 8).map((c) => introduceCard(c, day(-1)))];
-    expect(yesterdaysCards(ps, NOW)).toHaveLength(5);
-    expect(todaysCards(ps, NOW)).toHaveLength(3);
+    expect(latestLessonCards(ps)).toHaveLength(3);
+    expect(previousLessonCards(ps)).toHaveLength(5);
   });
 
-  it('iki gun oncesi "dun" degildir', () => {
-    expect(yesterdaysCards(kartlarla(4, day(-2)), NOW)).toEqual([]);
+  it('bugun ders yoksa en son ders eski gunden gelir', () => {
+    const ps = [
+      ...CARDS.slice(0, 4).map((c) => introduceCard(c, day(-2))),
+      ...CARDS.slice(4, 6).map((c) => introduceCard(c, day(-9))),
+    ];
+    // Iki gun ara verilmis: "dun" bos kalirdi, "en son ders" dolu
+    expect(latestLessonCards(ps)).toHaveLength(4);
+    expect(previousLessonCards(ps)).toHaveLength(2);
+  });
+
+  it('iki kapsam asla ayni karti icermez', () => {
+    const ps = [...introduceMany(3, NOW), ...CARDS.slice(3, 8).map((c) => introduceCard(c, day(-4)))];
+    const son = new Set(latestLessonCards(ps).map((p) => p.cardId));
+    expect(previousLessonCards(ps).some((p) => son.has(p.cardId))).toBe(false);
+  });
+
+  it('tek ders varsa onceki ders bostur', () => {
+    expect(previousLessonCards(introduceMany(3, NOW))).toEqual([]);
+    expect(lessonDays(introduceMany(3, NOW))).toHaveLength(1);
+  });
+
+  it('ders gunleri yeniden eskiye siralanir', () => {
+    const ps = [
+      ...CARDS.slice(0, 2).map((c) => introduceCard(c, day(-5))),
+      ...CARDS.slice(2, 4).map((c) => introduceCard(c, NOW)),
+      ...CARDS.slice(4, 6).map((c) => introduceCard(c, day(-2))),
+    ];
+    expect(lessonDays(ps)).toEqual([...lessonDays(ps)].sort().reverse());
+    expect(lessonDays(ps)).toHaveLength(3);
   });
 
   /*

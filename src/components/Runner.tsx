@@ -8,6 +8,7 @@ import { Button } from './ui';
 import { judge, type Judgement } from '../answer';
 import { CARDS, EN_HAVUZ } from '../content';
 import { ADIM, bloklaraBol, secenekler, shuffle, type Gorev } from '../exercise';
+import type { Step } from '../types';
 import { seslendir, seslendirmeyiDurdur, useTelaffuz } from '../speech';
 
 
@@ -42,7 +43,13 @@ export function Runner({
    * dogru: kartlar birbirinden bagimsiz.
    */
   sirali?: boolean;
-  onResult: (cardId: string, ok: boolean, hookRevealed: boolean) => void | Promise<void>;
+  /** `step`: cevabin HANGI basamakta verildigi — puanlamanin birimi (bkz. score.ts) */
+  onResult: (
+    cardId: string,
+    ok: boolean,
+    hookRevealed: boolean,
+    step: Step,
+  ) => void | Promise<void>;
   onDone: () => void;
 }) {
   const bloklar = useMemo(
@@ -96,7 +103,8 @@ export function Runner({
         onDone={async (sonuc) => {
           if (busy) return;
           setBusy(true);
-          for (const [cardId, ok] of sonuc) await onResult(cardId, ok, false);
+          // Eslestirme blogu yalnizca 1. basamak gorevlerinden kurulur
+          for (const [cardId, ok] of sonuc) await onResult(cardId, ok, false, 1);
           ilerle();
         }}
       />
@@ -118,7 +126,7 @@ export function Runner({
     const j = judge(typed, card.en, { havuz: EN_HAVUZ });
     setVerdict({ judgement: j, typed });
     if (sound) seslendir(card.en);
-    void onResult(card.id, j !== 'yanlis', hookRevealed || !temiz);
+    void onResult(card.id, j !== 'yanlis', hookRevealed || !temiz, step);
   }
 
   function sikSec(secim: string) {
@@ -129,7 +137,7 @@ export function Runner({
     setSecilen(secim);
     setVerdict({ judgement: ok ? 'dogru' : 'yanlis' });
     if (sound && ters) seslendir(card.en);
-    void onResult(card.id, ok, hookRevealed);
+    void onResult(card.id, ok, hookRevealed, step);
   }
 
   const soru = (() => {

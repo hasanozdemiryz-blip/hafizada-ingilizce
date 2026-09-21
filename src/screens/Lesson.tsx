@@ -4,11 +4,11 @@ import { Runner } from '../components/Runner';
 import { ADIMLAR, type Gorev } from '../exercise';
 import { BackButton, Button, Progressbar, Screen, TopBar } from '../components/ui';
 import { CARD_BY_ID } from '../content';
-import { db, logSession } from '../db';
-import { introduceCard, learningCheck, reviewCard } from '../scheduler';
-import type { Card, Progress } from '../types';
+import { db, logAnswer, logSession } from '../db';
+import { introduceCard, learningCheck, learningDone, reviewCard } from '../scheduler';
+import type { Card, Progress, Step } from '../types';
 
-type Bolum = 'yeni' | 'ogrenme' | 'tekrar' | 'bitti';
+type Bolum = 'yeni' | 'ogrenme' | 'tekrar';
 
 /**
  * DERS — gunun tek akisi.
@@ -30,6 +30,7 @@ export function Lesson({
   tekrarKuyrugu,
   sound,
   eslestirmesiz = false,
+  tekrarOnce = false,
   onExit,
   onFinish,
 }: {
@@ -44,6 +45,16 @@ export function Lesson({
    * kelime icin fazla kolay. 1. basamaktakiler coktan secmeli sorulur.
    */
   eslestirmesiz?: boolean;
+  /**
+   * Tekrar bolumu basa alinir.
+   *
+   * Ana ekranda ayri bir "eskileri tekrar et" dugmesi ACILMADI: uc giris
+   * noktasini tek "Basla"ya indirmek bu urunun en buyuk kazancıydı ve
+   * tekrari atlanabilir yapmak tekrar borcunu sessizce buyutur. Ama tekrar
+   * yuku agirken kullanicinin "once sunlari halledeyim" demesi mesru —
+   * bu yalnizca SIRAYI degistirir, hicbir bolumu atlamaz.
+   */
+  tekrarOnce?: boolean;
   onExit: () => void;
   onFinish: (ozet: {
     count: number;
@@ -55,7 +66,9 @@ export function Lesson({
     yeni: number;
   }) => void;
 }) {
-  const [bolum, setBolum] = useState<Bolum>(yeniKartlar.length > 0 ? 'yeni' : 'tekrar');
+  const [bolum, setBolum] = useState<Bolum>(() =>
+    tekrarOnce && tekrarKuyrugu.length > 0 ? 'tekrar' : yeniKartlar.length > 0 ? 'yeni' : 'tekrar',
+  );
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
   const [cikisSoruluyor, setCikisSoruluyor] = useState(false);
@@ -73,6 +86,20 @@ export function Lesson({
 
   /** Seansin kendi sayaclari — bitis ekrani bunlari gosterir. */
   const sayac = useRef({ dogru: 0, toplam: 0, ilerleyen: 0 });
+
+  /**
+   * Ogrenme testinde kelime basina "2. basamagi yardimsiz gecti mi".
+   *
+   * Once olcut "ALTI gorevin hepsi temiz"ti ve pratikte hic tutmuyordu:
+   * gercek bir derste bes kelimenin besinde de en az bir hata cikti,
+   * hicbiri ilerlemedi. Olcut artik tek ve net — cokten secmeliyi
+   * kancaya basmadan dogru yapmak tanimayi gectin demektir (bkz.
+   * `learningDone`).
+   */
+  const tanimaGecti = useRef(new Map<string, boolean>());
+
+  /** Yeni kartlar iki yerden yazilmaya cagriliyor; ikinci cagri bos gecer. */
+  const yazildi = useRef(false);
 
   const toplam = yeniKartlar.length + new Set(tekrarKuyrugu.map((p) => p.cardId)).size;
 
@@ -93,6 +120,14 @@ export function Lesson({
     [yeniKartlar],
   );
 
+  /**
+   * Bolumlerin SIRASI tek yerde duruyor.
+   *
+   * Once gecisler dagilmisti ("ogrenme bitti -> tekrar var mi?"). Sira bir
+   * liste olunca "once tekrar" istegi tek satirda ifade ediliyor ve ekranda
+   * "Bolum 2/3" yazmak da mumkun oluyor — kullanici tekrarin derse DAHIL
+   * oldugunu gorsun diye; ayri bir tekrar dugmesi istegi buradan doguyordu.
+   */
   const tekrarGorevleri = useMemo<Gorev[]>(
     () =>
       tekrarKuyrugu
@@ -106,25 +141,49 @@ export function Lesson({
     [tekrarKuyrugu, eslestirmesiz],
   );
 
+  const bolumler = useMemo<Bolum[]>(() => {
+    const liste: Bolum[] = [];
+    const tekrarVar = tekrarGorevleri.length > 0;
+    if (tekrarOnce && tekrarVar) liste.push('tekrar');
+    if (yeniKartlar.length > 0) liste.push('yeni', 'ogrenme');
+    if (!tekrarOnce && tekrarVar) liste.push('tekrar');
+    return liste;
+  }, [tekrarOnce, tekrarGorevleri.length, yeniKartlar.length]);
+
   /** Ogrenme testi: merdiveni oynatmaz, yalnizca ilk notu ve olcumu yazar. */
-  const ogrenmeSonucu = useCallback(async (cardId: string, ok: boolean) => {
-    sayac.current.toplam++;
-    if (ok) sayac.current.dogru++;
-    const p = yeniKayitlar.current.get(cardId);
-    if (p) yeniKayitlar.current.set(cardId, learningCheck(p, ok));
-  }, []);
+  const ogrenmeSonucu = useCallback(
+    async (cardId: string, ok: boolean, hookRevealed: boolean, step: Step) => {
+      sayac.current.toplam++;
+      if (ok) sayac.current.dogru++;
+      void logAnswer({ cardId, ok, step, ipucu: hookRevealed, kaynak: 'ders' });
+
+      if (step === 2) tanimaGecti.current.set(cardId, ok && !hookRevealed);
+
+      const p = yeniKayitlar.current.get(cardId);
+      if (p) yeniKayitlar.current.set(cardId, learningCheck(p, ok));
+    },
+    [],
+  );
 
   /** Ogrenme testi bitti: yeni kartlar artik kalici. */
   const yeniKartlariYaz = useCallback(async () => {
-    const kayitlar = [...yeniKayitlar.current.values()];
+    if (yazildi.current) return;
+    yazildi.current = true;
+
+    const kayitlar = [...yeniKayitlar.current.values()].map((p) => {
+      const sonra = learningDone(p, tanimaGecti.current.get(p.cardId) === true);
+      if (sonra.step > p.step) sayac.current.ilerleyen++;
+      return sonra;
+    });
     if (kayitlar.length > 0) await db.progress.bulkPut(kayitlar);
   }, []);
 
   /** Tekrar: merdiveni oynatir. */
   const tekrarSonucu = useCallback(
-    async (cardId: string, ok: boolean, hookRevealed: boolean) => {
+    async (cardId: string, ok: boolean, hookRevealed: boolean, step: Step) => {
       sayac.current.toplam++;
       if (ok) sayac.current.dogru++;
+      void logAnswer({ cardId, ok, step, ipucu: hookRevealed, kaynak: 'ders' });
 
       const p = await db.progress.get(cardId);
       if (!p) return;
@@ -140,8 +199,16 @@ export function Lesson({
     if (!yeniKayitlar.current.has(card.id)) {
       yeniKayitlar.current.set(card.id, introduceCard(card));
     }
-    if (i + 1 >= yeniKartlar.length) setBolum('ogrenme');
+    if (i + 1 >= yeniKartlar.length) gec('yeni');
     else setI(i + 1);
+  }
+
+  /** Siradaki bolume gecer; sira bittiyse (ya da bolum listede yoksa) dersi kapatir. */
+  function gec(simdiki: Bolum) {
+    const yer = bolumler.indexOf(simdiki);
+    const sonraki = yer >= 0 ? bolumler[yer + 1] : undefined;
+    if (sonraki) setBolum(sonraki);
+    else void bitir();
   }
 
   async function bitir() {
@@ -159,7 +226,20 @@ export function Lesson({
     });
   }
 
-  const basilik = { yeni: 'Yeni kelimeler', ogrenme: 'Öğrenme testi', tekrar: 'Tekrar', bitti: '' };
+  const basilik: Record<Bolum, string> = {
+    yeni: 'Yeni kelimeler',
+    ogrenme: 'Öğrenme testi',
+    tekrar: 'Tekrar',
+  };
+
+  /*
+    Bolum sayisi ekranda: tekrar dersin ICINDE oldugu gorunsun. Tek bolumlu
+    derste sayi yazmak gurultu — o zaman yalnizca bolumun adi kaliyor.
+  */
+  const bolumEtiketi =
+    bolumler.length > 1
+      ? `Bölüm ${bolumler.indexOf(bolum) + 1}/${bolumler.length} · ${basilik[bolum]}`
+      : basilik[bolum];
 
   /**
    * Cikis, yeni kelimeler daha kalici degilken CIDDI bir kayip.
@@ -206,7 +286,7 @@ export function Lesson({
         />
         <Progressbar done={i} total={yeniKartlar.length} />
         <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-ink-faint mt-2">
-          {basilik.yeni}
+          {bolumEtiketi}
         </p>
 
         <div key={card.id} className="rise flex-1 flex flex-col justify-center py-6">
@@ -228,13 +308,8 @@ export function Lesson({
   const sonuc = bolum === 'ogrenme' ? ogrenmeSonucu : tekrarSonucu;
 
   if (gorevler.length === 0) {
-    if (bolum === 'ogrenme') {
-      void yeniKartlariYaz().then(() =>
-        setBolum(tekrarGorevleri.length > 0 ? 'tekrar' : 'bitti'),
-      );
-      return null;
-    }
-    void bitir();
+    if (bolum === 'ogrenme') void yeniKartlariYaz().then(() => gec('ogrenme'));
+    else gec(bolum);
     return null;
   }
 
@@ -242,7 +317,7 @@ export function Lesson({
     <Screen>
       <TopBar left={<BackButton onClick={cikmakIstiyor} />} />
       <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-ink-faint">
-        {basilik[bolum]}
+        {bolumEtiketi}
       </p>
       <Runner
         key={bolum}
@@ -251,11 +326,8 @@ export function Lesson({
         sirali={bolum === 'ogrenme'}
         onResult={sonuc}
         onDone={() => {
-          if (bolum === 'ogrenme') {
-            void yeniKartlariYaz().then(() =>
-              setBolum(tekrarGorevleri.length > 0 ? 'tekrar' : 'bitti'),
-            );
-          } else void bitir();
+          if (bolum === 'ogrenme') void yeniKartlariYaz().then(() => gec('ogrenme'));
+          else gec(bolum);
         }}
       />
       {uyari}

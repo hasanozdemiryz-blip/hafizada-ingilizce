@@ -1,7 +1,8 @@
 import { CARDS, BATCH } from '../content';
 import { firstCheckRate, produceRate, unaidedRate, weakestHooks } from '../quality';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { db, getState, setState } from '../db';
+import { todayKey } from '../dates';
 import { Card } from '../components/ui';
 import type { Progress, Step } from '../types';
 
@@ -41,11 +42,25 @@ export function DevPanel() {
   const uretim = produceRate(progress);
   const zayiflar = weakestHooks(progress, 6);
 
+  /**
+   * Zaman ileri sarar — aslinda BUTUN kayitlari geri kaydirarak.
+   *
+   * Once yalnizca `progress` kaydiriliyordu. Simulasyon o haliyle yalan
+   * soyluyordu: gunluk etkinlik, seri ve cevap gunlugu bugunde kaliyor,
+   * yani alti gunluk bir tur tek gune yigiliyor, "yeni gun" hic gelmiyor
+   * ve seri hic artmiyordu. Zamanin geri kaydirilmadigi her kayit,
+   * simulasyonda bozuk bir ekran demek.
+   */
   async function ileriSar(gun: number) {
     const ms = gun * 86_400_000;
     const geri = (d: Date) => new Date(d.getTime() - ms);
-    const hepsi = await db.progress.toArray();
+    /** YYYY-MM-DD anahtarini yerel ogleye sabitleyip kaydirir */
+    const geriAnahtar = (key: string) => {
+      const [y, m, d] = key.split('-').map(Number);
+      return todayKey(geri(new Date(y, m - 1, d, 12, 0, 0)));
+    };
 
+    const hepsi = await db.progress.toArray();
     await db.progress.bulkPut(
       hepsi.map((p) => ({
         ...p,
@@ -59,6 +74,24 @@ export function DevPanel() {
         },
       })),
     );
+
+    // Cevap gunlugu: Basari pencereleri dogru gunlere dagilsin
+    const cevaplar = await db.answers.toArray();
+    await db.answers.bulkPut(
+      cevaplar.map((c) => {
+        const ts = c.ts - ms;
+        return { ...c, ts, gun: todayKey(new Date(ts)) };
+      }),
+    );
+
+    // Gunluk etkinlik ve seri: "yeni gun" gelsin, seri islesin
+    const state = await getState();
+    await setState({
+      days: Object.fromEntries(
+        Object.entries(state.days).map(([k, v]) => [geriAnahtar(k), v]),
+      ),
+      lastSessionDate: state.lastSessionDate ? geriAnahtar(state.lastSessionDate) : null,
+    });
   }
 
   /** Tanisilmis kartlari dogrudan bir basamaga tasir — sadece ekrani gormek icin. */

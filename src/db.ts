@@ -1,13 +1,14 @@
 import Dexie, { type Table } from 'dexie';
 import { LIMIT_DEFAULT } from './content';
 import { nextStreak, todayKey } from './dates';
-import type { AppState, Progress } from './types';
+import type { AppState, Cevap, Progress } from './types';
 
 type MetaRow = { key: string; value: unknown };
 
 class AppDB extends Dexie {
   progress!: Table<Progress, string>;
   meta!: Table<MetaRow, string>;
+  answers!: Table<Cevap, number>;
 
   constructor() {
     super('hafizada-ingilizce');
@@ -103,6 +104,44 @@ class AppDB extends Dexie {
             delete p.firstProduceOk;
           }),
       );
+
+    /**
+     * v5 — cevap gunlugu.
+     *
+     * Yeni tablo, veri tasima yok: basari gecmisi BILEREK sifirdan
+     * basliyor. Eski `days.d/y` sayaclari kelime bazinda geri
+     * uretilemiyor; onlari yeni yuzdeye karistirmak iki farkli seyi tek
+     * rakamda toplamak olurdu. Kelime ilerlemesi (step/FSRS) etkilenmez.
+     */
+    this.version(5).stores({
+      progress: 'cardId, due',
+      meta: 'key',
+      answers: '++id, ts, gun, cardId',
+    });
+
+    /**
+     * v6 — cevaba BASAMAK ve IPUCU eklendi.
+     *
+     * Basari yalnizca `cardId` ile sayilinca ogrenme testinin alti sorusu
+     * tek hucreye dusuyor, en zor olani (dinleme) en sonda sorulduğu icin
+     * de butun kelimenin sonucunu o belirliyordu: 30 cevabin 21'i dogru
+     * olan bir ders %0 gorunuyordu. `step` ile birim `kelime x basamak`
+     * oluyor. `ipucu` ise "yardimsiz mi bildi" sorusunu tasiyor —
+     * "neler yapabildin" paneli artik merdiven konumuna degil buna bakiyor.
+     *
+     * Index semasi degismiyor; eski satirlar `null`/`false` ile dolduruluyor.
+     */
+    this.version(6)
+      .stores({ progress: 'cardId, due', meta: 'key', answers: '++id, ts, gun, cardId' })
+      .upgrade((tx) =>
+        tx
+          .table('answers')
+          .toCollection()
+          .modify((c: Record<string, unknown>) => {
+            c.step ??= null;
+            c.ipucu ??= false;
+          }),
+      );
   }
 }
 
@@ -188,28 +227,61 @@ export async function logSession(
   return { ...next, freezeUsed };
 }
 
+/**
+ * Tek cevap kaydi.
+ *
+ * Seans sonunda toplu yazilmiyor bilerek: ders yarida birakildiginda da
+ * verilen cevaplar verilmis sayilir. Yeni KELIMELER yarida kaydedilmiyor
+ * (bkz. Lesson) ama bu ayri bir soru — cevap gercekten olup bitti.
+ */
+export function logAnswer(
+  cevap: Pick<Cevap, 'cardId' | 'ok' | 'step' | 'ipucu' | 'kaynak'>,
+  now = new Date(),
+): Promise<number> {
+  return db.answers.add({ ...cevap, ts: now.getTime(), gun: todayKey(now) });
+}
+
+export const getAnswers = (): Promise<Cevap[]> => db.answers.toArray();
+
 /** Tum ilerlemeyi disa aktar — local-first veri kaybina karsi. */
 export async function exportProgress(): Promise<string> {
-  const [progress, state] = await Promise.all([db.progress.toArray(), getState()]);
-  return JSON.stringify({ version: 4, exportedAt: new Date().toISOString(), state, progress }, null, 2);
+  const [progress, state, answers] = await Promise.all([
+    db.progress.toArray(),
+    getState(),
+    getAnswers(),
+  ]);
+  return JSON.stringify(
+    { version: 5, exportedAt: new Date().toISOString(), state, progress, answers },
+    null,
+    2,
+  );
 }
 
 export async function importProgress(json: string): Promise<void> {
-  const parsed = JSON.parse(json) as { state?: AppState; progress?: Progress[] };
+  const parsed = JSON.parse(json) as {
+    state?: AppState;
+    progress?: Progress[];
+    answers?: Cevap[];
+  };
   if (!Array.isArray(parsed.progress)) throw new Error('Gecersiz yedek dosyasi');
 
   const progress = parsed.progress.map(normalizeProgress);
+  // v5 oncesi yedekte cevap gunlugu yok; basari gecmisi bos gelir, gerisi durur.
+  const answers = Array.isArray(parsed.answers) ? parsed.answers : [];
 
-  await db.transaction('rw', db.progress, db.meta, async () => {
+  await db.transaction('rw', db.progress, db.meta, db.answers, async () => {
     await db.progress.clear();
+    await db.answers.clear();
     await db.progress.bulkPut(progress);
+    if (answers.length > 0) await db.answers.bulkAdd(answers);
     if (parsed.state) await db.meta.put({ key: APP_KEY, value: parsed.state });
   });
 }
 
 export async function resetAll(): Promise<void> {
-  await db.transaction('rw', db.progress, db.meta, async () => {
+  await db.transaction('rw', db.progress, db.meta, db.answers, async () => {
     await db.progress.clear();
     await db.meta.clear();
+    await db.answers.clear();
   });
 }

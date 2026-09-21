@@ -35,6 +35,15 @@ export const DAILY_REVIEW_CAP = 40;
  */
 export const AHEAD_BATCH = 10;
 
+/**
+ * Tekrar yuku bu sayiyi gecince ana ekranda "Önce tekrar et" satiri cikar.
+ *
+ * Ayri bir tekrar dugmesi ACILMADI (bkz. NOTLAR): tekrari atlanabilir
+ * yapmak borcu buyutur. Bu satir yalnizca dersin ICINDEKI sirayi
+ * degistiriyor, hicbir bolumu atlamiyor.
+ */
+export const AGIR_TEKRAR = 12;
+
 const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[^a-zçğıöşü]/g, '');
 
 /**

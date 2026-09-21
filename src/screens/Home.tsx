@@ -8,6 +8,8 @@ import type { AppState, Card as CardType, Progress } from '../types';
 type Props = {
   progress: Progress[];
   state: AppState;
+  /** Bugunun anahtari — gun donunce ekran da doner (bkz. today.ts) */
+  bugun: string;
   /** Vadesi gelmis TUM kartlar — ham sayi ekranda ASLA gosterilmez */
   due: Progress[];
   newCards: CardType[];
@@ -18,7 +20,10 @@ type Props = {
   /** Gunluk hedef dolduysa tekrarlanacak, o gunun kartlari */
   todaysCount: number;
   aheadCount: number;
+  /** Tekrar yuku bunu gecince "Önce tekrar et" satiri gorunur */
+  agirTekrar: number;
   onStart: () => void;
+  onReviewFirst: () => void;
   onQuickReview: () => void;
   onPractice: () => void;
 };
@@ -37,13 +42,16 @@ type Props = {
 export function Home({
   progress,
   state,
+  bugun,
   due,
   newCards,
   todayCount,
   remaining,
   todaysCount,
   aheadCount,
+  agirTekrar,
   onStart,
+  onReviewFirst,
   onQuickReview,
   onPractice,
 }: Props) {
@@ -52,6 +60,25 @@ export function Home({
   const limitDoldu = remaining === 0;
   const bosGun = tekrar === 0 && newCards.length === 0;
   const setBitti = setBittiMi(progress);
+
+  /*
+    Kahraman kartin uc yuzu var ve ayrimi BURADA yapiliyor:
+
+      ilkDers  — havuz bos, kullanici karsilamadan yeni geldi
+      yeniGun  — bugun henuz hic calisilmadi; gunun ACILDIGI an
+      normal   — gun icinde ikinci, ucuncu giris
+
+    `yeniGun` ozellikle bir AN, surekli bir etiket degil: ilk ders
+    bitince `lastSessionDate` bugune donuyor ve kart normale geciyor.
+    Boylece "yeni gun" sozu gun icinde tekrarlanip anlamini yitirmiyor.
+  */
+  const ilkDers = ogrenilen === 0;
+  const yeniGun = !ilkDers && state.lastSessionDate !== bugun;
+
+  /** Gunun paketi: tek satirda ne bekliyor. */
+  const paket = [newCards.length > 0 && `${newCards.length} yeni`, tekrar > 0 && `${tekrar} tekrar`]
+    .filter(Boolean)
+    .join(' · ');
 
   const siradaki = progress
     .filter((p) => p.introduced)
@@ -163,20 +190,38 @@ export function Home({
           </Card>
         ) : (
           <div className="rise rounded-card p-6 bg-gradient-to-br from-brand to-[#7db2ff] text-white shadow-[0_16px_34px_-16px_rgba(79,146,246,0.95)]">
-            <p className="text-sm font-medium text-white/80">Bugünün dersi</p>
+            <p className="text-sm font-medium text-white/80">
+              {ilkDers ? 'Hazır' : yeniGun ? 'Yeni gün' : 'Bugünün dersi'}
+            </p>
             <p className="word text-3xl font-extrabold mt-0.5 mb-1">
-              {[newCards.length > 0 && `${newCards.length} yeni`, tekrar > 0 && `${tekrar} tekrar`]
-                .filter(Boolean)
-                .join(' · ')}
+              {ilkDers ? 'İlk dersin hazır' : yeniGun ? 'Yeni güne başla' : paket}
             </p>
             <p className="text-sm text-white/75 mb-4">
-              {newCards.length > 0
-                ? 'Önce kelimeler, sonra öğrenme testi.'
-                : 'Bugün gelen kelimeler seni bekliyor.'}
+              {ilkDers
+                ? `${newCards.length} kelime · önce tanış, sonra öğrenme testi.`
+                : yeniGun
+                  ? paket
+                  : newCards.length > 0
+                    ? 'Önce kelimeler, sonra öğrenme testi.'
+                    : 'Bugün gelen kelimeler seni bekliyor.'}
             </p>
             <Button variant="soft" onClick={onStart}>
               Başla
             </Button>
+
+            {/*
+              Ikinci bir HEDEF degil, ayni dersin sirasi. Yalnizca tekrar
+              yuku agirken cikiyor: uzun bir derse girmeden once "sunlari
+              halledeyim" demek mesru, ama tekrari atlamak degil.
+            */}
+            {newCards.length > 0 && tekrar >= agirTekrar && (
+              <button
+                onClick={onReviewFirst}
+                className="mt-3 w-full text-center text-sm font-semibold text-white/80 underline decoration-white/40 underline-offset-4 transition-opacity active:opacity-60"
+              >
+                Önce {tekrar} tekrarı yap
+              </button>
+            )}
           </div>
         )}
 

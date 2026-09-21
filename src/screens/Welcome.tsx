@@ -171,8 +171,9 @@ export function Welcome({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="shrink-0 rise delay-3">
+        {/* "Baslayalim" ders hemen basliyor demekti; artik ana ekrana dusuyor */}
         <Button variant="brand" onClick={() => void bitir()}>
-          Başlayalım
+          Hazırım
         </Button>
       </div>
     </Screen>

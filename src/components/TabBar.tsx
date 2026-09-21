@@ -1,10 +1,15 @@
 export type Tab = 'ogren' | 'egzersiz' | 'ilerleme' | 'ayarlar';
 
-const TABS: { id: Tab; ad: string; ikon: string }[] = [
-  { id: 'ogren', ad: 'Öğren', ikon: '🌱' },
-  { id: 'egzersiz', ad: 'Egzersiz', ikon: '🎯' },
-  { id: 'ilerleme', ad: 'İlerleme', ikon: '📊' },
-  { id: 'ayarlar', ad: 'Ayarlar', ikon: '⚙️' },
+/**
+ * Her sekmenin kendi rengi var — dordu de ayni mavi pille isaretlenince
+ * hangi sekmede oldugu ancak yazi okunarak anlasiliyordu. Renk sabit:
+ * sekme nereye giderse gitsin ayni rengi tasiyor.
+ */
+const TABS: { id: Tab; ad: string; ikon: string; renk: string }[] = [
+  { id: 'ogren', ad: 'Öğren', ikon: '🌱', renk: 'bg-brand' },
+  { id: 'egzersiz', ad: 'Egzersiz', ikon: '🎯', renk: 'bg-grow' },
+  { id: 'ilerleme', ad: 'İlerleme', ikon: '📊', renk: 'bg-ink' },
+  { id: 'ayarlar', ad: 'Ayarlar', ikon: '⚙️', renk: 'bg-ink-soft' },
 ];
 
 /** Alt menunun kaplayacagi yer — icerik altinda kalmasin diye. */
@@ -19,7 +24,7 @@ export function TabBar({ active, onChange }: { active: Tab; onChange: (t: Tab) =
             key={t.id}
             onClick={() => onChange(t.id)}
             className={`flex-1 rounded-full py-2 text-[11px] font-bold transition-all active:scale-95 ${
-              active === t.id ? 'bg-brand text-white' : 'text-ink-faint'
+              active === t.id ? `${t.renk} text-white` : 'text-ink-faint'
             }`}
           >
             <span className="block text-base leading-none mb-0.5">{t.ikon}</span>

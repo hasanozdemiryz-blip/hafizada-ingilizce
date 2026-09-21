@@ -68,6 +68,40 @@ export type Progress = {
   due: Date;
 };
 
+/**
+ * Tek bir cevap.
+ *
+ * Basari yuzdesi once gun bazinda TOPLU sayaclardan hesaplaniyordu
+ * (`AppState.days.d/y`). O sekille "kelimeyi yeniden calisinca onceki
+ * yanlisi duzelsin" istegi karsilanamaz: hangi cevabin hangi kelimeye
+ * ait oldugu bilgisi atilmis oluyor, geri getirilemiyor. Ham cevap
+ * durdugu surece yuzdenin tanimi sonradan da degistirilebilir.
+ */
+export type Cevap = {
+  id?: number;
+  cardId: string;
+  /** epoch ms — pencere hesabi buradan */
+  ts: number;
+  /** YYYY-MM-DD, yerel. Gun bazli sorgu ts aritmetigi istemesin. */
+  gun: string;
+  ok: boolean;
+  /**
+   * Hangi basamakta soruldu.
+   *
+   * Basarinin birimi bu yuzden var: yalnizca `cardId` ile sayilinca
+   * ogrenme testinin ALTI sorusu tek hucreye dusuyor ve en sonuncusu
+   * (dinleme) butun kelimenin sonucunu belirliyordu — 21/30 dogru yapan
+   * bir ders %0 gorunuyordu. Karsilastirma ayni basamakla yapilmali.
+   *
+   * v6 oncesi kayitlarda `null`.
+   */
+  step: Step | null;
+  /** Kanca ipucuna basilarak mi bulundu — "yardimsiz mi" sorusu */
+  ipucu: boolean;
+  /** Dersin mi egzersizin mi cevabi — ikisi de sayilir, ayrimi durur */
+  kaynak: 'ders' | 'egzersiz';
+};
+
 export type AppState = {
   /** Karsilama ekrani goruldu mu */
   onboarded: boolean;

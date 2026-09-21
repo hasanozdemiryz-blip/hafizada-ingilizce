@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CARDS } from './content';
 import { introduceCard } from './scheduler';
 import { abilities, activeDays, masteryRate, successRate } from './score';
-import type { AppState, Progress, Step } from './types';
+import type { AppState, Cevap, Progress, Step } from './types';
 
 const NOW = new Date('2026-03-10T09:00:00');
 /** n gun once */
@@ -19,41 +19,139 @@ const gunler = (kayit: Record<number, { r?: number; i?: number; d?: number; y?: 
 
 const kart = (i: number, step: Step): Progress => ({ ...introduceCard(CARDS[i], NOW), step });
 
+/** `gunOnce` gun once, o gunun oglen vakti verilmis bir cevap. */
+const cevap = (
+  cardId: string,
+  ok: boolean,
+  gunOnce: number,
+  step: Step | null = 1,
+  ipucu = false,
+): Cevap => {
+  const d = new Date(NOW);
+  d.setDate(d.getDate() - gunOnce);
+  return { cardId, ok, step, ipucu, ts: d.getTime(), gun: key(gunOnce), kaynak: 'ders' };
+};
+
 describe('basari orani', () => {
-  it('secili penceredeki dogru oranini verir', () => {
-    const d = gunler({ 0: { d: 8, y: 2 } });
-    expect(successRate(d, 'gun', NOW)).toEqual({ percent: 80, dogru: 8, toplam: 10 });
+  /*
+   * Yuzde KELIME bazinda: her kelime penceresinde bir kez sayilir, ona
+   * verilen en son cevaba gore.
+   */
+  it('ayni alistirmanin son cevabini sayar', () => {
+    const c = [cevap('a', false, 0), cevap('a', true, 0), cevap('b', true, 0)];
+    expect(successRate(c, 'gun', NOW)).toEqual({
+      percent: 100,
+      dogru: 2,
+      toplam: 2,
+      kelime: 2,
+      cevap: 3,
+      yanlisCevap: 1,
+    });
   });
 
-  it('hafta penceresi son 7 gunu toplar', () => {
-    const d = gunler({ 0: { d: 5, y: 5 }, 3: { d: 10, y: 0 }, 6: { d: 5, y: 0 } });
-    expect(successRate(d, 'hafta', NOW)).toEqual({ percent: 80, dogru: 20, toplam: 25 });
+  /*
+   * Gercek bir derste bulundu: ogrenme testi ayni kelimeyi alti kez,
+   * gittikce zorlasan basamaklarda soruyor. Birim KELIME oldugunda en
+   * sondaki dinleme butun kelimenin sonucunu belirliyor ve 30 cevabin
+   * 21'i dogru olan ders %0 gorunuyordu.
+   */
+  it('zor basamak kolay basamagin sonucunu silmez', () => {
+    const ders = ['a', 'b', 'c', 'd', 'e'].flatMap((id) => [
+      cevap(id, true, 0, 1),
+      cevap(id, true, 0, 2),
+      cevap(id, true, 0, 3),
+      cevap(id, true, 0, 4),
+      cevap(id, true, 0, 5),
+      cevap(id, false, 0, 6), // dinleme — hepsi yanlis
+    ]);
+    const b = successRate(ders, 'gun', NOW)!;
+    expect(b.toplam).toBe(30);
+    expect(b.dogru).toBe(25);
+    expect(b.percent).toBe(83);
+    expect(b.kelime).toBe(5);
   });
 
-  it('pencere disindaki gunleri saymaz', () => {
-    const d = gunler({ 0: { d: 1, y: 0 }, 10: { d: 100, y: 0 } });
-    expect(successRate(d, 'hafta', NOW)?.toplam).toBe(1);
-    expect(successRate(d, 'ay', NOW)?.toplam).toBe(101);
+  it('ayni kelimenin farkli basamaklari ayri sayilir', () => {
+    const c = [cevap('a', true, 0, 1), cevap('a', false, 0, 5)];
+    expect(successRate(c, 'gun', NOW)?.toplam).toBe(2);
+    expect(successRate(c, 'gun', NOW)?.kelime).toBe(1);
+    expect(successRate(c, 'gun', NOW)?.percent).toBe(50);
+  });
+
+  // Istenen davranis: yanlis yapilan alistirma tekrar edilince oran YUKSELIR.
+  it('sonradan dogru yapilan alistirma orani yukseltir', () => {
+    const once = [cevap('a', false, 0), cevap('b', true, 0)];
+    expect(successRate(once, 'gun', NOW)?.percent).toBe(50);
+    expect(successRate([...once, cevap('a', true, 0)], 'gun', NOW)?.percent).toBe(100);
+  });
+
+  // Ve tersi: dogru bilinen kelime sonra yanlis yapilirsa oran DUSER.
+  it('sonradan yanlis yapilan alistirma orani dusurur', () => {
+    const c = [cevap('a', true, 0), cevap('b', true, 0), cevap('a', false, 0)];
+    expect(successRate(c, 'gun', NOW)?.percent).toBe(50);
+  });
+
+  // Tekrar sayisi oy sayisi degil: bir kelimeyi 10 kez dogru yapmak
+  // digerinin yanlisini gizlemez.
+  it('cok tekrar orani sismez', () => {
+    const c = [
+      ...Array.from({ length: 10 }, () => cevap('a', true, 0)),
+      cevap('b', false, 0),
+    ];
+    const b = successRate(c, 'gun', NOW)!;
+    expect(b.percent).toBe(50);
+    expect(b.cevap).toBe(11);
+  });
+
+  it('pencere disindaki cevaplari saymaz', () => {
+    const c = [cevap('a', true, 0), cevap('b', false, 10)];
+    expect(successRate(c, 'hafta', NOW)?.toplam).toBe(1);
+    expect(successRate(c, 'ay', NOW)?.toplam).toBe(2);
+  });
+
+  // Ayni kelimenin pencere ICINDEKI son cevabi gecerli; disarida kalan eski
+  // cevap yuzdeyi etkilemez.
+  it('pencere disinda kalan eski cevap gormezden gelinir', () => {
+    const c = [cevap('a', true, 20), cevap('a', false, 0)];
+    expect(successRate(c, 'ay', NOW)?.percent).toBe(0);
+    expect(successRate(c, 'gun', NOW)?.percent).toBe(0);
+  });
+
+  it('toplam penceresi butun gecmisi alir', () => {
+    const c = [cevap('a', true, 400), cevap('b', false, 0)];
+    expect(successRate(c, 'toplam', NOW)?.toplam).toBe(2);
+    expect(successRate(c, 'ay', NOW)?.toplam).toBe(1);
   });
 
   /*
    * "Hic cevap yok" ile "hepsi yanlis" ayri seyler; ikisi de %0 gorunmemeli.
    */
   it('hic cevap yoksa null doner', () => {
-    expect(successRate({}, 'gun', NOW)).toBeNull();
-    expect(successRate(gunler({ 0: { r: 5 } }), 'gun', NOW)).toBeNull();
+    expect(successRate([], 'gun', NOW)).toBeNull();
+    expect(successRate([cevap('a', true, 30)], 'hafta', NOW)).toBeNull();
   });
 
   it('hepsi yanlissa %0 doner, null degil', () => {
-    expect(successRate(gunler({ 0: { d: 0, y: 4 } }), 'gun', NOW)).toEqual({
+    expect(successRate([cevap('a', false, 0)], 'gun', NOW)).toEqual({
       percent: 0,
       dogru: 0,
-      toplam: 4,
+      toplam: 1,
+      kelime: 1,
+      cevap: 1,
+      yanlisCevap: 1,
     });
   });
 
-  it('eski kayitlarda d/y yoksa cokmez', () => {
-    expect(successRate(gunler({ 0: { r: 12, i: 5 } }), 'hafta', NOW)).toBeNull();
+  // v6 oncesi kayitlarda basamak yok; cokmeden, kelime bazinda sayilirlar.
+  it('basamaksiz eski kayitlar tek hucrede toplanir', () => {
+    const c = [cevap('a', false, 0, null), cevap('a', true, 0, null)];
+    expect(successRate(c, 'gun', NOW)?.toplam).toBe(1);
+    expect(successRate(c, 'gun', NOW)?.percent).toBe(100);
+  });
+
+  // Gun penceresi yerel gece yarisinda baslar, "24 saat once" degil.
+  it('gun penceresi dunku cevabi almaz', () => {
+    expect(successRate([cevap('a', true, 1)], 'gun', NOW)).toBeNull();
   });
 });
 
@@ -69,6 +167,12 @@ describe('duzenlilik', () => {
 
   it('ay penceresi 30 gun', () => {
     expect(activeDays({}, 'ay', NOW).toplam).toBe(30);
+  });
+
+  // "Toplam"da payda yok: 30 gunun kaci degil, toplam kac gun calisildigi.
+  it('toplam penceresinde payda yoktur', () => {
+    const d = gunler({ 0: { r: 1 }, 40: { r: 1 }, 400: { r: 1 } });
+    expect(activeDays(d, 'toplam', NOW)).toEqual({ calisilan: 3, toplam: null });
   });
 });
 
@@ -96,33 +200,54 @@ describe('ustalik', () => {
 
 describe('yetenekler', () => {
   /*
-   * Beceri BIRIKIMLI: 5. basamaktaki kelime 3'ten gecerek geldi, yani
-   * onu hem taniyor hem secebiliyor. Once kutular birbirini disliyordu ve
-   * "Tanima 2" yazinca "sadece 2 kelimeyi taniyorum" gibi okunuyordu.
+   * Panel MERDIVEN konumuna degil YAPILANA bakiyor. Once `step >= 3` /
+   * `>= 5` esiklerine bakiyordu ve derste ters secmeli + yazma dogru
+   * yapilmis olmasina ragmen alt iki satir 0 duruyordu: merdiven ogrenme
+   * testinde oynamiyor, 3. basamaga cikmak gunler suruyor.
    */
-  it('ust basamak alttakileri de sayar', () => {
-    const y = abilities([kart(0, 1), kart(1, 3), kart(2, 6)]);
-    expect(y).toEqual({ taniyor: 3, seciyor: 2, yaziyor: 1, toplam: 3 });
+  const dogru = (cardId: string, step: Step, ipucu = false) =>
+    cevap(cardId, true, 0, step, ipucu);
+
+  it('derste yapilan basamak ayni gun sayilir', () => {
+    const ps = [kart(0, 1), kart(1, 1)];
+    const y = abilities(ps, [
+      dogru(CARDS[0].id, 3),
+      dogru(CARDS[0].id, 5),
+      dogru(CARDS[1].id, 3),
+    ]);
+    // Ikisi de hala 1. basamakta ama yapilan is sayiliyor
+    expect(y).toEqual({ taniyor: 2, seciyor: 2, yaziyor: 1, toplam: 2 });
   });
 
-  it('hepsi en ustteyse hepsi her satirda', () => {
-    const y = abilities([kart(0, 6), kart(1, 6)]);
-    expect(y).toEqual({ taniyor: 2, seciyor: 2, yaziyor: 2, toplam: 2 });
+  it('kanca ipucuyla bulunan sayilmaz', () => {
+    const y = abilities([kart(0, 1)], [dogru(CARDS[0].id, 5, true)]);
+    expect(y.yaziyor).toBe(0);
   });
 
-  it('hepsi en alttaysa yalnizca taniyor', () => {
-    const y = abilities([kart(0, 1), kart(1, 2)]);
-    expect(y).toEqual({ taniyor: 2, seciyor: 0, yaziyor: 0, toplam: 2 });
+  it('yanlis cevap sayilmaz', () => {
+    const y = abilities([kart(0, 1)], [cevap(CARDS[0].id, false, 0, 5)]);
+    expect(y.yaziyor).toBe(0);
   });
 
-  // Geri dusen kart artik o beceriyi gosteremiyor demektir.
-  it('geri dusen kart ust beceriden cikar', () => {
-    expect(abilities([kart(0, 2)]).seciyor).toBe(0);
-    expect(abilities([kart(0, 4)]).yaziyor).toBe(0);
+  it('alt basamak ust beceriyi doldurmaz', () => {
+    const y = abilities([kart(0, 1)], [dogru(CARDS[0].id, 4)]);
+    expect(y.seciyor).toBe(1);
+    expect(y.yaziyor).toBe(0);
+  });
+
+  it('ayni kelime iki kez sayilmaz', () => {
+    const y = abilities([kart(0, 1)], [dogru(CARDS[0].id, 5), dogru(CARDS[0].id, 5)]);
+    expect(y.yaziyor).toBe(1);
+  });
+
+  it('basamaksiz eski kayit sayilmaz', () => {
+    const y = abilities([kart(0, 1)], [cevap(CARDS[0].id, true, 0, null)]);
+    expect(y.seciyor).toBe(0);
   });
 
   it('tanisilmamis kart girmez', () => {
-    expect(abilities([{ ...kart(0, 6), introduced: false }])).toEqual({
+    const ps = [{ ...kart(0, 6), introduced: false }];
+    expect(abilities(ps, [dogru(CARDS[0].id, 5)])).toEqual({
       taniyor: 0,
       seciyor: 0,
       yaziyor: 0,
@@ -130,7 +255,16 @@ describe('yetenekler', () => {
     });
   });
 
+  it('cevap yoksa yalnizca tanistiklari sayar', () => {
+    expect(abilities([kart(0, 6), kart(1, 6)], [])).toEqual({
+      taniyor: 2,
+      seciyor: 0,
+      yaziyor: 0,
+      toplam: 2,
+    });
+  });
+
   it('bos girdide hepsi sifir', () => {
-    expect(abilities([])).toEqual({ taniyor: 0, seciyor: 0, yaziyor: 0, toplam: 0 });
+    expect(abilities([], [])).toEqual({ taniyor: 0, seciyor: 0, yaziyor: 0, toplam: 0 });
   });
 });

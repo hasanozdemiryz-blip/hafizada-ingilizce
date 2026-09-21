@@ -10,6 +10,7 @@
  */
 import {
   Rating,
+  State,
   createEmptyCard,
   fsrs,
   generatorParameters,
@@ -57,20 +58,55 @@ export function introduceCard(card: Card, now = new Date()): Progress {
 }
 
 /**
- * Ogrenme testi — tanismanin hemen ardindaki kontrol.
+ * Ogrenme testindeki tek bir cevap.
  *
- * Kartin ILK gercek notunu burasi verir. Merdiveni oynatmaz: kelime hala
- * kisa sureli hafizada, buradan gelen basari "ogrenildi" demek degil.
- * Isi iki tane: FSRS'i gercek bir cevapla baslatmak ve kancanin ilk
- * denemede tutup tutmadigini OLCMEK.
+ * ZAMANLAMAYA DOKUNMAZ. Onceden her cevap FSRS'e ayri bir not yaziyordu ve
+ * test alti soru sordugu icin kelime iki dakika icinde alti not aliyordu.
+ * FSRS her notu "araliklı bir hatirlama" sayar; sonucu olculdu:
+ *
+ *     1 ders sonrasi   reps 6 · stabilite 2,3 gun
+ *     1 tekrar sonrasi reps 7 · stabilite 13,9 gun  -> vade 12-15 gun
+ *
+ * Yani kelime daha ilk gun iki gune, ilk tekrardan sonra iki haftaya
+ * firliyordu; alti gunluk bir turda ilk uc gun hic tekrar gelmedi. Bu,
+ * kitaptaki "cramming araliklari sisirir" hatasi.
+ *
+ * Artik testin tek isi olcmek: kancanin ILK denemede tutup tutmadigi.
+ * Not bir kez, testin sonunda verilir (bkz. `learningDone`).
  */
-export function learningCheck(prev: Progress, ok: boolean, now = new Date()): Progress {
-  const { card: next } = f.next(prev.fsrs, now, ok ? Rating.Good : Rating.Again);
+export function learningCheck(prev: Progress, ok: boolean): Progress {
+  return { ...prev, firstCheckOk: prev.firstCheckOk ?? ok };
+}
+
+/**
+ * Ogrenme testi bitti — kart kalicilasirken son bir karar.
+ *
+ * Merdiven ogrenme testi SIRASINDA oynamiyor ve bu dogru: kelime hala
+ * taze, oradaki basari kalici hafizanin kaniti degil. Ama tek sonucu
+ * suydu: ilk gun hicbir sey ilerlemiyordu. Kullanici testte kelimeyi
+ * bastan yazmis, dinleyip yazmis oluyor, ders sonunda yine "0 kelime
+ * ilerledi" goruyordu — ve "Neler yapabiliyorsun" paneli ilk gunlerde
+ * hic kimildamiyordu.
+ *
+ * Olcut: **2. basamagi (coktan secmeli) kancaya basmadan dogru yapmak.**
+ * Once "testin ALTI gorevinin hepsi temiz" isteniyordu ve pratikte hic
+ * tutmadi — gercek bir derste bes kelimenin besinde de en az bir hata
+ * cikti, hicbiri ilerlemedi. Alti gorev gittikce zorlasiyor; en ustteki
+ * dinlemeyi ilk gun tutturamamak tanimayi bilmedigi anlamina gelmiyor.
+ *
+ * Verilen tek basamak ve tanima tarafinda kaliyor: 2. basamakta gorsel ve
+ * kanca hala ekranda, yani bu bir uretim iddiasi degil. Uretim basamaklari
+ * (>=3) hala yalnizca gercek tekrarla, kanca ekrandan kalktiktan sonra
+ * kazanilir.
+ */
+export function learningDone(prev: Progress, tanimaGecti: boolean, now = new Date()): Progress {
+  // Testin TAMAMI icin TEK not — Anki'deki "ogrenme adimlari"nin karsiligi.
+  const { card: next } = f.next(prev.fsrs, now, tanimaGecti ? Rating.Good : Rating.Again);
   return {
     ...prev,
     fsrs: next,
     due: next.due,
-    firstCheckOk: prev.firstCheckOk ?? ok,
+    step: tanimaGecti ? clampStep(ILK_ADIM + 1) : prev.step,
   };
 }
 
@@ -88,6 +124,15 @@ export function learningCheck(prev: Progress, ok: boolean, now = new Date()): Pr
  *
  * Olcum cevaplandigi andaki basamaga gore yapilir (`prev.step`), sonrakine
  * gore degil — hangi yardimla bilindigi onemli.
+ *
+ * AYNI GUN IKINCI KEZ DOGRU BILMEK ARALIGI UZATMAZ. Hizli tekrar ve ders
+ * tekrari ayni kelimeyi gun icinde defalarca sorabiliyor; her dogru cevap
+ * FSRS'e yazilsaydi calıskan kullanici kendi zamanlamasini haftalar oteye
+ * atardi (Egzersiz sekmesi icin zaten gecerli olan kural). Yanlis cevap
+ * HER ZAMAN sayilir: bilmedigin bir kelimenin araligi uzamamali.
+ *
+ * Kural yalnizca mezun olmus (Review) kartlar icin; ogrenme adimindaki
+ * kart gun icinde birkac kez sorulmak uzere tasarlanmistir.
  */
 export function reviewCard(
   prev: Progress,
@@ -95,7 +140,15 @@ export function reviewCard(
   hookRevealed: boolean,
   now = new Date(),
 ): { progress: Progress; requeue: boolean } {
-  const { card: next } = f.next(prev.fsrs, now, ok ? Rating.Good : Rating.Again);
+  const bugunGorulmus =
+    prev.fsrs.state === State.Review &&
+    !!prev.fsrs.last_review &&
+    todayKey(prev.fsrs.last_review) === todayKey(now);
+  const zamanlamaDursun = ok && bugunGorulmus;
+
+  const { card: next } = zamanlamaDursun
+    ? { card: prev.fsrs }
+    : f.next(prev.fsrs, now, ok ? Rating.Good : Rating.Again);
   const yardimsiz = ok && !hookRevealed;
   const olcum = olculebilir(prev.step);
 
@@ -175,11 +228,33 @@ export function todaysCards(all: Progress[], now = new Date()): Progress[] {
   return introducedOn(all, todayKey(now));
 }
 
-/** Dun tanisilan kartlar. */
-export function yesterdaysCards(all: Progress[], now = new Date()): Progress[] {
-  const dun = new Date(now);
-  dun.setDate(dun.getDate() - 1);
-  return introducedOn(all, todayKey(dun));
+/**
+ * Ders gunleri, yeniden eskiye.
+ *
+ * Egzersizdeki kapsam birimi TAKVIM GUNU degil DERS: "Dun" kutusu bir
+ * gun ara verildiginde ya da o gun yalnizca tekrar yapildiginda bos
+ * kaliyordu — yapisal olarak, kullanicinin hatasi olmadan. Birim ders
+ * olunca kutu her zaman dolu ve anlami tek cumle: en son ders, bir
+ * onceki ders.
+ */
+export function lessonDays(all: Progress[]): string[] {
+  const gunler = new Set<string>();
+  for (const p of all) {
+    if (p.introduced && p.introducedAt) gunler.add(todayKey(new Date(p.introducedAt)));
+  }
+  return [...gunler].sort().reverse();
+}
+
+/** En son ders: bugun yeni kelime geldiyse bugun, gelmediyse son ders gunu. */
+export function latestLessonCards(all: Progress[]): Progress[] {
+  const [gun] = lessonDays(all);
+  return gun ? introducedOn(all, gun) : [];
+}
+
+/** En son dersten ONCEKI ders — tanim geregi oncekiyle cakismaz. */
+export function previousLessonCards(all: Progress[]): Progress[] {
+  const gun = lessonDays(all)[1];
+  return gun ? introducedOn(all, gun) : [];
 }
 
 /** Bu kadar gun once tanisilmis kartlar, en eskiden baslayarak. */

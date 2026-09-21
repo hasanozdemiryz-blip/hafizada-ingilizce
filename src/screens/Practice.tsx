@@ -6,8 +6,15 @@ import { BackButton, Button, Card, Screen, TopBar } from '../components/ui';
 import { CARD_BY_ID, ESKI_GUN } from '../content';
 import { ADIM, ADIMLAR, type Gorev } from '../exercise';
 import { hardest } from '../quality';
-import { logSession } from '../db';
-import { randomOld, todaysCards, yesterdaysCards } from '../scheduler';
+import { logAnswer, logSession } from '../db';
+import { todayKey } from '../dates';
+import {
+  dueQueue,
+  latestLessonCards,
+  lessonDays,
+  previousLessonCards,
+  randomOld,
+} from '../scheduler';
 import type { Progress, Step } from '../types';
 
 /**
@@ -19,17 +26,73 @@ import type { Progress, Step } from '../types';
  */
 const PARTI = 10;
 
-/** Tam satiri kaplayan birincil kapsam — gunun kelimeleri. */
-const BUGUN = { id: 'bugun', ad: 'Bugün', emoji: '☀️', alt: 'bugün öğrendiklerim' } as const;
+/**
+ * Tam satiri kaplayan birincil kapsam — EN SON dersin kelimeleri.
+ *
+ * Basligi degisken: bugun yeni kelime geldiyse "Bugün", gelmediyse
+ * "Son ders". Sabit "Bugün" olarak durdugunda set bitince kutu sonsuza
+ * kadar bos kaliyordu, cunku artik hicbir gun yeni kelime gelmiyor.
+ */
+const SON_DERS = { id: 'son', emoji: '☀️' } as const;
 
+/**
+ * Her kapsamin kendi rengi var. Renk sistemin bir parcasi:
+ * KAPSAM renkli, EGZERSIZ TIPI lacivert — iki eksen birbirine karismasin.
+ * Kanca sarisi (spark) burada KULLANILMIYOR; o renk yalnizca kancanin.
+ */
 const KAPSAMLAR = [
-  { id: 'dun', ad: 'Dün', emoji: '🌙', alt: 'dün öğrendiklerim' },
-  { id: 'zor', ad: 'Zorlandıklarım', emoji: '🩹', alt: `en çok düştüğüm ${PARTI}` },
-  { id: 'eski', ad: 'Eski kelimeler', emoji: '🕰️', alt: `${ESKI_GUN}+ günlük, rastgele ${PARTI}` },
-  { id: 'sec', ad: 'Seç', emoji: '✋', alt: 'kendin işaretle, sınır yok' },
+  {
+    id: 'onceki',
+    ad: 'Önceki ders',
+    emoji: '🌙',
+    alt: 'bir önceki dersin kelimeleri',
+    secili: 'bg-ink text-white shadow-[var(--shadow-lift)]',
+    ikon: 'bg-sunken',
+  },
+  {
+    id: 'bekleyen',
+    ad: 'Bekleyen tekrarlar',
+    emoji: '⏰',
+    alt: `vadesi gelmiş ${PARTI}`,
+    secili: 'bg-grow text-white shadow-[0_8px_18px_-8px_rgba(43,196,138,0.85)]',
+    ikon: 'bg-grow-soft',
+  },
+  {
+    id: 'zor',
+    ad: 'Zorlandıklarım',
+    emoji: '🩹',
+    alt: `en çok düştüğüm ${PARTI}`,
+    secili: 'bg-blush text-white shadow-[0_8px_18px_-8px_rgba(247,154,201,0.95)]',
+    ikon: 'bg-blush-soft',
+  },
+  {
+    id: 'eski',
+    ad: 'Eski kelimeler',
+    emoji: '🕰️',
+    alt: `${ESKI_GUN}+ günlük, rastgele ${PARTI}`,
+    secili: 'bg-brand-deep text-white shadow-[0_8px_18px_-8px_rgba(47,111,208,0.9)]',
+    ikon: 'bg-brand-soft',
+  },
 ] as const;
 
-type Kapsam = typeof BUGUN.id | (typeof KAPSAMLAR)[number]['id'];
+/**
+ * Merdivenin uc bolgesi, uc renk — ve bunlar Ilerleme'deki "Neler
+ * yapabiliyorsun" cubuklarinin AYNI renkleri: tanima mavi, gecis sari,
+ * uretim nane. Iki ekran ayni seyi ayni renkle soyluyor.
+ */
+const ADIM_RENK: Record<Step, string> = {
+  1: 'bg-brand-soft',
+  2: 'bg-brand-soft',
+  3: 'bg-spark-soft',
+  4: 'bg-spark-soft',
+  5: 'bg-grow-soft',
+  6: 'bg-grow-soft',
+};
+
+/** Elle secim otomatik kapsamlarla ayni eksende degil; kendi satirinda. */
+const SEC = { id: 'sec', ad: 'Seç', emoji: '✋', alt: 'kendin işaretle, sınır yok' } as const;
+
+type Kapsam = typeof SON_DERS.id | (typeof KAPSAMLAR)[number]['id'] | typeof SEC.id;
 
 const norm = (s: string) => s.toLocaleLowerCase('tr');
 
@@ -43,8 +106,10 @@ export function Practice({
   /** Egzersiz kosarken alt menu gizlenir — tam ekran odak. */
   onRunning: (calisiyor: boolean) => void;
 }) {
-  const [kapsam, setKapsam] = useState<Kapsam>('bugun');
-  const [adim, setAdim] = useState<Step | 'kart' | 'karisik'>('karisik');
+  const [kapsam, setKapsam] = useState<Kapsam>('son');
+  const [adim, setAdim] = useState<Step | 'kart' | 'karisik' | 'ders'>('karisik');
+  /** Ders tekrari iki fazli: once kartlar, sonra alti basamak sirayla. */
+  const [dersFazi, setDersFazi] = useState<'kart' | 'gorev'>('kart');
   const [calisiyor, setCalisiyorState] = useState(false);
   const [kartIndex, setKartIndex] = useState(0);
   const [secimEkrani, setSecimEkraniState] = useState(false);
@@ -78,16 +143,21 @@ export function Practice({
 
   const ogrenilenler = useMemo(() => progress.filter((p) => p.introduced), [progress]);
 
+  /** Bugun yeni kelime geldi mi — hero kutunun basligini bu belirliyor. */
+  const bugunDers = lessonDays(ogrenilenler)[0] === todayKey();
+
   /**
-   * Bugun KISITLANMAZ: gun kac kelimeyse o kadar. Digerleri `PARTI` ile
-   * sinirli, elle secim ise sinirsiz.
+   * DERS kapsamlari kisitlanmaz: bir ders kac kelimeyse o kadar. Zaman/zorluk
+   * kapsamlari `PARTI` ile sinirli, elle secim ise sinirsiz.
    */
   const secilenler = useMemo(() => {
     switch (kapsam) {
-      case 'bugun':
-        return todaysCards(ogrenilenler);
-      case 'dun':
-        return yesterdaysCards(ogrenilenler).slice(0, PARTI);
+      case 'son':
+        return latestLessonCards(ogrenilenler);
+      case 'onceki':
+        return previousLessonCards(ogrenilenler);
+      case 'bekleyen':
+        return dueQueue(ogrenilenler).slice(0, PARTI);
       case 'zor':
         return hardest(ogrenilenler, PARTI);
       case 'eski':
@@ -105,20 +175,26 @@ export function Practice({
     [secilenler],
   );
 
-  const gorevler = useMemo<Gorev[]>(
-    () =>
-      secilenler
-        .map((p) => {
-          const card = CARD_BY_ID.get(p.cardId);
-          return card && adim !== 'kart'
-            ? { card, step: adim === 'karisik' ? p.step : adim }
-            : null;
-        })
-        .filter((g): g is Gorev => g !== null),
-    [secilenler, adim],
-  );
+  const gorevler = useMemo<Gorev[]>(() => {
+    if (adim === 'kart') return [];
+    /*
+      Ders tekrari dersin ogrenme testiyle AYNI gorev listesini kuruyor:
+      her kelime alti basamagin hepsinden bir kez geciyor (bkz. Lesson).
+      Merdiveni ve FSRS'i oynatmiyor — Egzersiz'in kurali burada da gecerli.
+    */
+    if (adim === 'ders') {
+      return ADIMLAR.flatMap((step) => kartlar.map((card): Gorev => ({ card, step })));
+    }
+    return secilenler
+      .map((p) => {
+        const card = CARD_BY_ID.get(p.cardId);
+        return card ? { card, step: adim === 'karisik' ? p.step : adim } : null;
+      })
+      .filter((g): g is Gorev => g !== null);
+  }, [secilenler, kartlar, adim]);
 
-  const partiSayisi = adim === 'kart' ? kartlar.length : gorevler.length;
+  /** Dugmede KELIME sayisi yazar; ders tekrarinda gorev sayisi bunun alti kati. */
+  const partiSayisi = adim === 'kart' || adim === 'ders' ? kartlar.length : gorevler.length;
 
   // --- Elle secim ekrani ---
   if (secimEkrani) {
@@ -217,7 +293,8 @@ export function Practice({
   }
 
   // --- Kart gozden gecirme: soru yok, kartin kendisi ---
-  if (calisiyor && adim === 'kart') {
+  // Ders tekrarinin BIRINCI fazi da burasi: dersteki gibi once kartlar.
+  if (calisiyor && (adim === 'kart' || (adim === 'ders' && dersFazi === 'kart'))) {
     const card = kartlar[kartIndex];
     if (!card) {
       setCalisiyor(false);
@@ -234,7 +311,7 @@ export function Practice({
           }
         />
         <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-ink-faint">
-          Kartları gözden geçir
+          {adim === 'ders' ? 'Ders tekrarı · kartlar' : 'Kartları gözden geçir'}
         </p>
         <div key={card.id} className="rise flex-1 flex flex-col justify-center py-6">
           <LearnFace card={card} />
@@ -243,8 +320,10 @@ export function Practice({
           <Button
             variant="brand"
             onClick={() => {
-              if (kartIndex + 1 >= kartlar.length) setCalisiyor(false);
-              else setKartIndex(kartIndex + 1);
+              if (kartIndex + 1 < kartlar.length) setKartIndex(kartIndex + 1);
+              // Ders tekrarinda kartlar bitince gorevlere gecilir, cikilmaz
+              else if (adim === 'ders') setDersFazi('gorev');
+              else setCalisiyor(false);
             }}
           >
             Devam
@@ -259,14 +338,20 @@ export function Practice({
       <Screen>
         <TopBar left={<BackButton onClick={() => setCalisiyor(false)} />} />
         <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-ink-faint">
-          Egzersiz
+          {adim === 'ders' ? 'Ders tekrarı · alıştırma' : 'Egzersiz'}
         </p>
         <Runner
+          /*
+            Ders tekrarinda gorevler VERILDIGI sirada kosuyor: merdiven
+            eslestirmeden dinlemeye tirmaniyor, karistirmak o sirayi bozar.
+          */
+          sirali={adim === 'ders'}
           gorevler={gorevler}
           sound={sound}
-          onResult={(_id, ok) => {
+          onResult={(id, ok, ipucu, step) => {
             sayac.current.toplam++;
             if (ok) sayac.current.dogru++;
+            void logAnswer({ cardId: id, ok, step, ipucu, kaynak: 'egzersiz' });
           }}
           onDone={() => {
             const { dogru, toplam } = sayac.current;
@@ -281,8 +366,9 @@ export function Practice({
   }
 
   const sayilar: Record<Kapsam, number> = {
-    bugun: todaysCards(ogrenilenler).length,
-    dun: yesterdaysCards(ogrenilenler).length,
+    son: latestLessonCards(ogrenilenler).length,
+    onceki: previousLessonCards(ogrenilenler).length,
+    bekleyen: Math.min(PARTI, dueQueue(ogrenilenler).length),
     zor: hardest(ogrenilenler, PARTI).length,
     eski: randomOld(ogrenilenler, PARTI).length,
     sec: secilenIdler.size,
@@ -309,6 +395,12 @@ export function Practice({
             <p className="text-sm text-ink-soft mt-1.5">
               {ozet.dogru} doğru · {ozet.toplam - ozet.dogru} yanlış
             </p>
+            <div className="h-2.5 w-full rounded-full bg-sunken overflow-hidden mt-3">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-grow to-[#5fe0ad] transition-[width] duration-700"
+                style={{ width: `${Math.round((ozet.dogru / ozet.toplam) * 100)}%` }}
+              />
+            </div>
             <button
               onClick={() => setOzet(null)}
               className="mt-3 rounded-full bg-sunken px-4 py-2 text-sm font-bold text-ink transition-all active:scale-95"
@@ -331,50 +423,63 @@ export function Practice({
             <section>
               <h2 className="text-sm font-semibold text-ink-soft mb-2">Hangi kelimeler</h2>
 
-              {/* Bugun tam satir: gunluk dersin pekistirmesi en sik istenen sey */}
+              {/* En son ders tam satir: gunluk dersin pekistirmesi en sik istenen sey */}
               <button
-                onClick={() => setKapsam('bugun')}
-                className={`w-full mb-2 rounded-2xl px-4 py-3.5 text-left transition-all active:scale-[0.98] ${
-                  kapsam === 'bugun'
+                onClick={() => setKapsam('son')}
+                disabled={sayilar.son === 0}
+                className={`w-full mb-2 rounded-2xl px-4 py-3.5 text-left transition-all active:scale-[0.98] disabled:opacity-45 disabled:active:scale-100 ${
+                  kapsam === 'son'
                     ? 'bg-brand text-white shadow-[0_8px_18px_-8px_rgba(79,146,246,0.85)]'
                     : 'bg-white text-ink shadow-[var(--shadow-soft)]'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl leading-none">{BUGUN.emoji}</span>
+                  <span
+                    className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg ${
+                      kapsam === 'son' ? 'bg-white/20' : 'bg-brand-soft'
+                    }`}
+                  >
+                    {SON_DERS.emoji}
+                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-bold">{BUGUN.ad}</span>
+                    <span className="block text-sm font-bold">
+                      {bugunDers ? 'Bugün' : 'Son ders'}
+                    </span>
                     <span
-                      className={`block text-[11px] mt-0.5 ${kapsam === 'bugun' ? 'text-white/75' : 'text-ink-faint'}`}
+                      className={`block text-[11px] mt-0.5 ${kapsam === 'son' ? 'text-white/75' : 'text-ink-faint'}`}
                     >
-                      {BUGUN.alt}
+                      {bugunDers ? 'bugün öğrendiklerim' : 'en son dersin kelimeleri'}
                     </span>
                   </span>
-                  <span className="text-sm font-bold tabular-nums shrink-0">{sayilar.bugun}</span>
+                  <span className="text-sm font-bold tabular-nums shrink-0">{sayilar.son}</span>
                 </div>
               </button>
 
               <div className="grid grid-cols-2 gap-2">
                 {KAPSAMLAR.map((k) => {
                   const secili = kapsam === k.id;
+                  const bos = sayilar[k.id] === 0;
                   return (
                     <button
                       key={k.id}
-                      onClick={() => {
-                        setKapsam(k.id);
-                        if (k.id === 'sec') setSecimEkrani(true);
-                      }}
-                      className={`rounded-2xl px-3.5 py-3 text-left transition-all active:scale-[0.97] ${
-                        secili
-                          ? 'bg-brand text-white shadow-[0_8px_18px_-8px_rgba(79,146,246,0.85)]'
-                          : 'bg-white text-ink shadow-[var(--shadow-soft)]'
+                      onClick={() => setKapsam(k.id)}
+                      /* Bos kapsam basilabiliyordu ve hicbir sey olmuyordu */
+                      disabled={bos}
+                      className={`rounded-2xl px-3.5 py-3 text-left transition-all active:scale-[0.97] disabled:opacity-45 disabled:active:scale-100 ${
+                        secili ? k.secili : 'bg-white text-ink shadow-[var(--shadow-soft)]'
                       }`}
                     >
                       <span className="flex items-center justify-between">
-                        <span className="text-lg leading-none">{k.emoji}</span>
+                        <span
+                          className={`grid h-8 w-8 place-items-center rounded-lg text-base ${
+                            secili ? 'bg-white/20' : k.ikon
+                          }`}
+                        >
+                          {k.emoji}
+                        </span>
                         <span className="text-sm font-bold tabular-nums">{sayilar[k.id]}</span>
                       </span>
-                      <span className="block text-sm font-bold leading-tight mt-1">{k.ad}</span>
+                      <span className="block text-sm font-bold leading-tight mt-1.5">{k.ad}</span>
                       <span
                         className={`block text-[11px] mt-0.5 ${secili ? 'text-white/75' : 'text-ink-faint'}`}
                       >
@@ -385,23 +490,64 @@ export function Practice({
                 })}
               </div>
 
-              {kapsam === 'sec' && (
-                <button
-                  onClick={() => setSecimEkrani(true)}
-                  className="w-full mt-2 rounded-full bg-sunken px-4 py-2.5 text-sm font-bold text-ink transition-all active:scale-95"
-                >
-                  {secilenIdler.size > 0 ? 'Seçimi değiştir' : 'Kelime seç'}
-                </button>
-              )}
+              {/* Elle secim kendi satirinda: otomatik kapsamlarla ayni eksende degil */}
+              <button
+                onClick={() => {
+                  setKapsam('sec');
+                  setSecimEkrani(true);
+                }}
+                className={`w-full mt-2 rounded-2xl px-4 py-3 text-left transition-all active:scale-[0.98] ${
+                  kapsam === 'sec'
+                    ? 'bg-ink text-white shadow-[var(--shadow-lift)]'
+                    : 'bg-white text-ink shadow-[var(--shadow-soft)]'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-base ${
+                      kapsam === 'sec' ? 'bg-white/20' : 'bg-sunken'
+                    }`}
+                  >
+                    {SEC.emoji}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold">{SEC.ad}</span>
+                    <span
+                      className={`block text-[11px] mt-0.5 ${kapsam === 'sec' ? 'text-white/75' : 'text-ink-faint'}`}
+                    >
+                      {kapsam === 'sec' && secilenIdler.size > 0
+                        ? `${secilenIdler.size} kelime seçili · değiştir`
+                        : SEC.alt}
+                    </span>
+                  </span>
+                </div>
+              </button>
             </section>
 
             <section className="mt-1">
               <h2 className="text-sm font-semibold text-ink-soft mb-2">Hangi egzersiz</h2>
               <div className="grid grid-cols-2 gap-2">
+                {/*
+                  Dersi tekrar etmek: kartlari yeniden gor, sonra alti basamak
+                  sirayla — dersin ogrenme testinin aynisi. Merdiven ve
+                  zamanlama oynamaz, o yuzden istedigin kadar yapilabilir.
+                */}
+                <EgzersizKare
+                  emoji="🎓"
+                  ad="Dersi tekrar et"
+                  alt="kartları gör, 6 basamak sırayla"
+                  ikon="bg-sunken"
+                  secili={adim === 'ders'}
+                  onClick={() => {
+                    setAdim('ders');
+                    setKartIndex(0);
+                  }}
+                />
                 <EgzersizKare
                   emoji="🎲"
                   ad="Karışık"
                   alt="her kelime kendi basamağında"
+                  ikon="bg-sunken"
                   secili={adim === 'karisik'}
                   onClick={() => setAdim('karisik')}
                 />
@@ -409,6 +555,7 @@ export function Practice({
                   emoji="🃏"
                   ad="Kartlar"
                   alt="görsel + kanca + cümle"
+                  ikon="bg-sunken"
                   secili={adim === 'kart'}
                   onClick={() => {
                     setAdim('kart');
@@ -421,6 +568,7 @@ export function Practice({
                     emoji={ADIM[n].emoji}
                     ad={ADIM[n].ad}
                     alt={ADIM[n].alt}
+                    ikon={ADIM_RENK[n]}
                     secili={adim === n}
                     onClick={() => setAdim(n)}
                   />
@@ -433,6 +581,7 @@ export function Practice({
               disabled={partiSayisi === 0}
               onClick={() => {
                 setKartIndex(0);
+                setDersFazi('kart');
                 setCalisiyor(true);
               }}
             >
@@ -464,12 +613,15 @@ function EgzersizKare({
   emoji,
   ad,
   alt,
+  ikon,
   secili,
   onClick,
 }: {
   emoji: string;
   ad: string;
   alt: string;
+  /** Merdiven bolgesinin rengi — bkz. ADIM_RENK */
+  ikon: string;
   secili: boolean;
   onClick: () => void;
 }) {
@@ -482,7 +634,13 @@ function EgzersizKare({
           : 'bg-white text-ink shadow-[var(--shadow-soft)]'
       }`}
     >
-      <span className="block text-2xl leading-none mb-1.5">{emoji}</span>
+      <span
+        className={`grid h-9 w-9 place-items-center rounded-xl text-lg mb-1.5 ${
+          secili ? 'bg-white/15' : ikon
+        }`}
+      >
+        {emoji}
+      </span>
       <span className="block text-sm font-bold leading-tight">{ad}</span>
       <span className={`block text-[11px] mt-0.5 ${secili ? 'text-white/70' : 'text-ink-faint'}`}>
         {alt}

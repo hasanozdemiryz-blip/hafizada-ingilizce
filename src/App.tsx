@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { TabBar, type Tab } from './components/TabBar';
 import {
+  AGIR_TEKRAR,
   AHEAD_BATCH,
   DAILY_REVIEW_CAP,
   ogrenilenKancalar,
@@ -25,12 +26,19 @@ import { SessionDone } from './screens/SessionDone';
 import { Welcome } from './screens/Welcome';
 import { Settings } from './screens/Settings';
 import { Splash } from './screens/Splash';
+import { useToday } from './today';
 import { WordList } from './screens/WordList';
 import type { Card, Progress } from './types';
 
 /** Sekmeli ekranlarin disindaki akis — alt menu burada gizli. */
 type Flow =
-  | { name: 'ders'; yeni: Card[]; tekrar: Progress[]; eslestirmesiz?: boolean }
+  | {
+      name: 'ders';
+      yeni: Card[];
+      tekrar: Progress[];
+      eslestirmesiz?: boolean;
+      tekrarOnce?: boolean;
+    }
   | {
       name: 'done';
       count: number;
@@ -48,11 +56,20 @@ export default function App() {
   const [flow, setFlow] = useState<Flow>(null);
   const [egzersizde, setEgzersizde] = useState(false);
 
+  /*
+    Gunun degistigini fark eden yer BURASI (bkz. today.ts). Onceden
+    `new Date()` yalnizca render aninda okunuyordu ve render de ancak
+    veritabani degisince oluyordu: uygulama acik dururken gece yarisi
+    gecilince ekran dunun durumunda donuyordu. Anahtar sorgunun bagimliligi
+    oldugu icin gun donunce kuyruklar da bastan hesaplanir.
+  */
+  const bugun = useToday();
+
   const data = useLiveQuery(async () => {
     const [hepsi, state] = await Promise.all([db.progress.toArray(), getState()]);
     // Setten cikmis kartlarin kaydi burada elenir; tek kapi (bkz. content.ts)
     return { progress: setteOlanlar(hepsi), state };
-  }, []);
+  }, [bugun]);
 
   if (!data) return <Splash />;
 
@@ -66,12 +83,13 @@ export default function App() {
       <Welcome
         onDone={() => {
           /*
-            Ana ekrana degil, DOGRUDAN ilk derse. Bir karar daha eksiliyor:
-            kullanici uygulamayi actiktan ~40 saniye sonra ilk bes kelimesini
-            ogrenmis oluyor. Havuz bostayken paket her zaman ilk BATCH kart.
+            Bir sure DOGRUDAN ilk derse giriliyordu — bir karar eksiltmek
+            icin. Kotu tarafi: kullanici hazir olup olmadigi sorulmadan
+            derse dusuyordu ve geri cikmanin yolu "dersi yarida birak"
+            uyarisiydi. Artik ana ekrana dusuyor; ilk ders orada kendi
+            karti olarak bekliyor (bkz. Home, `ilkDers`), baslatan o.
           */
           setTab('ogren');
-          setFlow({ name: 'ders', yeni: nextBatch(progress, state.dailyLimit), tekrar: [] });
         }}
       />
     );
@@ -84,6 +102,7 @@ export default function App() {
         tekrarKuyrugu={flow.tekrar}
         sound={state.sound}
         eslestirmesiz={flow.eslestirmesiz}
+        tekrarOnce={flow.tekrarOnce}
         onExit={kapat}
         onFinish={(ozet) => setFlow({ name: 'done', ...ozet })}
       />
@@ -123,14 +142,25 @@ export default function App() {
         <Home
           progress={progress}
           state={state}
+          bugun={bugun}
           due={due}
           newCards={newCards}
           todayCount={introducedToday(progress)}
           remaining={remainingToday(progress, state.dailyLimit)}
           todaysCount={bugununKartlari.length}
           aheadCount={ahead.length}
+          agirTekrar={AGIR_TEKRAR}
           onStart={() =>
             setFlow({ name: 'ders', yeni: newCards, tekrar: due.slice(0, DAILY_REVIEW_CAP) })
+          }
+          /* Ayni ders, yalnizca tekrar bolumu basta — bkz. AGIR_TEKRAR */
+          onReviewFirst={() =>
+            setFlow({
+              name: 'ders',
+              yeni: newCards,
+              tekrar: due.slice(0, DAILY_REVIEW_CAP),
+              tekrarOnce: true,
+            })
           }
           onQuickReview={() =>
             setFlow({ name: 'ders', yeni: [], tekrar: bugununKartlari, eslestirmesiz: true })
