@@ -29,12 +29,28 @@ async function fontuHazirla() {
 }
 
 /**
- * Panoya sigan kanca sayisi. v1 seti 26 kart oldugu icin tam set tek
- * panoya giriyor — seti bitiren kullanicinin paylastigi sey EKSIKSIZ olsun.
- * (Onceki sinir 24'tu ve baslik yine `pairs.length` yaziyordu: 26 kelime
- * diyen bir panoda 24 satir vardi.)
+ * Panoya sigan kanca sayisi.
+ *
+ * Kural: seti bitiren kullanicinin paylastigi sey EKSIKSIZ olsun. Set
+ * buyudukce sinir da buyumeli, yoksa 51 kelimeyi bitiren biri yarisini
+ * paylasir. Duzen sayiya gore uyarlaniyor (bkz. `duzen`).
+ *
+ * (Sinir once 24'tu ve baslik yine `pairs.length` yaziyordu: 26 kelime
+ * diyen bir panoda 24 satir vardi. Sonra 26'ya sabitlendi ve set 51'e
+ * cikinca ayni sorun tersinden dondu.)
  */
-export const PANO_MAX = 26;
+export const PANO_MAX = 60;
+
+/**
+ * Kanca sayisina gore sutun ve punto.
+ * 1350 piksel yukseklikte 26 satir 33 puntoyla rahat duruyor; uzeri
+ * sikisiyor, o yuzden sutun sayisi artiyor ve yazi kuculuyor.
+ */
+function duzen(adet: number) {
+  if (adet <= 26) return { sut: 2, kelime: 33, ok: 28, yukseklik: 38, ust: 28 };
+  if (adet <= 40) return { sut: 3, kelime: 28, ok: 23, yukseklik: 33, ust: 24 };
+  return { sut: 3, kelime: 24, ok: 20, yukseklik: 29, ust: 21 };
+}
 
 /**
  * Kanca panosu — ogrenilen kelimelerin kancalari tek gorselde.
@@ -65,7 +81,8 @@ export async function renderHookBoard(pairs: { en: string; hook: string }[]): Pr
   ctx.font = `400 34px ${YAZI}`;
   ctx.fillText('ezberlemedim — bağladım', W / 2, 205);
 
-  const sut = 2;
+  const d = duzen(goster.length);
+  const sut = d.sut;
   const satir = Math.ceil(goster.length / sut);
   const gx = 70;
   const gy = 280;
@@ -79,23 +96,23 @@ export async function renderHookBoard(pairs: { en: string; hook: string }[]): Pr
     const y = gy + r * gh;
 
     ctx.textAlign = 'left';
-    ctx.font = `700 33px ${YAZI}`;
+    ctx.font = `700 ${d.kelime}px ${YAZI}`;
     ctx.fillStyle = '#16233a';
     const enW = ctx.measureText(p.en).width;
     ctx.fillText(p.en, x, y);
 
     ctx.fillStyle = '#9fadc2';
-    ctx.font = `400 28px ${YAZI}`;
+    ctx.font = `400 ${d.ok}px ${YAZI}`;
     ctx.fillText(' ≈ ', x + enW + 6, y);
     const okW = ctx.measureText(' ≈ ').width;
 
     // kanca: fosforlu kalem izi
-    ctx.font = `700 33px ${YAZI}`;
+    ctx.font = `700 ${d.kelime}px ${YAZI}`;
     const hx = x + enW + 12 + okW;
     const hw = ctx.measureText(p.hook).width;
     ctx.fillStyle = '#ffd23f';
     ctx.beginPath();
-    ctx.roundRect(hx - 8, y - 28, hw + 16, 38, 10);
+    ctx.roundRect(hx - 8, y - d.ust, hw + 16, d.yukseklik, 10);
     ctx.fill();
     ctx.fillStyle = '#16233a';
     ctx.fillText(p.hook, hx, y);

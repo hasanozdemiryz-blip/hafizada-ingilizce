@@ -41,7 +41,8 @@ export default defineConfig({
         scope: base,
         display: 'standalone',
         orientation: 'portrait',
-        background_color: '#eaf1fb',
+        /* Acilis karesi: ikonun zeminiyle ayni krem (bkz. Splash) */
+        background_color: '#fff7e4',
         theme_color: '#16233a',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },

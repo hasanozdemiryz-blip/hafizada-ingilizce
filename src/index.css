@@ -83,6 +83,12 @@
   --color-grow: #2bc48a;
   --color-grow-soft: #d9f8ec;
 
+  /* --- Marka kremi: yalnizca ACILIS zincirinde ---
+         Logonun zemini bu; urun ekranlarinda kullanilmaz. Ikona basmaktan
+         ana ekrana kadar renk sicramasin diye acilis ekrani ve PWA'nin
+         acilis karesi (vite.config.ts `background_color`) bu renkte. --- */
+  --color-cream: #fff7e4;
+
   /* --- Ucuncul vurgu: pembe --- */
   --color-blush: #f79ac9;
   --color-blush-soft: #fde6f2;

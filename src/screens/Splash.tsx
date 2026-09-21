@@ -15,6 +15,11 @@ import { CARDS } from '../content';
  *
  * Kanca cifti her acilista degisir: bir saniyelik bekleme, yontemin ne
  * oldugunu soyleyen bir cumleye donusur.
+ *
+ * Zemin KREM, uygulamanin mavisi degil: ikona basmaktan ana ekrana kadar
+ * olan zincirde renk sicramasin diye. Sira su — cihazin cizdigi acilis
+ * karesi (manifest `background_color`) krem, bu ekran krem, sonra
+ * uygulama kendi mavisine aciliyor.
  */
 const ORNEKLER = CARDS.slice(0, 12);
 
@@ -28,7 +33,7 @@ export function Splash() {
   }, []);
 
   return (
-    <div className="min-h-full flex flex-col items-center justify-center gap-6 px-8">
+    <div className="min-h-full bg-cream flex flex-col items-center justify-center gap-6 px-8">
       <div
         className={`flex flex-col items-center gap-4 transition-all duration-500 ${
           gorundu ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
