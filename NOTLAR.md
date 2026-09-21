@@ -287,13 +287,20 @@ cd android && ./gradlew assembleDebug
 blok `cap add android` sonrası **elle geri konmalı**, çünkü `android/`
 depoda tutulmuyor.
 
-**Capacitor 8 Java 21+ istiyor.** Homebrew'daki JDK 17 `invalid source
-release: 21` veriyor. Android Studio'nun kendi JDK'si kullanılmalı:
+**Java sürümü iki taraftan sıkışıyor.** Capacitor 8 **21+** istiyor (JDK 17
+`invalid source release: 21` veriyor), Gradle 8.14 ise **25'i tanımıyor**
+(`Unsupported class file major version 69`). Bir süre Android Studio'nun
+kendi JDK'si kullanılıyordu; Android Studio güncellenince o JDK 25 oldu ve
+derleme kırıldı. Doğru çözüm ikisinin arasında sabit bir sürüm:
 
 ```
-export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+brew install openjdk@21
+export JAVA_HOME="/opt/homebrew/opt/openjdk@21"
 export ANDROID_HOME=~/Library/Android/sdk
 ```
+
+> Ders: derleme zincirini bir IDE'nin paketindeki sürüme bağlamak, IDE
+> güncellenince sessizce kırılıyor. Sürümü projenin kendisi sabitlemeli.
 
 ### APK'yı telefona ulaştırmak
 
