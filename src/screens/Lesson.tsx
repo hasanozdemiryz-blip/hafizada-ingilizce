@@ -6,7 +6,7 @@ import { Gecis } from '../components/Gecis';
 import { BackButton, Button, Progressbar, Screen, TopBar } from '../components/ui';
 import { CARD_BY_ID } from '../content';
 import { db, logAnswer, logSession } from '../db';
-import { introduceCard, learningCheck, learningDone, reviewCard } from '../scheduler';
+import { introduceCard, learningCheck, learningDone, markKnown, reviewCard } from '../scheduler';
 import type { Card, Progress, Step } from '../types';
 
 type Bolum = 'yeni' | 'ogrenme' | 'tekrar';
@@ -31,6 +31,7 @@ type GecisAni = Omit<Parameters<typeof Gecis>[0], 'onDevam'> & { devam: () => vo
  */
 export function Lesson({
   yeniKartlar,
+  yedekKartlar,
   tekrarKuyrugu,
   sound,
   eslestirmesiz = false,
@@ -39,6 +40,8 @@ export function Lesson({
   onFinish,
 }: {
   yeniKartlar: Card[];
+  /** "Bunu biliyorum" denince yerine kayacak kartlar */
+  yedekKartlar: Card[];
   tekrarKuyrugu: Progress[];
   sound: boolean;
   /**
@@ -82,6 +85,20 @@ export function Lesson({
    * Runner bir basamagin bittigini disari VERMIYOR; bolgeleri ayri ayri
    * kosturmak o sinirlari ucretsiz veriyor ve motoru degistirmiyor.
    */
+  /**
+   * Dersin kartlari YEREL durumda tutuluyor, prop'tan dogrudan okunmuyor:
+   * "Bunu biliyorum" denince liste degisiyor (atlanan kartin yerine yedek
+   * kayiyor).
+   */
+  const [dersKartlari, setDersKartlari] = useState<Card[]>(yeniKartlar);
+  const yedekler = useRef<Card[]>([...yedekKartlar]);
+
+  /** "Biliyorum" denen kartlar — ders bitince digerleriyle birlikte yazilir. */
+  const bilinenler = useRef<Map<string, Progress>>(new Map());
+
+  /** Son "biliyorum" — kisa sureli "geri al" icin. */
+  const [sonBilinen, setSonBilinen] = useState<{ card: Card; yer: number } | null>(null);
+
   const [bolgeIndex, setBolgeIndex] = useState(0);
 
   /** Ekranda bir gecis ani duruyorsa bolum yerine o cizilir. */
@@ -133,8 +150,8 @@ export function Lesson({
    * buradaki basari kalici hafizanin degil, tazeligin sonucu.
    */
   const ogrenmeGorevleri = useMemo<Gorev[]>(
-    () => ADIMLAR.flatMap((step) => yeniKartlar.map((c): Gorev => ({ card: c, step }))),
-    [yeniKartlar],
+    () => ADIMLAR.flatMap((step) => dersKartlari.map((c): Gorev => ({ card: c, step }))),
+    [dersKartlari],
   );
 
   /**
@@ -165,10 +182,10 @@ export function Lesson({
     const liste: Bolum[] = [];
     const tekrarVar = tekrarGorevleri.length > 0;
     if (tekrarOnce && tekrarVar) liste.push('tekrar');
-    if (yeniKartlar.length > 0) liste.push('yeni', 'ogrenme');
+    if (dersKartlari.length > 0) liste.push('yeni', 'ogrenme');
     if (!tekrarOnce && tekrarVar) liste.push('tekrar');
     return liste;
-  }, [tekrarOnce, tekrarGorevleri.length, yeniKartlar.length]);
+  }, [tekrarOnce, tekrarGorevleri.length, dersKartlari.length]);
 
   /** Ogrenme testi: merdiveni oynatmaz, yalnizca ilk notu ve olcumu yazar. */
   const ogrenmeSonucu = useCallback(
@@ -199,7 +216,9 @@ export function Lesson({
       if (sonra.step > p.step) sayac.current.ilerleyen++;
       return sonra;
     });
-    if (kayitlar.length > 0) await db.progress.bulkPut(kayitlar);
+    /* "Biliyorum" denenler merdiveni HIC gormuyor, oldugu gibi yaziliyor. */
+    const hepsi = [...kayitlar, ...bilinenler.current.values()];
+    if (hepsi.length > 0) await db.progress.bulkPut(hepsi);
   }, []);
 
   /** Tekrar: merdiveni oynatir. */
@@ -220,11 +239,56 @@ export function Lesson({
 
   /** Kart bellege alinir; not verilmez — ilk not ogrenme testinden gelir. */
   function kartiGor(card: Card) {
+    setSonBilinen(null);
     if (!yeniKayitlar.current.has(card.id)) {
       yeniKayitlar.current.set(card.id, introduceCard(card));
     }
-    if (i + 1 >= yeniKartlar.length) gec('yeni');
+    if (i + 1 >= dersKartlari.length) gec('yeni');
     else setI(i + 1);
+  }
+
+  /**
+   * "Bunu biliyorum" — kelimeyi kenara ayirir, YERINE siradaki kayar.
+   *
+   * Ders 5 kart kaliyor ki gunluk hedef "5 kelime OGRENDIM" anlamini
+   * korusun; atlanan kelime hicbir sayaca girmiyor (bkz. types.ts
+   * `bilinen`). Yedek kalmadiysa liste kisaliyor — set sonuna gelinmistir.
+   *
+   * `i` DEGISMIYOR: yedek ayni yere oturdugu icin kullanici siradaki
+   * kelimeyi ayni konumda goruyor.
+   */
+  function biliyorum(card: Card) {
+    bilinenler.current.set(card.id, markKnown(card));
+    yeniKayitlar.current.delete(card.id);
+
+    const yedek = yedekler.current.shift();
+    setDersKartlari((liste) => {
+      const yeni = [...liste];
+      if (yedek) yeni[i] = yedek;
+      else yeni.splice(i, 1);
+      return yeni;
+    });
+    setSonBilinen({ card, yer: i });
+
+    // Yedek yoksa ve atlanan SON karttiysa bolum biter.
+    if (!yedek && i >= dersKartlari.length - 1) gec('yeni');
+  }
+
+  /** Yanlis basilmisti — kelimeyi derse geri koy. */
+  function bilinenGeriAl() {
+    if (!sonBilinen) return;
+    const { card, yer } = sonBilinen;
+    bilinenler.current.delete(card.id);
+    setDersKartlari((liste) => {
+      const yeni = [...liste];
+      // Yerine kayan yedek varsa onu yedeklere iade et
+      const suan = yeni[yer];
+      if (suan && suan.id !== card.id) yedekler.current.unshift(suan);
+      yeni[yer] = card;
+      return yeni;
+    });
+    setI(yer);
+    setSonBilinen(null);
   }
 
   /**
@@ -235,7 +299,7 @@ export function Lesson({
    */
   function bolumGecisi(simdiki: Bolum): Omit<GecisAni, 'devam'> | null {
     if (simdiki === 'yeni') {
-      const n = yeniKartlar.length;
+      const n = dersKartlari.length;
       return {
         ikon: 'ogren',
         renk: 'brand',
@@ -322,7 +386,7 @@ export function Lesson({
       dogru,
       toplam: cevap,
       ilerleyen,
-      yeni: yeniKartlar.length,
+      yeni: dersKartlari.length,
     });
   }
 
@@ -355,7 +419,7 @@ export function Lesson({
       <div className="rise w-full max-w-md rounded-card bg-white p-6 shadow-[var(--shadow-lift)]">
         <p className="word text-xl font-extrabold">Ders yarıda kalacak</p>
         <p className="text-sm text-ink-soft mt-2">
-          Bu dersin <b>{yeniKartlar.length} yeni kelimesi henüz kaydedilmedi</b>. Şimdi
+          Bu dersin <b>{dersKartlari.length} yeni kelimesi henüz kaydedilmedi</b>. Şimdi
           çıkarsan hiçbiri öğrenilmiş sayılmaz ve ders bir dahakine <b>baştan</b> başlar.
         </p>
         <div className="mt-5 flex flex-col gap-2.5">
@@ -394,19 +458,31 @@ export function Lesson({
 
   // --- Bolum 1: yeni kartlar ---
   if (bolum === 'yeni') {
-    const card = yeniKartlar[i];
+    const card = dersKartlari[i];
     if (!card) return null;
     return (
       <Screen>
+        {/*
+          "Biliyorum" ust barda, "Devam"dan UZAKTA. Ikisi yan yana olsaydi
+          kazara basilir ve basan kisi kelimeyi kaybettigini fark etmezdi.
+        */}
         <TopBar
           left={<BackButton onClick={cikmakIstiyor} />}
           right={
-            <span>
-              {i + 1} / {yeniKartlar.length}
+            <span className="flex items-center gap-3">
+              <button
+                onClick={() => biliyorum(card)}
+                className="rounded-full bg-white/70 px-3 py-1.5 text-xs font-bold text-ink-soft shadow-[var(--shadow-soft)] transition-all active:scale-95 hover:bg-white"
+              >
+                Bunu biliyorum
+              </button>
+              <span className="tabular-nums">
+                {i + 1} / {dersKartlari.length}
+              </span>
             </span>
           }
         />
-        <Progressbar done={i} total={yeniKartlar.length} />
+        <Progressbar done={i} total={dersKartlari.length} />
         <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-ink-faint mt-2">
           {bolumEtiketi}
         </p>
@@ -414,6 +490,24 @@ export function Lesson({
         <div key={card.id} className="rise flex-1 flex flex-col justify-center py-6">
           <LearnFace card={card} />
         </div>
+
+        {/*
+          Geri al: yanlis basildiysa kelime kaybolmasin. Kacirilsa bile
+          kelime Kelimeler > Bildiklerim'den geri alinabiliyor.
+        */}
+        {sonBilinen && (
+          <div className="rise shrink-0 mb-3 flex items-center justify-center gap-2 text-sm">
+            <span className="text-ink-faint">
+              <b className="word font-bold text-ink-soft">{sonBilinen.card.en}</b> kenara ayrıldı
+            </span>
+            <button
+              onClick={bilinenGeriAl}
+              className="rounded-full bg-sunken px-3 py-1.5 text-xs font-bold text-ink transition-all active:scale-95"
+            >
+              Geri al
+            </button>
+          </div>
+        )}
 
         <div className="shrink-0">
           <Button variant="brand" onClick={() => kartiGor(card)}>

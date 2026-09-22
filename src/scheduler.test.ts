@@ -19,12 +19,14 @@ import {
   learningCheck,
   learningDone,
   lessonDays,
+  markKnown,
   nextBatch,
   olderThan,
   previousLessonCards,
   randomOld,
   remainingToday,
   reviewCard,
+  spareCards,
   todaysCards,
 } from './scheduler';
 import type { Progress } from './types';
@@ -551,5 +553,55 @@ describe('egzersiz kapsamlari', () => {
 
   it('eski kart yoksa bos doner', () => {
     expect(randomOld(introduceMany(5, NOW), 10, NOW)).toEqual([]);
+  });
+});
+
+describe('"bunu biliyorum"', () => {
+  const kart = CARDS[0];
+
+  it('ogrenilmis SAYILMAZ — kanca hic gosterilmedi, hicbir sey olculmedi', () => {
+    const p = markKnown(kart);
+    expect(p.bilinen).toBe(true);
+    expect(p.introduced).toBe(false);
+    expect(p.introducedAt).toBeNull();
+  });
+
+  /*
+    Bu dortlu `bilinen`in butun sozu: kelime hicbir sayaca, hicbir kuyruga
+    girmeyecek. `introduced: false` oldugu icin cogu yer kendiliginden
+    eliyor; test o kendiliginden elemeyi de dogruluyor.
+  */
+  it('hicbir kuyruga girmez', () => {
+    const hepsi = [markKnown(kart)];
+    expect(dueQueue(hepsi)).toEqual([]);
+    expect(aheadQueue(hepsi, 10)).toEqual([]);
+    expect(randomOld(hepsi, 10, new Date(Date.now() + 999 * 86_400_000))).toEqual([]);
+    expect(latestLessonCards(hepsi)).toEqual([]);
+  });
+
+  it('gunluk sayaci yemez — kayma bunun uzerine kurulu', () => {
+    const hepsi = [markKnown(kart)];
+    expect(introducedToday(hepsi)).toBe(0);
+    expect(remainingToday(hepsi, 5)).toBe(5);
+  });
+
+  it('yeni kelime olarak bir daha sunulmaz', () => {
+    const parti = nextBatch([markKnown(kart)], 5);
+    expect(parti.some((c) => c.id === kart.id)).toBe(false);
+  });
+
+  it('yedekler partide ve kapalilarda olmayan ilk kartlardir', () => {
+    const parti = nextBatch([], 5);
+    const yedek = spareCards([], parti, 3);
+    expect(yedek).toHaveLength(3);
+    expect(yedek.some((c) => parti.some((k) => k.id === c.id))).toBe(false);
+    // Sira korunur: parti bittigi yerden devam
+    expect(yedek[0].id).toBe(CARDS[parti.length].id);
+  });
+
+  it('bilinen kart yedek olarak da gelmez', () => {
+    const bilinen = markKnown(CARDS[6]);
+    const yedek = spareCards([bilinen], CARDS.slice(0, 5), 5);
+    expect(yedek.some((c) => c.id === CARDS[6].id)).toBe(false);
   });
 });

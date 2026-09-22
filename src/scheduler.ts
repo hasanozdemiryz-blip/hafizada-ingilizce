@@ -175,7 +175,11 @@ export const isDue = (p: Progress, now = new Date()) =>
   p.introduced && p.due.getTime() <= now.getTime();
 
 export function dueQueue(all: Progress[], now = new Date()): Progress[] {
-  return all.filter((p) => isDue(p, now)).sort((a, b) => a.due.getTime() - b.due.getTime());
+  // `bilinen` acikca eleniyor: `isDue` yalnizca vadeye bakiyor, ogrenilmis
+  // olup olmadigina degil.
+  return all
+    .filter((p) => !p.bilinen && isDue(p, now))
+    .sort((a, b) => a.due.getTime() - b.due.getTime());
 }
 
 /**
@@ -206,11 +210,59 @@ export function remainingToday(all: Progress[], limit: number, now = new Date())
  * Siradaki paket: tanisilmamis ilk kartlar, gunluk hedefi asmadan.
  * Paket `BATCH` kadar; hedefe daha az kaldiysa o kadar.
  */
+/**
+ * Bir daha yeni kelime olarak SUNULMAYACAK kartlar.
+ *
+ * Tanisilanlar ve "biliyorum" denenler. Ikincisi `introduced: false`
+ * oldugu icin burada ayrica elenmeli — baska her yerde kendiliginden
+ * eleniyor (bkz. types.ts `bilinen`).
+ */
+const kapali = (all: Progress[]) =>
+  new Set(all.filter((p) => p.introduced || p.bilinen).map((p) => p.cardId));
+
 export function nextBatch(all: Progress[], limit: number, now = new Date()): Card[] {
   const kalan = remainingToday(all, limit, now);
   if (kalan === 0) return [];
-  const introduced = new Set(all.filter((p) => p.introduced).map((p) => p.cardId));
-  return CARDS.filter((c) => !introduced.has(c.id)).slice(0, Math.min(BATCH, kalan));
+  const disarida = kapali(all);
+  return CARDS.filter((c) => !disarida.has(c.id)).slice(0, Math.min(BATCH, kalan));
+}
+
+/**
+ * Derste "biliyorum" denince yerine kayacak kartlar.
+ *
+ * Ders 5 kart kalsin diye: atlanan kartin yerine siradaki geliyor, boylece
+ * gunluk hedef "5 kelime OGRENDIM" anlamini koruyor. Parti disinda kalan
+ * ilk kartlardan olusuyor.
+ */
+export function spareCards(all: Progress[], parti: readonly Card[], sayi = BATCH): Card[] {
+  const disarida = kapali(all);
+  const partidekiler = new Set(parti.map((c) => c.id));
+  return CARDS.filter((c) => !disarida.has(c.id) && !partidekiler.has(c.id)).slice(0, sayi);
+}
+
+/**
+ * "Bunu biliyorum" kaydi.
+ *
+ * Kelime kenara ayrilir: ogrenilmis SAYILMAZ (kanca hic gosterilmedi,
+ * hicbir sey olculmedi) ama yeni kelime olarak da bir daha sunulmaz.
+ * Vadesi uzaga atiliyor ki hicbir kuyruga dusmesin.
+ */
+export function markKnown(card: Card, now = new Date()): Progress {
+  const bos = createEmptyCard(now);
+  const uzak = new Date(now.getTime() + 3650 * 86_400_000);
+  return {
+    ...toProgress(card.id, { ...bos, due: uzak }, {
+      step: ILK_ADIM,
+      introduced: false,
+      introducedAt: null,
+      firstCheckOk: null,
+      unaidedOk: null,
+      produceOk: null,
+      hookRevealCount: 0,
+      failCount: 0,
+    }),
+    bilinen: true,
+  };
 }
 
 /** Belirli bir gunde tanisilan kartlar. */

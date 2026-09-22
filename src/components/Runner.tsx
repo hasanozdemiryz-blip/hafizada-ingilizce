@@ -193,6 +193,21 @@ export function Runner({
                 yazdığın: <span className="line-through">{verdict.typed}</span>
               </span>
             )}
+
+            {/*
+              Kancaya basip dogru bilince merdiven YERINDE kalir — bu bir
+              ceza degil, merdivenin tanimi: tek isi "artik kancasiz
+              yapabiliyor musun" sorusuna cevap vermek.
+              Ama ekranda hicbir sey olmuyordu: "Doğru" yaziyor, hicbir sey
+              kimildamıyor, sebebi soylenmiyor. Ceza yoktu ama GERI BILDIRIM
+              de yoktu ve bu cezalandirilmis gibi hissettiriyordu.
+              Puanlamaya dokunulmadi; eksik olan tek sey bu satirdi.
+            */}
+            {verdict.judgement === 'dogru' && hookRevealed && (
+              <span className="text-sm text-ink-faint">
+                kancayla bildin · bir dahakine kancasız dene
+              </span>
+            )}
           </div>
         )}
       </div>

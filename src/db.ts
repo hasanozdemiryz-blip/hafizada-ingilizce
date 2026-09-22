@@ -157,6 +157,8 @@ function normalizeProgress(p: Progress): Progress {
     step: p.step ?? 1,
     introduced: p.introduced ?? false,
     introducedAt: p.introducedAt ?? null,
+    // Yedek eski bir surumden geliyorsa alan yok; yoklugu "bilinen degil".
+    bilinen: p.bilinen ?? false,
     firstCheckOk: p.firstCheckOk ?? null,
     unaidedOk: p.unaidedOk ?? null,
     produceOk: p.produceOk ?? null,
@@ -305,6 +307,19 @@ export async function importProgress(json: string): Promise<void> {
     if (answers.length > 0) await db.answers.bulkAdd(answers);
     if (parsed.state) await db.meta.put({ key: APP_KEY, value: parsed.state });
   });
+}
+
+/**
+ * "Bunu biliyorum" kaydini geri alir.
+ *
+ * Kayit tamamen SILINIYOR, bir bayrak cevrilmiyor: kelime o zaman yeni
+ * kelime havuzuna kendi siklik sirasindaki yerine doner ve ileride normal
+ * bir yeni kelime olarak gelir. Uygulamada hic ogrenilmedigi icin dogrusu
+ * bu — "ogrenilmis ama tekrari gelmis" gibi davranmak yalan olurdu.
+ */
+export async function bilinenGeriAl(cardId: string): Promise<void> {
+  const p = await db.progress.get(cardId);
+  if (p?.bilinen) await db.progress.delete(cardId);
 }
 
 export async function resetAll(): Promise<void> {

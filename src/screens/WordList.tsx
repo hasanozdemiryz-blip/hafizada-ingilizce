@@ -2,24 +2,25 @@ import { useMemo, useState } from 'react';
 import { BackButton, Card, Ikon, Screen, SpeakButton, TopBar } from '../components/ui';
 import { CARDS, CARD_BY_ID } from '../content';
 import { ADIM } from '../exercise';
+import { bilinenGeriAl } from '../db';
 import { shareHookBoard } from '../share';
 import { Button } from '../components/ui';
-import type { Progress, Step } from '../types';
+import type { Progress } from '../types';
 
+/**
+ * Uc bolum, daha fazlasi degil.
+ *
+ * Bir sure merdiven bolgeleri de sekme olarak duruyordu — "Tanıma (1–2)",
+ * "Geçiş (3–4)", "Üretim (5–6)". Ikisi birden sorun: basamak numarasi
+ * kullaniciya HIC ogretilmiyor (jargon), ve ayni bilgiyi Ilerleme'deki
+ * "Neler yapabildin" cubuklari zaten anlatiyor. Uc sekme kalkti.
+ */
 const FILTRELER = [
   { id: 'ogrenilen', ad: 'Öğrendiklerim' },
-  { id: 'tanima', ad: 'Tanıma (1–2)' },
-  { id: 'gecis', ad: 'Geçiş (3–4)' },
-  { id: 'uretim', ad: 'Üretim (5–6)' },
   { id: 'havuz', ad: 'Tüm set' },
+  { id: 'bilinen', ad: 'Bildiklerim' },
 ] as const;
 type Filtre = (typeof FILTRELER)[number]['id'];
-
-const ARALIK: Partial<Record<Filtre, [Step, Step]>> = {
-  tanima: [1, 2],
-  gecis: [3, 4],
-  uretim: [5, 6],
-};
 
 const norm = (s: string) => s.toLocaleLowerCase('tr');
 
@@ -41,12 +42,9 @@ export function WordList({ progress, onExit }: { progress: Progress[]; onExit: (
 
   const taban = useMemo(() => {
     if (filtre === 'havuz') return CARDS;
-    const aralik = ARALIK[filtre];
+    const secici = filtre === 'bilinen' ? (p: Progress) => p.bilinen : (p: Progress) => p.introduced;
     return progress
-      .filter((p) => {
-        if (!p.introduced) return false;
-        return aralik ? p.step >= aralik[0] && p.step <= aralik[1] : true;
-      })
+      .filter(secici)
       .map((p) => CARD_BY_ID.get(p.cardId))
       .filter((c): c is NonNullable<typeof c> => Boolean(c));
   }, [progress, filtre]);
@@ -95,6 +93,13 @@ export function WordList({ progress, onExit }: { progress: Progress[]; onExit: (
           ))}
         </div>
 
+        {filtre === 'bilinen' && (
+          <p className="text-sm text-ink-soft px-1">
+            Derste “bunu biliyorum” dediğin kelimeler. Hiçbir sayıya girmiyorlar;
+            istersen sisteme geri alabilirsin.
+          </p>
+        )}
+
         {ogrenilenler.length > 0 && filtre === 'ogrenilen' && (
           <Button
             variant="brand"
@@ -133,6 +138,20 @@ export function WordList({ progress, onExit }: { progress: Progress[]; onExit: (
                   </div>
                   <p className="text-sm text-ink-soft mt-0.5 truncate">{c.tr}</p>
                 </div>
+
+                {/*
+                  Geri alinca KAYIT SILINIYOR: kelime yeni kelime havuzuna
+                  kendi siklik sirasindaki yerine doner ve ileride normal bir
+                  yeni kelime olarak gelir (bkz. db.ts `bilinenGeriAl`).
+                */}
+                {p?.bilinen && (
+                  <button
+                    onClick={() => void bilinenGeriAl(c.id)}
+                    className="shrink-0 rounded-full bg-sunken px-3 py-1.5 text-xs font-bold text-ink transition-all active:scale-95"
+                  >
+                    Geri ekle
+                  </button>
+                )}
                 {ogrenildi && <SpeakButton word={c.en} size="small" />}
                 <span
                   title={ogrenildi ? ADIM[p!.step].ad : 'Henüz öğrenilmedi'}

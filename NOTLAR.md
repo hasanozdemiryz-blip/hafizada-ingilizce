@@ -1150,6 +1150,80 @@ diliyle örtüşmedi. Atılmadı, stil açıkça tarif edilip bir kez yeniden
 
 ---
 
+## 2026-09-22 — "Bunu biliyorum" ve kancanın bedeli
+
+### İstek kelime seçtirmekti, çıkan şey o olmadı
+
+İstek şuydu: ilk derste kullanıcı kendi kelimelerini seçsin, bir de
+"rastgele seç" düğmesi olsun. İkisi de yapılmadı, sebepleriyle:
+
+**Rastgele** mevcut sırayı bozar. Sıra rastgele değil, tasarlanmış:
+sıklık sırası + ilk beş kartta zayıf kanca yok (`far ≈ far` gibi kartlar
+yöntemin ne yaptığını göstermiyor, bilerek geriye itilmişler). Rastgelelik
+özgürlük değil; iyi bir sıralamayı kötüsüyle değiştirmek.
+
+**İlk derste seçtirmek** üç sebeple en kötü an: (1) kullanıcının karar
+verecek bilgisi yok — kelimeleri bilmediği için buradalar, (2) ilk beş
+kart vitrin, kendi seçerse ilk izlenimi "bu zaten aynı kelime" olabilir,
+(3) "tek akış, tek karar" kazancını en kırılgan noktada harcar.
+
+Ama altındaki ihtiyaç gerçekti. İnsanların kelime seçmek istemesinin
+sebebi genelde *"bunu zaten biliyorum, boşa çalışmayayım"*dır — bu
+**planlama değil tepki**, ve tepki çok daha ucuz.
+
+### Kayma, kararın kilit taşı
+
+"Biliyorum" denince yerine sıradaki kelime kayıyor. Alternatif ders
+kısalmasıydı ve o günlük hedefi **yalancı** yapardı: "5/5 kelime" derken
+aslında 4 öğrenilmiş olurdu. Hedefin anlamı korunması gereken şeydi.
+
+Kaymanın şartı: atlanan kelime **günlük sayacı yememeli**. `introduced:
+false` bunu kendiliğinden sağlıyor.
+
+### `introduced: false` bir numara değil, doğru olan
+
+Kelime uygulamada öğrenilmedi: kanca gösterilmedi, soru sorulmadı, hiçbir
+şey ölçülmedi. Onu "öğrenilmiş" saymak veriyi kirletirdi.
+
+Yan faydası büyük: `introduced` süzen **her yer** onu kendiliğinden eliyor —
+puanlama, set bitişi, günlük sayaç, kapsamlar, paylaşım panosu. Elle
+elenmesi gereken yalnızca iki yer kaldı (`nextBatch` ve `dueQueue`) ve
+ikisi de açıkça yazıldı.
+
+> Ders: doğru veri modelini seçmek, yirmi yerde "bunu da ele" yazmaktan
+> ucuz. Bayrak eklemeden önce var olan alanın ne anlattığına bakılmalı.
+
+### Kancaya basmanın bedeli — sanılandan azmış
+
+"Kancaya basınca olumsuz etkisi olmasın" istendi. Koda bakınca çıkan:
+zaten neredeyse yok.
+
+| | |
+|---|---|
+| Başarı yüzdesi | doğru sayılıyor, `ipucu` süzülmüyor |
+| FSRS zamanlaması | `Rating.Good`, aralık normal uzuyor |
+| "Neler yapabildin" | o cevap sayılmıyor ama sonradan kancasız yapınca sayılıyor |
+| `unaidedOk` / `hookRevealCount` | yalnızca geliştirme paneline gidiyor |
+| **Merdiven** | **yerinde kalıyor** — tek gerçek etki |
+
+Merdiven ilerlemesi bilerek engelli: merdivenin tek işi *"artık kancasız
+yapabiliyor musun"* sorusuna cevap vermek. Kancayla ilerletirsek yeteneği
+değil katılımı ölçer ve kullanıcı 6. basamakta kanca yokken çuvallar.
+
+**Eksik olan ceza değil, geri bildirimdi.** Kancayla doğru bilince ekranda
+hiçbir şey olmuyordu: "Doğru" yazıyor, merdiven kımıldamıyor, sebebi
+söylenmiyor — bu cezalandırılmış gibi hissettiriyor. Tek satır eklendi:
+*"kancayla bildin · bir dahakine kancasız dene"*. Puanlamaya dokunulmadı.
+
+### Kenarda duran kusur
+
+`unaidedOk` ilk ölçülebilir cevapta **bir kez** yazılıp bir daha
+güncellenmiyor; tek bir erken an kalıcı damga bırakıyor. Kullanıcıya zararı
+yok (yalnızca geliştirme paneli) ama ölçüm olarak zayıf. Bilerek bu turda
+dokunulmadı.
+
+---
+
 ## Ortam
 
 `/Volumes/TwinMOS` **exFAT**. macOS her dosyanın yanına `._` gölgesi bırakıyor;

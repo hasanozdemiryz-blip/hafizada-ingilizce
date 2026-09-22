@@ -44,6 +44,19 @@ export type Progress = {
   introduced: boolean;
   /** ISO tarih — gunluk sayim ve olcum icin */
   introducedAt: string | null;
+  /**
+   * Kullanici "bunu zaten biliyorum" dedi.
+   *
+   * `introduced` BILEREK false: o kelime uygulamada ogrenilmedi, kanca hic
+   * gosterilmedi, hicbir olcum yapilmadi. Boylece puanlama, set bitisi,
+   * gunluk sayac ve butun kuyruklar onu KENDILIGINDEN disarida birakiyor —
+   * `introduced` suzen her yer zaten eliyor.
+   *
+   * Tek gorundugu yer Kelimeler ekranindaki "Bildiklerim" bolumu; oradan
+   * sisteme geri alinabiliyor (kayit silinir, kelime yeni kelime havuzuna
+   * doner).
+   */
+  bilinen?: boolean;
 
   // --- Icerik kalite sinyalleri (bkz. quality.ts) ---
   /**

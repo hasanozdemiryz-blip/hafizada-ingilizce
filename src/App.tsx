@@ -15,6 +15,7 @@ import {
   dueQueue,
   introducedToday,
   nextBatch,
+  spareCards,
   remainingToday,
   todaysCards,
 } from './scheduler';
@@ -38,6 +39,8 @@ type Flow =
   | {
       name: 'ders';
       yeni: Card[];
+      /** "Biliyorum" denince yerine kayacak kartlar */
+      yedek: Card[];
       tekrar: Progress[];
       eslestirmesiz?: boolean;
       tekrarOnce?: boolean;
@@ -131,6 +134,7 @@ export default function App() {
     return (
       <Lesson
         yeniKartlar={flow.yeni}
+        yedekKartlar={flow.yedek}
         tekrarKuyrugu={flow.tekrar}
         sound={state.sound}
         eslestirmesiz={flow.eslestirmesiz}
@@ -178,6 +182,8 @@ export default function App() {
 
   const due = dueQueue(progress);
   const newCards = nextBatch(progress, state.dailyLimit);
+  /* "Bunu biliyorum" denince yerine kayacak kartlar (bkz. Lesson) */
+  const yedekKartlar = spareCards(progress, newCards);
   const bugununKartlari = todaysCards(progress);
   const ahead = aheadQueue(progress, AHEAD_BATCH);
 
@@ -196,21 +202,22 @@ export default function App() {
           aheadCount={ahead.length}
           agirTekrar={AGIR_TEKRAR}
           onStart={() =>
-            setFlow({ name: 'ders', yeni: newCards, tekrar: due.slice(0, DAILY_REVIEW_CAP) })
+            setFlow({ name: 'ders', yeni: newCards, yedek: yedekKartlar, tekrar: due.slice(0, DAILY_REVIEW_CAP) })
           }
           /* Ayni ders, yalnizca tekrar bolumu basta — bkz. AGIR_TEKRAR */
           onReviewFirst={() =>
             setFlow({
               name: 'ders',
               yeni: newCards,
+              yedek: yedekKartlar,
               tekrar: due.slice(0, DAILY_REVIEW_CAP),
               tekrarOnce: true,
             })
           }
           onQuickReview={() =>
-            setFlow({ name: 'ders', yeni: [], tekrar: bugununKartlari, eslestirmesiz: true })
+            setFlow({ name: 'ders', yeni: [], yedek: [], tekrar: bugununKartlari, eslestirmesiz: true })
           }
-          onPractice={() => setFlow({ name: 'ders', yeni: [], tekrar: ahead })}
+          onPractice={() => setFlow({ name: 'ders', yeni: [], yedek: [], tekrar: ahead })}
         />
       )}
       {tab === 'egzersiz' && (

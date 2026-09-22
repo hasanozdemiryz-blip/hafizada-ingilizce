@@ -173,6 +173,38 @@ Bölgeler `exercise.ts` içindeki `BOLGELER`'de — modül saf, ikon ve renk **a
 olarak taşınıyor. Motor (`Runner`) bir basamağın bittiğini dışarı vermiyor;
 öğrenme testi bölge bölge koşturularak o sınır ücretsiz elde ediliyor.
 
+### "Bunu biliyorum"
+
+Yeni kelime kartında, üst barda — **"Devam"dan uzakta**, çünkü yan yana
+olsalardı kazara basılır ve basan kişi kelimeyi kaybettiğini fark etmezdi.
+
+Basınca kelime kenara ayrılır ve **yerine sıradaki kelime kayar**: ders 5
+kart kalır, günlük hedef "5 kelime **öğrendim**" anlamını korur.
+
+Kelime `bilinen` işaretiyle kaydedilir ve **`introduced: false`** olur —
+uygulamada öğrenilmedi, kanca hiç gösterilmedi, hiçbir şey ölçülmedi.
+Bunun güzel yanı: `introduced` süzen her yer onu **kendiliğinden** eliyor.
+
+| | |
+|---|---|
+| Tekrar kuyruğu · kapsamlar | girmez |
+| Başarı % · kalıcılık · "Neler yapabildin" | girmez |
+| Günlük hedef sayacı | girmez *(kaymanın şartı)* |
+| Set bitişi | girmez — hepsine "biliyorum" diyen kutlama görmez |
+| Yeni kelime havuzu | bir daha sunulmaz |
+
+**İki katmanlı geri alma:** basar basmaz ekranda "Geri al"; kaçırılsa bile
+Kelimeler → **Bildiklerim**'den "Geri ekle". Geri eklenince kayıt **silinir**
+ve kelime yeni kelime havuzuna kendi sıklık sırasındaki yerine döner —
+"öğrenilmiş ama tekrarı gelmiş" gibi davranmak yalan olurdu.
+
+### Kelimeler ekranı üç bölüm
+
+**Öğrendiklerim · Tüm set · Bildiklerim.** Bir süre merdiven bölgeleri de
+sekmeydi ("Tanıma (1–2)", "Geçiş (3–4)", "Üretim (5–6)"); kalktılar. İkisi
+birden sorundu: basamak numarası kullanıcıya hiç öğretilmiyor, ve aynı
+bilgiyi İlerleme'deki "Neler yapabildin" çubukları zaten anlatıyor.
+
 ### Öğrenme testi
 
 Tanışmanın hemen ardından, aynı 5 kelime — ve merdivenin **altı basamağının
@@ -653,7 +685,7 @@ konsolda hata yok. 215 birim testi, tip denetimi ve derleme temiz. Paket
 - **Kullanım sayısı** — "kaç kişi kullanıyor" sorusunun cevabı yok ve yerel profil bunu **çözmüyor**: cihazda duran bir isim kimseye ulaşmaz. Tek yolu anonim bir ping (profil kimliği kullanılabilir) ya da APK Play'e girerse Play Console.
 - **Telaffuz kaydı** — tarayıcının ses sentezi kullanılıyor, kayıt kalitesinde değil. Yetmezse aynı arayüz önceden üretilmiş ses dosyalarına bağlanır; çağrı noktaları değişmez.
 
-**Sırada:** yayın ve D1/D7 ölçümü · kanca aday üretim hattı (havuzu ~600'e çıkarmak için) · kart görselleri · bulut senkronu (gerekirse — yerel profilin `id` alanı çapa olarak hazır).
+**Sırada:** analitik (Firebase/GA4 — planlandı, kurulmadı) · yayın ve D1/D7 ölçümü · kanca aday üretim hattı (havuzu ~600'e çıkarmak için) · kart görselleri · bulut senkronu (gerekirse — yerel profilin `id` alanı çapa olarak hazır).
 
 ---
 
