@@ -156,6 +156,8 @@ export default function App() {
         onKapat={kapat}
         onKaydet={(profil) => {
           void setState({ profil });
+          // Adin kendisi GONDERILMIYOR — yalnizca neyin degistigi.
+          olay('profil_degisti', { avatar: profil.avatar.tip, cerceve: profil.cerceve });
           kapat();
         }}
       />

@@ -3,7 +3,7 @@ import { TAB_SPACE } from '../components/TabBar';
 import { Avatar } from '../components/Avatar';
 import { Button, Card, Ikon, Screen } from '../components/ui';
 import { CARDS, LIMIT_CHOICES, LIMIT_MAX } from '../content';
-import { olcumHazirla, olcumVarMi, olcumuKapat } from '../analitik';
+import { olay, olcumHazirla, olcumVarMi, olcumuKapat } from '../analitik';
 import { exportProgress, importProgress, resetAll, setState } from '../db';
 import {
   HATIRLATMA_SAATLERI,
@@ -14,6 +14,7 @@ import {
 import { useTelaffuz } from '../speech';
 import { DevPanel } from './DevPanel';
 import type { AppState } from '../types';
+import { dosyayiVer, paylasilabilir, yedekAdi } from '../dosya';
 
 /**
  * AYARLAR.
@@ -34,6 +35,13 @@ export function Settings({
   const fileRef = useRef<HTMLInputElement>(null);
   const [sifirlaSoruluyor, setSifirlaSoruluyor] = useState(false);
   const [hata, setHata] = useState<string | null>(null);
+
+  /**
+   * Yedek paylas menusune verilebiliyor mu. Yalnizca METIN degistiriyor:
+   * menu acilacaksa "Yedekle", dosya inecekse "Yedek al" demek dogru.
+   * Kabuk render sirasinda degismedigi icin state'e gerek yok.
+   */
+  const paylasSecenegi = paylasilabilir();
   const sesVar = useTelaffuz();
   const hatirlatmaVarMi = useHatirlatma();
 
@@ -42,6 +50,7 @@ export function Settings({
    * hicbir sey yapmamali.
    */
   async function hatirlatmayiAyarla(saat: number | null) {
+    olay('hatirlatma_degisti', { saat: saat ?? 'kapali' });
     if (saat === null) {
       await hatirlatmayiKapat();
       await setState({ reminderHour: null });
@@ -249,10 +258,13 @@ export function Settings({
           <h2 className="text-sm font-bold text-ink-soft mb-1">Verilerim</h2>
           <p className="text-sm text-ink-soft mb-3">
             İlerleme, profilin ve fotoğrafın <b>yalnızca bu cihazda</b> tutuluyor.
-            Taşımak veya korumak için yedek al.
+            Taşımak veya korumak için yedekle
+            {paylasSecenegi && " — açılan menüden Drive'a, e-postaya ya da istediğin yere gönderebilirsin"}.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Kucuk onClick={() => void disaAktar(state.profil?.ad)}>Yedek al</Kucuk>
+            <Kucuk onClick={() => void disaAktar(state.profil?.ad)}>
+              {paylasSecenegi ? 'Yedekle' : 'Yedek al'}
+            </Kucuk>
             <Kucuk onClick={() => fileRef.current?.click()}>Geri yükle</Kucuk>
             <Kucuk tehlike onClick={() => setSifirlaSoruluyor(true)}>
               Sıfırla
@@ -348,33 +360,21 @@ export function Settings({
   );
 }
 
-/**
- * Dosya adinda profil adi da geciyor: birden fazla yedek yan yana
- * durunca hangisinin kime ait oldugu dosya adindan anlasilsin.
- * Turkce harfler ve bosluk dosya adinda sorun cikarabiliyor — sadelestirilir.
- */
-const dosyaAdi = (ad?: string) => {
-  const sade = (ad ?? '')
-    .toLocaleLowerCase('tr')
-    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
-    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-  const gun = new Date().toISOString().slice(0, 10);
-  return sade ? `${sade}-yedek-${gun}.json` : `hafizada-yedek-${gun}.json`;
-};
 
 async function disaAktar(profilAdi?: string) {
-  const url = URL.createObjectURL(new Blob([await exportProgress()], { type: 'application/json' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = dosyaAdi(profilAdi);
-  a.click();
-  URL.revokeObjectURL(url);
+  const blob = new Blob([await exportProgress()], { type: 'application/json' });
+  const { yol, verildi } = await dosyayiVer(blob, yedekAdi(profilAdi), 'Hafızada İngilizce yedeği');
+  // Iptal eden kullanici yedek ALMAMISTIR; olay yalnizca dosya gercekten
+  // verildiginde yaziliyor. `yol` ise "Android'de paylas menusu aciliyor mu"
+  // sorusunu tek bir cihazdan degil, kullanimdan cevapliyor.
+  if (verildi) olay('yedek_alindi', { yol });
 }
 
 async function iceAktar(file: File) {
   await importProgress(await file.text());
+  // Basarili olunca: hatali dosya `importProgress` icinde patliyor ve
+  // cagiran taraf hatayi yakaliyor, yani buraya ancak yuklenmis yedek gelir.
+  olay('yedek_yuklendi');
 }
 
 function Kucuk({

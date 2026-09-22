@@ -3,6 +3,8 @@
  * Gelir modeli kitle uzerinden oldugu icin paylasim bir ozellik degil,
  * dagitim kanali. (Kart paylasimi gorseller gelince — Faz 2/4.)
  */
+import { dosyayiVer } from './dosya';
+
 const W = 1080;
 const H = 1350; // 4:5
 
@@ -31,25 +33,38 @@ async function fontuHazirla() {
 /**
  * Panoya sigan kanca sayisi.
  *
- * Kural: seti bitiren kullanicinin paylastigi sey EKSIKSIZ olsun. Set
- * buyudukce sinir da buyumeli, yoksa 51 kelimeyi bitiren biri yarisini
- * paylasir. Duzen sayiya gore uyarlaniyor (bkz. `duzen`).
+ * Kural: seti bitiren kullanicinin paylastigi sey EKSIKSIZ olsun.
  *
- * (Sinir once 24'tu ve baslik yine `pairs.length` yaziyordu: 26 kelime
- * diyen bir panoda 24 satir vardi. Sonra 26'ya sabitlendi ve set 51'e
- * cikinca ayni sorun tersinden dondu.)
+ * BU SINIR DORT KEZ GERIDE KALDI. Once 24'tu ve baslik `pairs.length`
+ * yaziyordu (26 diyen bir panoda 24 satir); 26'ya cekildi, set 51 oldu;
+ * 60'a cekildi, set 100 oldu. Her seferinde kullanici ekranda bir sayi
+ * okuyup baska bir sayi yazan gorseli paylasti — hem de urunun tek
+ * dagitim kanalinda.
+ *
+ * Sayiyi buyutmek tek basina yetmiyor, cunku hata sayinin kendisinde
+ * degil: set buyudugunde hicbir sey uyarmiyordu. `share.test.ts` artik
+ * `PANO_MAX >= CARDS.length` diye tutuyor — sinir geride kalirsa test
+ * duser, kullanici degil.
+ *
+ * 104 = 4 sutun x 26 satir, duzenin cizebildigi en buyuk pano.
  */
-export const PANO_MAX = 60;
+export const PANO_MAX = 104;
 
 /**
  * Kanca sayisina gore sutun ve punto.
  * 1350 piksel yukseklikte 26 satir 33 puntoyla rahat duruyor; uzeri
  * sikisiyor, o yuzden sutun sayisi artiyor ve yazi kuculuyor.
+ *
+ * Dort sutunda bir hucre 235 piksel; setin en uzun cifti
+ * (`speed -> spidometre`, 15 harf) 20 puntoda ~180 piksel tutuyor, yani
+ * sigiyor. Daha kucuk punto denenmedi — telefonda okunmayan bir pano
+ * paylasilmaz.
  */
 function duzen(adet: number) {
   if (adet <= 26) return { sut: 2, kelime: 33, ok: 28, yukseklik: 38, ust: 28 };
   if (adet <= 40) return { sut: 3, kelime: 28, ok: 23, yukseklik: 33, ust: 24 };
-  return { sut: 3, kelime: 24, ok: 20, yukseklik: 29, ust: 21 };
+  if (adet <= 60) return { sut: 3, kelime: 24, ok: 20, yukseklik: 29, ust: 21 };
+  return { sut: 4, kelime: 20, ok: 17, yukseklik: 25, ust: 18 };
 }
 
 /**
@@ -133,28 +148,7 @@ export async function renderHookBoard(pairs: { en: string; hook: string }[]): Pr
 
 export async function shareHookBoard(pairs: { en: string; hook: string }[]): Promise<void> {
   const sayi = Math.min(pairs.length, PANO_MAX);
-  await paylas(await renderHookBoard(pairs), 'kanca-panosu.png', `${sayi} kelime, ${sayi} kanca`);
+  await dosyayiVer(await renderHookBoard(pairs), 'kanca-panosu.png', `${sayi} kelime, ${sayi} kanca`);
 }
 
-/** Paylasim sayfasini ac; desteklenmiyorsa dosyayi indir. */
-async function paylas(blob: Blob, dosyaAdi: string, baslik: string): Promise<void> {
-  const file = new File([blob], dosyaAdi, { type: 'image/png' });
-
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: baslik });
-      return;
-    } catch (err) {
-      // kullanici vazgectiyse sessizce gec
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-    }
-  }
-
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = dosyaAdi;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
