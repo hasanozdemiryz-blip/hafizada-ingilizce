@@ -78,7 +78,6 @@ export function Lesson({
     tekrarOnce && tekrarKuyrugu.length > 0 ? 'tekrar' : yeniKartlar.length > 0 ? 'yeni' : 'tekrar',
   );
   const [i, setI] = useState(0);
-  const [busy, setBusy] = useState(false);
   const [cikisSoruluyor, setCikisSoruluyor] = useState(false);
 
   /**
@@ -135,6 +134,21 @@ export function Lesson({
 
   /** Yeni kartlar iki yerden yazilmaya cagriliyor; ikinci cagri bos gecer. */
   const yazildi = useRef(false);
+
+  /**
+   * Ders bitisi BIR KEZ.
+   *
+   * Koruma bir `busy` STATE'iyle yapiliyordu ve yetmiyordu: React state'i
+   * eszamanli guncellemiyor, ayni tick'te gelen iki cagri da onu `false`
+   * goruyor. Uretimdeki olcumde goruldu — tek derste iki `ders_bitti`,
+   * ayni saniye, ayni veri. (O state baska hicbir yerde okunmuyordu,
+   * kaldirildi.)
+   *
+   * Zarari olcumle sinirli degildi: `logSession` de iki kez kosuyor, yani
+   * seans yerel veritabanina iki kez yaziliyordu. Ref eszamanli guncellendigi
+   * icin ikinci cagri gercekten bos geciyor.
+   */
+  const bitiyor = useRef(false);
 
   const toplam = yeniKartlar.length + new Set(tekrarKuyrugu.map((p) => p.cardId)).size;
 
@@ -385,8 +399,8 @@ export function Lesson({
   }
 
   async function bitir() {
-    if (busy) return;
-    setBusy(true);
+    if (bitiyor.current) return;
+    bitiyor.current = true;
     const { dogru, toplam: cevap, ilerleyen } = sayac.current;
     const state = await logSession(toplam, dogru, cevap - dogru);
     olay('ders_bitti', {
