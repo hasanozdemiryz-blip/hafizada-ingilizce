@@ -1282,6 +1282,45 @@ ana pakette `firebase` bulmuyor.
 kurulamazsa sessiz kalıyor — istatistik için kullanıcıya hata göstermek
 ölçünün bedeli olamaz.
 
+### Android tarafı hazırmış
+
+Firebase için gradle yaması yazmaya hazırlanıyordum — gerekmedi.
+Capacitor'ın Android şablonu zaten `com.google.gms:google-services`
+classpath'ini taşıyor ve `app/build.gradle` içinde koşullu bir blok var:
+`google-services.json` varsa eklenti kendiliğinden devreye giriyor, yoksa
+sessizce atlıyor.
+
+Yani `android/` her `cap add`'de yeniden üretilse bile kayıp yok. Tek
+gereken dosyayı `android/app/` içine koymak; `.gitignore`'a eklendi.
+
+> Ders: bir şeyi yamamadan önce şablonun zaten yapıp yapmadığına bakılmalı.
+
+### Yasal metinler: üç belge, düz HTML
+
+`public/gizlilik.html`, `public/kullanim-kosullari.html`,
+`public/kvkk-aydinlatma.html` + ortak `yasal.css`.
+
+**Neden React değil:** mağazalar uygulama YÜKLENMEDEN açılabilen bir
+gizlilik adresi istiyor. Aynı metni hem uygulama içinde hem internette
+tutmanın tek kaynaklı yolu, `public/` içinde duran düz HTML.
+
+**Neden üç belge:** Gizlilik Politikası mağazaların zorunlu tuttuğu şey;
+Kullanım Koşulları sorumluluk ve veri kaybı sınırını çiziyor (ilerleme
+yalnızca cihazda, yedek kullanıcının sorumluluğunda); KVKK Aydınlatma
+Metni ise Türkiye için ayrı bir zorunluluk ve m.10'un istediği yapıyı
+(veri sorumlusu, işlenen veriler, amaç, hukuki sebep, aktarım, m.11
+hakları, başvuru) izliyor.
+
+Metinler uygulamanın **gerçek davranışına** göre yazıldı. Çoğu uygulamanın
+gizlilik metni kopyalandığı için yanlıştır — burada neyin cihazda kaldığı
+ve neyin gönderildiği tek tek sayılı, ve "gönderilmeyenler" ayrı bir
+başlık.
+
+> Bunlar hukuki danışmanlık değil. İki başlık yayından önce avukata
+> okutulmalı: **veri sorumlusu kimliği** (şahıs mı şirket mi — Play
+> hesabı kararıyla da bağlantılı) ve **yurt dışına aktarım** (Google
+> sunucuları; KVKK m.9).
+
 ### Play Veri Güvenliği formu için cevaplar
 
 Uygulama veri **topluyor** (artık "hayır" denemez). Beyan edilecekler:

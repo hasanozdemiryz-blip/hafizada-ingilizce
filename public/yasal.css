@@ -1,0 +1,163 @@
+/*
+ * Yasal sayfaların ortak stili.
+ *
+ * Bu sayfalar uygulamanın paketinden BAĞIMSIZ olmalı: Play ve App Store,
+ * uygulama yüklenmeden açılabilen bir gizlilik adresi istiyor. O yüzden
+ * React değil, düz HTML — ama stil üç dosyada tekrarlanmasın diye burada.
+ */
+:root {
+  --ink: #16233a;
+  --ink-soft: #5c6b85;
+  --ink-faint: #9fadc2;
+  --paper: #eaf1fb;
+  --surface: #ffffff;
+  --spark: #ffd23f;
+  --brand: #2f6fd0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 2.5rem 1rem 4rem;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.65 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+main {
+  max-width: 42rem;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 1.9rem;
+  line-height: 1.2;
+  margin: 0 0 0.25rem;
+}
+
+h2 {
+  font-size: 1.15rem;
+  margin: 2.25rem 0 0.5rem;
+}
+
+h3 {
+  font-size: 1rem;
+  margin: 1.5rem 0 0.4rem;
+}
+
+.ustbilgi {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  margin: 0 0 2rem;
+}
+
+p,
+li {
+  color: #23324d;
+}
+
+ul,
+ol {
+  padding-left: 1.2rem;
+}
+
+li {
+  margin: 0.35rem 0;
+}
+
+.vurgu {
+  background: var(--surface);
+  border-radius: 1.25rem;
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+  box-shadow: 0 10px 30px -12px rgba(22, 35, 58, 0.22);
+}
+
+.vurgu p:first-child {
+  margin-top: 0;
+}
+.vurgu p:last-child {
+  margin-bottom: 0;
+}
+
+mark {
+  background: var(--spark);
+  border-radius: 0.25rem;
+  padding: 0 0.2em;
+}
+
+a {
+  color: var(--brand);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.95rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid #dfe8f5;
+  vertical-align: top;
+}
+
+th {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+nav.baglar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 2.5rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid #dfe8f5;
+  font-size: 0.9rem;
+}
+
+nav.baglar a {
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  text-decoration: none;
+  box-shadow: 0 10px 30px -12px rgba(22, 35, 58, 0.22);
+}
+
+footer {
+  margin-top: 2rem;
+  color: var(--ink-faint);
+  font-size: 0.85rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #0f1726;
+    --surface: #182236;
+    --ink: #e8eef8;
+    --ink-soft: #9fadc2;
+    --ink-faint: #6b7a92;
+    --brand: #7db2ff;
+  }
+  :root:not([data-theme='light']) p,
+  :root:not([data-theme='light']) li {
+    color: #cfd9e8;
+  }
+  :root:not([data-theme='light']) th,
+  :root:not([data-theme='light']) td {
+    border-bottom-color: #2a3750;
+  }
+  :root:not([data-theme='light']) nav.baglar {
+    border-top-color: #2a3750;
+  }
+}

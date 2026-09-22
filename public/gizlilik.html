@@ -6,133 +6,147 @@
     <title>Gizlilik Politikası · Hafızada İngilizce</title>
     <meta name="description" content="Hafızada İngilizce uygulamasının gizlilik politikası." />
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
-    <style>
-      /*
-        Bu sayfa uygulamanın paketinden BAĞIMSIZ: Play ve App Store,
-        uygulama yüklenmeden açılabilen bir gizlilik adresi istiyor.
-        O yüzden React değil, tek dosya düz HTML — stil de içeride.
-      */
-      :root {
-        --ink: #16233a;
-        --ink-soft: #5c6b85;
-        --paper: #eaf1fb;
-        --spark: #ffd23f;
-      }
-      * { box-sizing: border-box; }
-      body {
-        margin: 0;
-        padding: 2.5rem 1rem 4rem;
-        background: var(--paper);
-        color: var(--ink);
-        font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-        -webkit-font-smoothing: antialiased;
-      }
-      main { max-width: 42rem; margin: 0 auto; }
-      h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 0.25rem; }
-      h2 { font-size: 1.15rem; margin: 2.25rem 0 0.5rem; }
-      .tarih { color: var(--ink-soft); font-size: 0.9rem; margin: 0 0 2rem; }
-      p, li { color: #23324d; }
-      ul { padding-left: 1.2rem; }
-      li { margin: 0.35rem 0; }
-      .vurgu {
-        background: #fff;
-        border-radius: 1.25rem;
-        padding: 1.25rem 1.5rem;
-        margin: 1.5rem 0;
-        box-shadow: 0 10px 30px -12px rgba(22, 35, 58, 0.22);
-      }
-      .vurgu p { margin: 0; }
-      mark { background: var(--spark); border-radius: 0.25rem; padding: 0 0.2em; }
-      a { color: #2f6fd0; }
-      footer { margin-top: 3rem; color: var(--ink-soft); font-size: 0.9rem; }
-    </style>
+    <link rel="stylesheet" href="yasal.css" />
   </head>
   <body>
     <main>
       <h1>Gizlilik Politikası</h1>
-      <p class="tarih">Hafızada İngilizce · Son güncelleme: 22 Eylül 2026</p>
+      <p class="ustbilgi">Hafızada İngilizce · Yürürlük tarihi: 22 Eylül 2026</p>
 
       <div class="vurgu">
         <p>
           <strong>Kısaca:</strong> Öğrenme ilerlemen, profil adın ve seçtiğin fotoğraf
           <mark>yalnızca kendi cihazında</mark> durur; bize hiç ulaşmaz. Hesap açmıyorsun,
-          e-posta vermiyorsun. Yalnızca hangi ekranların kullanıldığını gösteren
-          <strong>anonim</strong> kullanım istatistikleri topluyoruz ve bunu
+          e-posta vermiyorsun. Yalnızca uygulamanın nasıl kullanıldığını gösteren
+          <strong>anonim</strong> istatistikler toplanır ve bunu
           <strong>Ayarlar'dan kapatabilirsin</strong>.
         </p>
       </div>
 
-      <h2>Cihazında kalanlar</h2>
+      <h2>1. Kim olduğumuz</h2>
       <p>
-        Aşağıdakiler tarayıcının/uygulamanın kendi deposunda (IndexedDB) tutulur.
-        Sunucumuza gönderilmez, bizim tarafımızdan görülemez:
+        Bu politika, Hafızada İngilizce mobil ve web uygulaması için geçerlidir.
+        Veri sorumlusu ve iletişim bilgileri için
+        <a href="kvkk-aydinlatma.html">KVKK Aydınlatma Metni</a>'ne bakabilirsin.
+      </p>
+
+      <h2>2. Cihazında kalan veriler</h2>
+      <p>
+        Aşağıdakiler cihazının kendi deposunda (IndexedDB) tutulur. Sunucumuza
+        gönderilmez, tarafımızdan görülemez, erişilemez:
       </p>
       <ul>
         <li>Öğrendiğin kelimeler, tekrar zamanlaman ve cevap geçmişin</li>
         <li>Profil adın ve avatarın</li>
-        <li>Kendi yüklediğin profil fotoğrafı</li>
-        <li>Günlük hedefin, serin ve ayarların</li>
+        <li>Kendin yüklediysen profil fotoğrafın</li>
+        <li>Günlük hedefin, serin, hatırlatma saatin ve diğer ayarların</li>
       </ul>
       <p>
-        Bu verileri taşımak istersen Ayarlar'daki <strong>Yedek al</strong> ile bir dosyaya
-        çıkarabilir, <strong>Sıfırla</strong> ile tamamen silebilirsin. Uygulamayı
-        kaldırmak da hepsini siler.
+        Bu verileri <strong>Ayarlar → Yedek al</strong> ile bir dosyaya çıkarabilir,
+        <strong>Sıfırla</strong> ile tamamen silebilirsin. Uygulamayı kaldırmak da
+        hepsini siler. Yedek dosyası senin cihazında oluşur; bize gönderilmez.
       </p>
 
-      <h2>Topladığımız tek şey: anonim kullanım istatistikleri</h2>
+      <h2>3. Topladığımız veriler: anonim kullanım istatistikleri</h2>
       <p>
         Uygulamanın nerede işe yaradığını, nerede takıldığını anlayabilmek için Google
-        Firebase Analytics kullanıyoruz. Toplanan olaylar şunlardır: uygulamanın
-        açılması, ders başlatma ve bitirme (kaç kelime, kaç doğru), egzersiz başlatma,
-        bir kelimeye “bunu biliyorum” denmesi, setin tamamlanması, ayar değişiklikleri.
-      </p>
-      <p>Bunlarla birlikte Google tarafından cihaz modeli, işletim sistemi sürümü,
-        uygulama sürümü, ülke düzeyinde yaklaşık konum ve cihaza özel rastgele bir
-        uygulama kimliği işlenir.</p>
-      <p>
-        <strong>Gönderilmeyenler:</strong> adın, profil fotoğrafın, yazdığın cevaplar,
-        hangi kelimeleri bildiğin, e-posta veya telefon gibi hiçbir iletişim bilgisi.
-        Kimliğin olarak yalnızca uygulamanın kendi ürettiği rastgele bir numara kullanılır;
-        bu numara seni uygulama dışında hiçbir şeye bağlamaz.
-      </p>
-      <p>
-        Bu ölçümü <strong>Ayarlar → Kullanım istatistikleri</strong> anahtarından
-        kapatabilirsin. Kapattığında hiçbir olay gönderilmez.
+        Firebase Analytics kullanıyoruz.
       </p>
 
-      <h2>Reklam yok, satış yok</h2>
+      <h3>Gönderilen olaylar</h3>
       <p>
-        Uygulamada reklam gösterilmiyor, hiçbir veri satılmıyor veya pazarlama amacıyla
-        üçüncü taraflarla paylaşılmıyor.
+        Uygulamanın açılması, dersin başlaması ve bitmesi (kaç kelime çalışıldı, kaç
+        doğru, yüzde kaç), egzersiz başlatma, bir kelimeye “bunu biliyorum” denmesi ve
+        bunun geri alınması, setin tamamlanması, karşılama akışının bitmesi, profil ve
+        hatırlatma ayarının değişmesi, yedek alma ve yükleme.
       </p>
 
-      <h2>Çocuklar</h2>
+      <h3>Google tarafından ayrıca işlenenler</h3>
+      <p>
+        Cihaz modeli, işletim sistemi sürümü, uygulama sürümü, dil, ülke düzeyinde
+        yaklaşık konum (IP adresinden türetilir; IP adresi saklanmaz) ve cihaza özel
+        rastgele bir uygulama örneği kimliği.
+      </p>
+
+      <h3>Gönderilmeyenler</h3>
+      <ul>
+        <li>Adın veya profil adın</li>
+        <li>Profil fotoğrafın</li>
+        <li>Yazdığın cevaplar ve hangi kelimeleri bildiğin</li>
+        <li>E-posta, telefon, adres gibi hiçbir iletişim bilgisi</li>
+        <li>Tam konum</li>
+      </ul>
+      <p>
+        Olaylara eklenen tek kimlik, uygulamanın cihazda ürettiği
+        <strong>rastgele bir numaradır</strong>. Bu numara seni uygulama dışında hiçbir
+        şeye bağlamaz, kimliğini göstermez ve başka kaynaklarla eşleştirilmez.
+      </p>
+
+      <h3>Kapatmak</h3>
+      <p>
+        <strong>Ayarlar → Kullanım istatistikleri</strong> anahtarını kapattığında o
+        andan itibaren hiçbir olay gönderilmez.
+      </p>
+
+      <h2>4. Yurt dışına aktarım</h2>
+      <p>
+        Kullanım istatistikleri Google Ireland Limited ve Google LLC tarafından işlenir;
+        bu, verilerin yurt dışındaki sunuculara aktarılması anlamına gelir. Ayrıntılar
+        için <a href="kvkk-aydinlatma.html">KVKK Aydınlatma Metni</a>'ne bakabilirsin.
+        Google'ın kendi gizlilik politikası:
+        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener"
+          >policies.google.com/privacy</a
+        >.
+      </p>
+
+      <h2>5. Saklama süresi</h2>
+      <p>
+        Cihazındaki veriler, sen silene ya da uygulamayı kaldırana kadar cihazında kalır.
+        Kullanım istatistikleri Firebase'in varsayılan saklama süresi boyunca tutulur ve
+        süre sonunda silinir.
+      </p>
+
+      <h2>6. Reklam yok, satış yok</h2>
+      <p>
+        Uygulamada reklam gösterilmez. Hiçbir veri satılmaz, kiralanmaz veya pazarlama
+        amacıyla üçüncü taraflarla paylaşılmaz. Analitik dışında üçüncü taraf izleyici
+        (tracker) kullanılmaz.
+      </p>
+
+      <h2>7. Çerezler</h2>
+      <p>
+        Web sürümünde takip amaçlı çerez kullanılmaz. Uygulamanın çalışması için
+        tarayıcının yerel depolama alanları (IndexedDB, Cache Storage) kullanılır; bunlar
+        cihazından çıkmaz.
+      </p>
+
+      <h2>8. Çocuklar</h2>
       <p>
         Uygulama özellikle çocuklara yönelik değildir ve çocuklardan bilerek kişisel veri
-        toplamaz.
+        toplamaz. Çocuğunuzun veri gönderdiğini düşünüyorsanız bize yazın; ilgili kayıtları
+        sileriz.
       </p>
 
-      <h2>Haklarınız</h2>
+      <h2>9. Haklarınız</h2>
       <p>
-        KVKK ve GDPR kapsamındaki haklarını kullanmak, verilerinin silinmesini istemek
-        veya soru sormak için bize yazabilirsin. Cihazındaki verilerin tamamını
-        istediğin an Ayarlar → Sıfırla ile kendin silebilirsin.
+        KVKK ve GDPR kapsamındaki haklarını kullanmak için bize yazabilirsin. Cihazındaki
+        verilerin tamamını istediğin an <strong>Ayarlar → Sıfırla</strong> ile kendin
+        silebilirsin. Ayrıntılı liste ve başvuru yolu
+        <a href="kvkk-aydinlatma.html">KVKK Aydınlatma Metni</a>'nde.
       </p>
 
-      <h2>İletişim</h2>
+      <h2>10. Değişiklikler</h2>
       <p>
-        <a href="mailto:hasanozdemiryz@gmail.com">hasanozdemiryz@gmail.com</a>
+        Bu metin değişirse yukarıdaki yürürlük tarihi güncellenir. Toplanan veri
+        türlerini genişleten önemli bir değişiklik olursa uygulama içinde bilgilendirilirsin.
       </p>
 
-      <h2>Değişiklikler</h2>
-      <p>
-        Bu metin değişirse yukarıdaki tarih güncellenir. Önemli bir değişiklik olursa
-        uygulama içinde bilgilendirilirsin.
-      </p>
-
-      <footer>
-        <p><a href="./">← Hafızada İngilizce</a></p>
-      </footer>
+      <nav class="baglar">
+        <a href="./">Uygulama</a>
+        <a href="kullanim-kosullari.html">Kullanım Koşulları</a>
+        <a href="kvkk-aydinlatma.html">KVKK Aydınlatma Metni</a>
+      </nav>
+      <footer>Hafızada İngilizce</footer>
     </main>
   </body>
 </html>

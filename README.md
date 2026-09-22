@@ -672,6 +672,29 @@ gelmiş olabilir).
 > Güvenliği formu buna göre. Play'de ret sebebi analitik değil, **beyan
 > uyuşmazlığıdır**.
 
+### Yasal metinler
+
+`public/` içinde **düz HTML**, React değil — çünkü mağazalar uygulama
+**yüklenmeden** açılabilen bir gizlilik adresi istiyor. Aynı dosyalar hem
+internette hem uygulama paketinde; tek kaynak.
+
+| Dosya | Ne |
+|---|---|
+| `gizlilik.html` | Gizlilik Politikası |
+| `kullanim-kosullari.html` | Kullanım Koşulları |
+| `kvkk-aydinlatma.html` | KVKK Aydınlatma Metni (6698 m.10) |
+| `yasal.css` | Ortak stil — açık/koyu tema |
+
+Uygulamadan erişim: **Ayarlar → Yasal** (en altta; aranan bir şey değil
+ama bulunabilir olmak zorunda).
+
+> Metinler uygulamanın **gerçek davranışına** göre yazıldı: neyin cihazda
+> kaldığı, neyin gönderildiği, neyin gönderilmediği tek tek sayılı. Çoğu
+> uygulamanın gizlilik metni kopyalandığı için yanlıştır; buradaki değil.
+> Yine de bunlar hukuki danışmanlık değildir — yayından önce bir avukata
+> okutulmalı, özellikle **veri sorumlusu kimliği** (şahıs mı şirket mi)
+> ve **yurt dışına aktarım** başlıkları.
+
 **Teknoloji:** Vite · React · TypeScript · Tailwind v4 · Dexie · ts-fsrs (FSRS-5) · vite-plugin-pwa. Yazı karakterleri (**Nunito** + Plus Jakarta Sans) yerelde, çevrimdışı çalışır.
 
 > Başlık fontu Fredoka'ydı; fontun kendisinde **ğ, Ğ, İ, Ş, ş glifleri yok**

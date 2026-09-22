@@ -279,6 +279,38 @@ export function Settings({
           <Satir ad="Sürüm" deger="0.1.0" />
         </Card>
 
+        {/*
+          YASAL — en altta, cunku aranan bir sey degil ama BULUNABILIR
+          olmasi gerekiyor. Play ve App Store gizlilik metnine uygulama
+          icinden erisilmesini bekliyor.
+
+          Sayfalar React degil, `public/` icinde duz HTML: magazalar
+          uygulama YUKLENMEDEN acilabilen bir gizlilik adresi istiyor,
+          yani ayni metin hem uygulamada hem internette olmali. Tek
+          kaynakta tutmanin yolu bu.
+        */}
+        <Card className="rise delay-3">
+          <h2 className="text-sm font-bold text-ink-soft mb-2">Yasal</h2>
+          <div className="flex flex-col">
+            {[
+              ['gizlilik.html', 'Gizlilik Politikası'],
+              ['kullanim-kosullari.html', 'Kullanım Koşulları'],
+              ['kvkk-aydinlatma.html', 'KVKK Aydınlatma Metni'],
+            ].map(([dosya, ad]) => (
+              <a
+                key={dosya}
+                href={`${import.meta.env.BASE_URL}${dosya}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-between py-2.5 text-sm transition-opacity active:opacity-60"
+              >
+                <span className="font-semibold">{ad}</span>
+                <span className="text-ink-faint">↗</span>
+              </a>
+            ))}
+          </div>
+        </Card>
+
         {import.meta.env.DEV && <DevPanel />}
       </div>
 
