@@ -1278,34 +1278,51 @@ sonsuza kadar aynı hatayı tekrarlardı.
 
 ### Supabase kurulumu
 
-`anon` anahtarı **gizli değildir**: istemciye zaten gönderilir. Güvenliği
-sağlayan şey RLS — tablo yalnızca INSERT'e açık, kimse yazılanı geri
-okuyamaz.
+Şema artık **panelde değil, depoda**:
+`supabase/migrations/20260922000000_olaylar.sql`.
+
+Bir süre bu SQL burada, bu dosyada duruyordu ve SQL Editor'e elle
+yapıştırılıyordu. Böyle olunca "üretimdeki tablo hangi halde" sorusunun
+cevabı hiçbir yerde yazmıyordu. Artık `supabase db push` uyguluyor ve
+değişiklikler yeni bir migration dosyası olarak birikiyor.
+
+Migration'ın kendisi neden öyle yazıldığını anlatıyor; buraya
+tekrarlanmayacak kadar yorumlu. Üç karar özetle:
+
+- **`ad` sütununda enum/check yok.** Kısıtlasaydık, kodda yeni bir olay
+  eklenip migration unutulduğunda sunucu 4xx döner, istemci de 4xx'i
+  "kalıcı hata" sayıp kayıtları atardı — sessiz ve geri dönülmez veri
+  kaybı. Yazım hatasını zaten `type Olay` yakalıyor.
+- **RLS yalnızca INSERT.** `anon` anahtarı gizli değil, APK'dan
+  çıkarılabilir. Güvenliği sağlayan şey anahtarın saklanması değil, bu
+  politika: kimse yazılanı geri okuyamaz, güncelleyemez, silemez.
+- **`olustu` istemciden, `alindi` sunucudan.** Cihaz saati yanlış
+  olabilir; ikisinin farkı saat kaymasını gösteriyor.
+
+#### Saklama süresi — bağlanmamış bir söz
+
+`public/gizlilik.html` 5. maddede kullanım olaylarının **en fazla 24 ay**
+saklanacağını söylüyor. Silme fonksiyonu migration'da versiyonlu duruyor
+(`bakim.olaylari_temizle`), ama **zamanlaması yapılmadı**: `pg_cron` her
+projede açık olmadığı için migration'ın ilk çalışmasını riske atmak
+istemedik.
+
+Yayından önce bir kere çalıştırılacak:
 
 ```sql
-create table olaylar (
-  id         bigint generated always as identity primary key,
-  olustu     timestamptz not null,
-  kimlik     text not null,   -- Profil.id, rastgele
-  ad         text not null,   -- olay adı
-  veri       jsonb,           -- parametreler
-  surum      text,
-  platform   text,
-  alindi     timestamptz not null default now()  -- sunucu zamanı
-);
-
-create index olaylar_kimlik_gun on olaylar (kimlik, (olustu::date));
-create index olaylar_ad on olaylar (ad, olustu);
-
-alter table olaylar enable row level security;
-
--- Yalnızca yazma. `anon` okuyamaz, silemez, güncelleyemez.
-create policy "anon ekleyebilir" on olaylar
-  for insert to anon with check (true);
+create extension if not exists pg_cron;
+select cron.schedule('olaylari-temizle', '0 4 1 * *',
+                     $$select bakim.olaylari_temizle(24)$$);
 ```
 
-`olustu` istemciden geliyor (cihaz saati yanlış olabilir), `alindi`
-sunucudan — ikisini karşılaştırmak saat kaymalarını gösteriyor.
+Bu yapılmadan gizlilik politikası tutmayan bir söz veriyor.
+
+#### Fonksiyon neden `public` dışında
+
+PostgREST yalnızca `public` şemasını dışa açıyor. `olaylari_temizle`
+orada olsaydı, `security definer` bir silme fonksiyonu anon anahtarıyla
+RPC olarak çağrılabilirdi — yani herkes ölçümü süpürebilirdi. O yüzden
+`bakim` şemasında ve `anon`dan yetkisi alınmış durumda.
 
 ### Ölçüm sorguları
 
@@ -1382,6 +1399,51 @@ ve vitest `exclude` ile kapatıldı. Yine de çarparsa: `find . -name '._*' -del
 
 ---
 
+## 2026-09-22 — Yedekleme buluta değil, kullanıcının kendi Drive'ına
+
+### Fikir büyük okundu, küçüğü doğruydu
+
+İstek "Supabase + Google hesabıyla bulut senkronizasyonu" diye geldi ve
+ben bunu tam bir hesap sistemi olarak okudum: kullanıcı tablosu, misafir→
+hesap göçü, iki cihaz arası çakışma çözümü, satır bazında "son yazan
+kazanır". Buna göre beş başlıklı bir risk listesi çıkardım.
+
+Kastedilen o değilmiş. İstenen şey WhatsApp'taki gibi: **Ayarlar'dan
+"Yedekle" deyip Google hesabını seçmek, yedek kullanıcının kendi
+Drive'ına gitmek.** Kayıt yok, hesap yok, sürekli senkron yok.
+
+Fark küçük görünüyor ama analizin dördünü buharlaştırıyor:
+
+| Endişe | Tam senkronda | Kendi Drive'ına yedekte |
+|---|---|---|
+| Çakışma çözümü | Gerekli (`guncellendi` damgası şart) | Yok — yedek bir anlık görüntü |
+| Misafir→hesap göçü | Kural yazılmalı | Yok |
+| Kullanıcı tablosu + RLS | Gerekli | Yok |
+| Yasal metinler | Baştan yazılır | **Değişmiyor** |
+
+Son satır en önemlisi. `public/gizlilik.html` birinci paragrafta
+"yalnızca kendi cihazında durur; **bize hiç ulaşmaz**" diyor. Tam senkron
+bunu yalan yapıyordu. Kendi Drive'ına yedekte veri bize değil kullanıcının
+kendi hesabına gidiyor — cümle doğru kalıyor, e-posta toplamıyoruz, Play
+Veri Güvenliği beyanı olduğu gibi kalıyor.
+
+### Aşama 1: paylaş menüsü, hiç OAuth yok
+
+Karar: önce OAuth'suz olanı yapmak, "sonra gelişecek" diye not düşmek.
+
+Yedek dosyası zaten üretiliyor (Ayarlar → Yedek al). Tek eklenen şey onu
+Android'in paylaş menüsüne vermek; kullanıcı oradan "Drive'a kaydet"i
+seçiyor. Geri yükleme de dosya seçiciyle.
+
+Bunun bedeli: Google'a tek bir OAuth isteği gitmiyor, doğrulama süreci
+yok, SHA-1 yok, keystore bağımlılığı yok, Play beyanı değişmiyor. Kimlik
+doğrulamayı **işletim sistemi** yapıyor, biz değil. Maliyet ~1 gün.
+
+Karşılığında kaybedilen tek şey otomatiklik: kullanıcı her seferinde elle
+seçiyor. Gerçek entegrasyon (bkz. Sırada) bunu çözecek ama release
+keystore'a bağlı olduğu için yayından önce yapılamaz — ters sırada
+yapılırsa aynı iş iki kez yapılır.
+
 ## Sırada
 
 Kapsam kararı gereği sıra **veriden sonra** açılıyor: 26 kartlık set yayına
@@ -1397,4 +1459,10 @@ Kapsam kararı gereği sıra **veriden sonra** açılıyor: 26 kartlık set yay�
    listesi. "Haa testi" insanda kalır; moat orası.
 3. Kalan 74 kartın görseli — yukarıdaki iskele ve derslerle. Veri gelmeden
    ~6.700 kredi harcanmıyor.
-4. Hesap + bulut senkronu — yalnızca retention verisi gerektirirse.
+4. **Drive'a yedek — ikinci aşama.** Aşama 1 (paylaş menüsü) yapılınca
+   gerçek Google Drive entegrasyonu: "Yedekle" → hesap seç → bitti, ve
+   otomatik yedek. OAuth client + release keystore'un SHA-1'i gerekiyor,
+   yani ancak yayından sonra. Bkz. "Yedekleme buluta değil, kullanıcının
+   kendi Drive'ına".
+5. Hesap + bulut senkronu — yalnızca retention verisi gerektirirse. Drive
+   yedeği bunun büyük kısmını zaten çözüyorsa hiç gerekmeyebilir.
