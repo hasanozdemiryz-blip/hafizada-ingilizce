@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { olay } from '../analitik';
 import { CardVisual } from '../components/CardVisual';
 import { Button, Card, HookChip, Ikon, Screen } from '../components/ui';
 import { CARDS, LIMIT_CHOICES, LIMIT_DEFAULT, SHOWCASE_CARD } from '../content';
@@ -27,6 +28,7 @@ export function Welcome({ onDone }: { onDone: () => void }) {
   const siklar = useMemo(() => secenekler(card, CARDS, 'tr'), [card]);
 
   async function bitir() {
+    olay('karsilama_bitti', { hedef });
     await setState({ onboarded: true, dailyLimit: hedef });
     onDone();
   }

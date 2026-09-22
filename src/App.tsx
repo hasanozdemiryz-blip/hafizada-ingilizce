@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { olay } from './analitik';
 import { TabBar, type Tab } from './components/TabBar';
 import {
   AGIR_TEKRAR,
@@ -161,6 +162,7 @@ export default function App() {
     );
   }
   if (flow?.name === 'done') {
+    if (flow.yeni > 0 && setBittiMi(progress)) olay('set_bitti', { kelime: progress.length });
     return (
       <SessionDone
         count={flow.count}

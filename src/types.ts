@@ -196,4 +196,16 @@ export type AppState = {
   reminderHour: number | null;
   /** YYYY-MM-DD, yerel saat */
   lastSessionDate: string | null;
+  /**
+   * Anonim kullanim olcumu acik mi (bkz. analitik.ts).
+   *
+   * Varsayilan ACIK ama Ayarlar'dan kapatilabiliyor. Ilk acilista onay
+   * kutusu SORULMUYOR: bu uygulamanin en korunan yeri karsilama akisi —
+   * "haa" anindan once bir izin diyalogu koymak, olcumun kazandiracagindan
+   * fazlasini kapida kaybettirir. Ayarlar'da acikca yaziyor ve tek
+   * dokunusla kapaniyor.
+   *
+   * Eski kayitlarda alan yok; yoklugu ACIK sayilir.
+   */
+  olcum?: boolean;
 };

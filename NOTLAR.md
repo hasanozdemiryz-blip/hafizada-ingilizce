@@ -1224,6 +1224,79 @@ dokunulmadı.
 
 ---
 
+## 2026-09-22 — Kullanım ölçümü (Firebase Analytics)
+
+### Bu karar "veri toplamıyoruz" sözünü bitiriyor
+
+Uygulamanın en net özelliklerinden biri buydu ve Play'in Veri Güvenliği
+formunu "hiçbir veri toplanmıyor" diye doldurmayı planlıyorduk. Firebase
+girince bu **yanlış beyan** olurdu — ve Play'de asıl ret/kaldırma sebebi
+analitik kullanmak değil, **beyan uyuşmazlığıdır**.
+
+O yüzden kod ile birlikte üç şey de değişti: gizlilik politikası sayfası
+(`public/gizlilik.html`), Ayarlar'daki metin, ve NOTLAR'daki bu kayıt.
+Veri Güvenliği formu bu metne göre doldurulacak.
+
+### Sınır: uygulama Firebase'i tanımıyor
+
+`src/analitik.ts` tek kapı. Uygulamanın geri kalanı yalnızca `olay()`
+çağırıyor. Yarın vazgeçilirse ya da başka bir araca geçilirse değişen tek
+yer orası — çağrı noktaları durur.
+
+### Üç kural
+
+**1. Yapılandırma yoksa sessizce kapalı.** Anahtarlar `VITE_FIREBASE_*`
+ortam değişkenlerinden geliyor; yoksa `olay()` hiçbir şey yapmıyor.
+Böylece geliştirme, testler ve depoyu klonlayan herkes ölçüm olmadan
+çalışıyor — ve geliştirme verisi gerçek ölçülere karışmıyor. Ayarlar'daki
+anahtar da yalnızca yapılandırma varsa görünüyor; telaffuz ve hatırlatma
+da aynı kuralı izliyor (olmayan bir şeyin anahtarı gösterilmez).
+
+**2. Kullanıcı kapatabilir.** Ayarlar → Kullanım istatistikleri.
+Varsayılan **açık** ama ilk açılışta izin diyalogu **sorulmuyor**:
+karşılama akışı bu ürünün en korunan yeri, "haa" anından önce bir onay
+kutusu ölçümün kazandıracağından fazlasını kapıda kaybettirir.
+
+**3. Kişisel veri gönderilmiyor.** Ad, avatar fotoğrafı, yazılan cevaplar,
+hangi kelimeleri bildiği — hiçbiri olaylara girmiyor. Tek kimlik
+`Profil.id`: zaten rastgele üretilmiş, kullanıcıyı dışarıda hiçbir şeye
+bağlamayan bir numara.
+
+### Olay adları sabit liste
+
+`type Olay` bir birleşim tipi, serbest metin değil. Serbest olsaydı bir
+gün `ders_bitti`, başka gün `dersBitti` yazılır ve panoda iki ayrı olay
+görünürdü — analitikte en sık yapılan hata bu. Yazım hatası artık
+derlemede yakalanıyor.
+
+### Paket büyümedi
+
+Firebase **dinamik import** ile geliyor: ölçüm kapalıyken ya da
+yapılandırılmamışken ana pakete hiç girmiyor, indirilmiyor bile. Ana
+paket 488 → 494 KB (6 KB); Firebase ayrı parçalarda duruyor ve `grep`
+ana pakette `firebase` bulmuyor.
+
+### Ölçüm akışı asla bozmaz
+
+`olay()` hiçbir zaman hata fırlatmıyor, `await` istemiyor. Firebase
+kurulamazsa sessiz kalıyor — istatistik için kullanıcıya hata göstermek
+ölçünün bedeli olamaz.
+
+### Play Veri Güvenliği formu için cevaplar
+
+Uygulama veri **topluyor** (artık "hayır" denemez). Beyan edilecekler:
+
+| Kategori | Ne | Amaç |
+|---|---|---|
+| Uygulama etkinliği | uygulama içi olaylar | Analiz |
+| Cihaz veya diğer kimlikler | Firebase uygulama örneği kimliği | Analiz |
+| Konum | ülke düzeyinde yaklaşık (IP'den) | Analiz |
+
+Hepsi için: aktarım şifreli · kullanıcı silme talep edebilir · veriler
+satılmıyor · reklam yok.
+
+---
+
 ## Ortam
 
 `/Volumes/TwinMOS` **exFAT**. macOS her dosyanın yanına `._` gölgesi bırakıyor;

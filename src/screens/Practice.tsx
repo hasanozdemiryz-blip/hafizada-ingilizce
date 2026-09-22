@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { olay } from '../analitik';
 import { LearnFace } from '../components/CardFace';
 import { Runner } from '../components/Runner';
 import { TAB_SPACE } from '../components/TabBar';
@@ -468,6 +469,7 @@ export function Practice({
                   setAdim('ders');
                   setKartIndex(0);
                   setDersFazi('kart');
+                  olay('egzersiz_basladi', { tip: 'ders', kelime: bugunDersKartlari.length });
                   setCalisiyor(true);
                 }}
                 disabled={bugunDersKartlari.length === 0}
@@ -649,6 +651,7 @@ export function Practice({
               onClick={() => {
                 setKartIndex(0);
                 setDersFazi('kart');
+                olay('egzersiz_basladi', { tip: String(adim), kapsam, kelime: partiSayisi });
                 setCalisiyor(true);
               }}
             >

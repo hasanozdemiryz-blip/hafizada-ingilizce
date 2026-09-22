@@ -3,6 +3,7 @@ import { TAB_SPACE } from '../components/TabBar';
 import { Avatar } from '../components/Avatar';
 import { Button, Card, Ikon, Screen } from '../components/ui';
 import { CARDS, LIMIT_CHOICES, LIMIT_MAX } from '../content';
+import { olcumHazirla, olcumVarMi, olcumuKapat } from '../analitik';
 import { exportProgress, importProgress, resetAll, setState } from '../db';
 import {
   HATIRLATMA_SAATLERI,
@@ -204,10 +205,51 @@ export function Settings({
           </Card>
         )}
 
+        {/*
+          OLCUM ANAHTARI — yalnizca yapilandirilmissa gorunur.
+          Yapilandirma yoksa (gelistirme, depoyu klonlayan) hicbir sey
+          gonderilmiyor; olmayan bir seyi kapatan anahtar gostermek yanlis
+          olurdu (telaffuz ve hatirlatma da ayni kurali izliyor).
+        */}
+        {olcumVarMi() && (
+          <Card className="rise delay-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-bold">Kullanım istatistikleri</p>
+                <p className="text-sm text-ink-soft mt-0.5">
+                  Hangi ekranların kullanıldığını anonim olarak ölçeriz. Adın,
+                  fotoğrafın ve cevapların <b>gönderilmez</b>.
+                </p>
+              </div>
+              <button
+                role="switch"
+                aria-checked={state.olcum !== false}
+                aria-label="Kullanım istatistikleri"
+                onClick={() => {
+                  const yeni = state.olcum === false;
+                  void setState({ olcum: yeni });
+                  if (yeni) void olcumHazirla(true, state.profil?.id);
+                  else void olcumuKapat();
+                }}
+                className={`shrink-0 h-8 w-14 rounded-full p-1 transition-colors ${
+                  state.olcum !== false ? 'bg-grow' : 'bg-line'
+                }`}
+              >
+                <span
+                  className={`block h-6 w-6 rounded-full bg-white shadow-[var(--shadow-soft)] transition-transform ${
+                    state.olcum !== false ? 'translate-x-6' : ''
+                  }`}
+                />
+              </button>
+            </div>
+          </Card>
+        )}
+
         <Card className="rise delay-2">
           <h2 className="text-sm font-bold text-ink-soft mb-1">Verilerim</h2>
           <p className="text-sm text-ink-soft mb-3">
-            İlerleme sadece bu cihazda tutuluyor. Taşımak veya korumak için yedek al.
+            İlerleme, profilin ve fotoğrafın <b>yalnızca bu cihazda</b> tutuluyor.
+            Taşımak veya korumak için yedek al.
           </p>
           <div className="flex flex-wrap gap-2">
             <Kucuk onClick={() => void disaAktar(state.profil?.ad)}>Yedek al</Kucuk>

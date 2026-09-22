@@ -187,6 +187,7 @@ export const EMPTY_STATE: AppState = {
   days: {},
   reminderHour: null,
   lastSessionDate: null,
+  olcum: true,
 };
 
 export async function getState(): Promise<AppState> {

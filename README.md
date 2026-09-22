@@ -654,6 +654,24 @@ gelmiş olabilir).
 > cevaplayamaz ve herkes sıfırdan başlar. Hiçbir yere gönderilmiyor ama
 > yedeğe giriyor. Yine de "kaç kişi kullanıyor"u **çözmüyor**; o ayrı iş.
 
+### Kullanım ölçümü
+
+`src/analitik.ts` tek kapı — uygulamanın geri kalanı yalnızca `olay()`
+çağırıyor, Firebase'i tanımıyor. Vazgeçilirse değişen tek yer orası.
+
+- **Yapılandırma yoksa sessizce kapalı.** Anahtarlar `VITE_FIREBASE_*`
+  ortam değişkeninden (bkz. `.env.example`); yoksa hiçbir şey gönderilmez
+  ve Ayarlar'daki anahtar bile görünmez.
+- **Kullanıcı kapatabilir** — Ayarlar → Kullanım istatistikleri.
+- **Kişisel veri gitmez** — ad, fotoğraf, cevaplar hiç gönderilmiyor. Tek
+  kimlik `Profil.id`: rastgele, dışarıda hiçbir şeye bağlanmıyor.
+- **Paket büyümez** — dinamik import; Firebase ana pakete girmiyor.
+
+> Bu, uygulamanın artık "hiçbir veri toplamıyor" diyemeyeceği anlamına
+> geliyor. Gizlilik politikası (`public/gizlilik.html`) ve Play'in Veri
+> Güvenliği formu buna göre. Play'de ret sebebi analitik değil, **beyan
+> uyuşmazlığıdır**.
+
 **Teknoloji:** Vite · React · TypeScript · Tailwind v4 · Dexie · ts-fsrs (FSRS-5) · vite-plugin-pwa. Yazı karakterleri (**Nunito** + Plus Jakarta Sans) yerelde, çevrimdışı çalışır.
 
 > Başlık fontu Fredoka'ydı; fontun kendisinde **ğ, Ğ, İ, Ş, ş glifleri yok**
@@ -685,7 +703,7 @@ konsolda hata yok. 215 birim testi, tip denetimi ve derleme temiz. Paket
 - **Kullanım sayısı** — "kaç kişi kullanıyor" sorusunun cevabı yok ve yerel profil bunu **çözmüyor**: cihazda duran bir isim kimseye ulaşmaz. Tek yolu anonim bir ping (profil kimliği kullanılabilir) ya da APK Play'e girerse Play Console.
 - **Telaffuz kaydı** — tarayıcının ses sentezi kullanılıyor, kayıt kalitesinde değil. Yetmezse aynı arayüz önceden üretilmiş ses dosyalarına bağlanır; çağrı noktaları değişmez.
 
-**Sırada:** analitik (Firebase/GA4 — planlandı, kurulmadı) · yayın ve D1/D7 ölçümü · kanca aday üretim hattı (havuzu ~600'e çıkarmak için) · kart görselleri · bulut senkronu (gerekirse — yerel profilin `id` alanı çapa olarak hazır).
+**Sırada:** yayın ve D1/D7 ölçümü · kanca aday üretim hattı (havuzu ~600'e çıkarmak için) · kart görselleri · bulut senkronu (gerekirse — yerel profilin `id` alanı çapa olarak hazır).
 
 ---
 

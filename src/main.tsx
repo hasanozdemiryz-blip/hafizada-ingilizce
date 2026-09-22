@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { olcumHazirla, olay } from './analitik';
 import { profilSagla } from './db';
 import { hatirlatmaHazirla } from './reminder';
 import { telaffuzHazirla } from './speech';
@@ -33,7 +34,14 @@ void hatirlatmaHazirla();
  * diye sorulmaz. Kayit duvari yeni bir uygulamanin en pahali ekranidir;
  * isteyen Ayarlar'dan degistirir, istemeyen hic fark etmez.
  */
-void profilSagla();
+void profilSagla().then((state) => {
+  /*
+    Olcum profil KURULDUKTAN sonra basliyor: kullanici kimligi olarak
+    `Profil.id` veriliyor — rastgele, kisisel veri degil, ve kullaniciyi
+    disarida hicbir seye baglamiyor (bkz. analitik.ts).
+  */
+  void olcumHazirla(state.olcum !== false, state.profil?.id).then(() => olay('uygulama_acildi'));
+});
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

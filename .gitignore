@@ -2,6 +2,13 @@ node_modules/
 dist/
 dev-dist/
 *.local
+
+# Firebase anahtarlari — bkz. .env.example. Gizli degiller ama gelistirme
+# verisi gercek olculere karismasin diye depoda tutulmuyorlar.
+.env.local
+
+# Android'in Firebase yapilandirmasi — projeye ozel, cap add ile gelmiyor
+android/app/google-services.json
 .DS_Store
 
 # macOS'un exFAT/ag suruculerde biraktigi AppleDouble golgeleri. Git bunlari

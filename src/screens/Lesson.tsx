@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { olay } from '../analitik';
 import { LearnFace } from '../components/CardFace';
 import { Runner } from '../components/Runner';
 import { ADIMLAR, bolgelereBol, type Gorev } from '../exercise';
@@ -137,6 +138,12 @@ export function Lesson({
 
   const toplam = yeniKartlar.length + new Set(tekrarKuyrugu.map((p) => p.cardId)).size;
 
+  /* Ders acilinca bir kez — bagimlilik listesi bos, yeniden kurulmuyor. */
+  useEffect(() => {
+    olay('ders_basladi', { yeni: yeniKartlar.length, tekrar: tekrarKuyrugu.length });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   /**
    * Ogrenme testi merdivenin TUM basamaklarini sirayla kosar:
    * eslestirme -> coktan secmeli -> ters secmeli -> harf dizme ->
@@ -258,6 +265,7 @@ export function Lesson({
    * kelimeyi ayni konumda goruyor.
    */
   function biliyorum(card: Card) {
+    olay('biliyorum_dendi', { basamak: 'yeni' });
     bilinenler.current.set(card.id, markKnown(card));
     yeniKayitlar.current.delete(card.id);
 
@@ -277,6 +285,7 @@ export function Lesson({
   /** Yanlis basilmisti — kelimeyi derse geri koy. */
   function bilinenGeriAl() {
     if (!sonBilinen) return;
+    olay('bilinen_geri_alindi', { nerede: 'ders' });
     const { card, yer } = sonBilinen;
     bilinenler.current.delete(card.id);
     setDersKartlari((liste) => {
@@ -380,6 +389,14 @@ export function Lesson({
     setBusy(true);
     const { dogru, toplam: cevap, ilerleyen } = sayac.current;
     const state = await logSession(toplam, dogru, cevap - dogru);
+    olay('ders_bitti', {
+      kelime: toplam,
+      dogru,
+      cevap,
+      ilerleyen,
+      bilinen: bilinenler.current.size,
+      yuzde: cevap > 0 ? Math.round((dogru / cevap) * 100) : 0,
+    });
     onFinish({
       count: toplam,
       streak: state.streakCount,
