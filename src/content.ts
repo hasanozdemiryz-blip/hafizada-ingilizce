@@ -56,7 +56,7 @@ const zayifKanca = (c: Card) => norm(c.en) === norm(c.hook);
 /**
  * Kart gorselleri.
  * `src/assets/cards/<kart-id>.webp` koyulunca o kartin gorseli olur —
- * elle liste tutmaya, cards.json'a dokunmaya gerek yok. 100 kart da
+ * elle liste tutmaya, cards.json'a dokunmaya gerek yok. Kalan kartlar da
  * ayni sekilde eklenecek.
  */
 const GORSEL_DOSYALARI = import.meta.glob('./assets/cards/*.{webp,png,jpg,jpeg}', {
@@ -77,14 +77,14 @@ const frekansSirasi = (raw as Card[])
   .sort((a, b) => a.order - b.order);
 
 /**
- * v1 seti: GORSELI HAZIR olan kartlar — su an 26.
+ * v1 seti: GORSELI HAZIR olan kartlar — su an 100.
  *
  * Kapsami gorsel belirliyor, cunku gorsel bu urunde susleme degil yontemin
  * kendisi: kancayi kelimeye baglayan sey o tek resim. Gorseli olmayan kartta
  * ekranda brief metni duruyordu; o kart yontemi HIC anlatmiyor, sadece bir
  * kelime listesi oluyor.
  *
- * Kalan 74 kart cards.json'da duruyor ve beklemede: gorseli uretilip
+ * Kalan 200 kart cards.json'da duruyor ve beklemede: gorseli uretilip
  * `src/assets/cards/<id>.webp` olarak konulan kart kendiliginden sete girer —
  * burada elle liste tutulmuyor. "Kurtarilabilir" sinifi hala 2. set icin bekliyor.
  *
@@ -119,8 +119,9 @@ export const SHOWCASE_CARD =
 /**
  * Settekilerin ilerlemesi. Setten CIKMIS kartin kaydi elenir — SILINMEZ.
  *
- * v1 seti 100 karttan 26'ya indi; daha once kurulmus bir cihazda `turn`,
- * `put` gibi artik sette olmayan kartlarin ilerlemesi veritabaninda duruyor.
+ * Set degisince (once 100'den 26'ya indi, sonra 100'e cikti) daha once
+ * kurulmus bir cihazda artik sette olmayan kartlarin — `turn`,
+ * `put` gibi — ilerlemesi veritabaninda duruyor.
  * Elenmezse: tekrar kuyruguna girip derste sessizce atlaniyorlar (ana ekran
  * "5 tekrar" diyor, ders bos aciliyor), "26 kelimenin 40'i" gibi sayilar
  * cikiyor ve set daha ilk gun "bitmis" sayilabiliyor.

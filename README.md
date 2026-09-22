@@ -6,6 +6,9 @@ Türkçe konuşanlara İngilizce kelime öğreten PWA. Her kelime bir **Türkçe
 
 ---
 
+> **Yayına çıkarma:** sıfırdan kurulum, telefonda deneme, Pages ve Play
+> adımları için [YAYIN.md](YAYIN.md).
+
 ## Çalıştırma
 
 ```bash
@@ -538,6 +541,7 @@ src/
   db.ts                Dexie (IndexedDB) — ilerleme + cevap günlüğü, cihazda
   analitik.ts          Kullanım ölçümünün tek kapısı — SDK yok, düz fetch
   share.ts             Paylaşım görselleri (canvas)
+  dosya.ts             Dosyayı kullanıcıya vermenin tek kapısı (paylaş/indir)
   components/          Match, Choice, Scramble, TypeAnswer, Runner, CardFace, Gecis
   screens/             Welcome, Home, Lesson, Practice, Progress,
                        WordList, Settings, SessionDone
@@ -551,6 +555,7 @@ tools/
   make-frames.mjs      Çerçeve sayfası → deliği ölçülüp hizalanmış 6 çerçeve
   make-lockup.mjs      İşaret + isim → yazılı kilit, profil görselleri
   android-bildirim-ikonu.mjs  Filiz → durum çubuğu silueti (cap add sonrası)
+  android-release.mjs  versionCode/versionName + release imzası (cap add sonrası)
 supabase/
   migrations/          Ölçüm tablosu, RLS, saklama süresi — versiyonlu şema
 ```
@@ -559,7 +564,14 @@ supabase/
 arkasında sunucu yok. (Anonim kullanım ölçümü ayrı bir yol — bkz. *Kullanım
 ölçümü*; oraya ilerleme değil, yalnızca olay adları gidiyor.) Açılışta
 `navigator.storage.persist()` çağrılır — yoksa Safari 7 gün kullanılmayan veriyi
-koşulsuz siliyor. İlerleme sekmesindeki **Yedek al / Geri yükle** ile taşınır.
+koşulsuz siliyor. Ayarlar'daki **Yedekle / Geri yükle** ile taşınır.
+
+**Yedek nereye gider.** Yedekleme dosyayı işletim sisteminin paylaş menüsüne
+verir; kullanıcı oradan Google Drive'ı, e-postayı ya da istediği yeri seçer.
+Yani yedek *kullanıcının kendi* bulutuna gidiyor — bize değil. Hesap yok,
+OAuth yok, SHA-1 yok ve gizlilik metnindeki "veriler bize hiç ulaşmaz"
+cümlesi doğru kalıyor. Paylaş menüsü olmayan yerde (masaüstü tarayıcı) dosya
+klasik yoldan iner; çağıran taraf farkı bilmez (bkz. `dosya.ts`).
 
 ### Renk sistemi
 
@@ -735,17 +747,17 @@ ama bulunabilir olmak zorunda).
 
 **Yayın öncesi son tur:** 50 kontrollük tıklama turu (karşılamadan ders sonuna,
 egzersiz · ilerleme · ayarlar · profil · çerçeve kilitleri · yedek) tamamlandı,
-konsolda hata yok. 215 birim testi, tip denetimi ve derleme temiz. Paket
-2,7 MB (ana paket 488 KB), 184 dosya çevrimdışı ön-bellekte.
+konsolda hata yok. 236 birim testi, tip denetimi ve derleme temiz. Paket
+2,7 MB, 192 dosya çevrimdışı ön-bellekte.
 
 **Yapılmadı ve nedeni:**
 
-- **Kart görselleri** — 100'ün 1'i hazır (`snake`). Görseli olmayan kartta brief
+- **Kart görselleri** — havuzun 300'ünden **100'ü hazır**, kalan 200 bekliyor. Görseli olmayan kartta brief
   metni duruyor, akış eksiksiz çalışıyor. Eklemek için: `npm run import:images
   -- --brief` ile brief listesini al, üretilenleri `gorseller/<kart-id>.png`
   olarak kaydet, `npm run import:images` çalıştır. Kod veya JSON düzenlemesi yok.
-  *(Havuz dolunca workbox ayarı gözden geçirilmeli: şu an tüm `.webp`
-  precache ediliyor, 100 görsel ≈ 5 MB'lık ilk indirme demek.)*
+  *(100 görselle ön-bellek 2,7 MB'da kaldı — webp'ler ortalama 14 KB. Endişe
+  edilen 5 MB gerçekleşmedi, workbox ayarına dokunmaya gerek yok.)*
 - **Hatırlatma bildirimi** — PWA'da kapalıyken bildirim göndermek sunucu gerektiriyor (Web Push). Backend'siz mümkün değil, o yüzden **yalnızca APK'da** var (cihazın kendi zamanlayıcısı). Aynı sınır ana ekran widget'ı için de geçerli (o native istiyor).
 - **Kullanım sayısı** — "kaç kişi kullanıyor" sorusunun cevabı yok ve yerel profil bunu **çözmüyor**: cihazda duran bir isim kimseye ulaşmaz. Tek yolu anonim bir ping (profil kimliği kullanılabilir) ya da APK Play'e girerse Play Console.
 - **Telaffuz kaydı** — tarayıcının ses sentezi kullanılıyor, kayıt kalitesinde değil. Yetmezse aynı arayüz önceden üretilmiş ses dosyalarına bağlanır; çağrı noktaları değişmez.

@@ -273,8 +273,12 @@ npm install
 npm run build
 npx cap add android          # android/ .gitignore'da, her seferinde üretilir
 npm run icons:bildirim       # durum çubuğu ikonu — cap add onu üretmiyor
+npm run android:release      # versionCode/versionName + imza yapılandırması
 cd android && ./gradlew assembleDebug
 ```
+
+Son iki betik `cap add android` **sonrasında** çalışmalı; ikisi de `android/`
+içine yazıyor ve `android/` depoda tutulmuyor.
 
 `icons:bildirim` atlanırsa bildirimin durum çubuğu ikonu uygulama simgesine
 düşer ve beyaz bir leke olarak çıkar (bkz. aşağıda *Bildirim ikonu*).
@@ -1514,25 +1518,279 @@ Kalıcı çözüm istenirse `JAVA_HOME`'u kabuk profilinde 21'e çekmek ya da
 `android/gradle.properties` içine `org.gradle.java.home` yazmak. İkincisi
 depoya girer ve başka makinede yanlış yolu gösterir; o yüzden yapılmadı.
 
+## 2026-09-22 — Yedek paylaş menüsüne bağlandı (Drive, Aşama 1)
+
+Aşama 1 yapıldı: yedek dosyası artık işletim sisteminin paylaş menüsüne
+gidiyor, kullanıcı oradan Drive'ı seçiyor. Tek bir OAuth isteği yok.
+
+### Plan "~1 gün, hiç eklenti yok" diyordu — değilmiş
+
+Aşama 1 tasarlanırken varsayım şuydu: dosya zaten üretiliyor, tek eklenen
+şey `navigator.share`. Koda bakınca varsayım düştü ve sebebi **daha önce bir
+kez çarptığımız duvarın aynısıydı**.
+
+Android System WebView `navigator.share`'i uygulamıyor — tıpkı
+`speechSynthesis`i uygulamadığı gibi (bkz. *APK'da ses yoktu*). Üstelik
+`a.download` da orada çalışmıyor. Yani APK'da "Yedekle" düğmesi **hiçbir şey
+yapmayan bir düğme** olacaktı; Android Chrome'da (PWA kurulumu) ise
+çalışacaktı. Sessiz kalite hatalarının tam da kaçınılmak istenen türü.
+
+Çözüm `speech.ts` ile aynı desen: üç durumlu bir geçit.
+
+```
+native — Capacitor kabuğu: önbelleğe yaz, URI'yi paylaş menüsüne ver
+web    — tarayıcının kendi navigator.share'i
+indir  — klasik a.download (masaüstü)
+```
+
+`@capacitor/share` + `@capacitor/filesystem`, ikisi de **dinamik `import`**
+ile — web paketine giren bayt sayısı sıfır, ayrı parça olarak yalnızca native
+kabukta iniyor. Ana paket 506,4 → 507,6 KB; o 1,2 KB geçidin kendi kodu.
+
+### Neden iki dosya tek kapıdan geçiyor
+
+`share.ts` içinde `paylas()` diye özel bir yardımcı vardı ve **aynı kusuru
+taşıyordu**: kanca panosu da APK'da paylaşılamazdı. İki ayrı düzeltme yazmak
+yerine `dosya.ts` tek kapı oldu; `share.ts` artık onu çağırıyor.
+
+Kanca panosunun APK'da çalışması bu turda istenmemişti — bedava geldi, çünkü
+düzeltilen şey paylaşımın kendisi değil, **dosyayı dışarı verme yolu**.
+
+### Önbellek dizini, belgeler değil
+
+Native yol dosyayı `Directory.Cache`'e yazıyor. Bu dosya bir **çıktı**,
+saklanacak veri değil: kullanıcı Drive'a kopyaladıktan sonra işletim sistemi
+onbelleği temizleyebilir. `Documents` seçilseydi her yedekleme cihazda kalıcı
+bir çöp bırakırdı.
+
+### İptal iki dilde geliyor
+
+Web tarafı `AbortError` atıyor, Capacitor'ın Share eklentisi ise platforma
+göre değişen bir **metin** ("Share canceled" / "cancelled"). İkisi de
+yakalanmazsa vazgeçen kullanıcının dosyası bir de ayrıca inerdi — yani
+"vazgeç" düğmesi dosya indirirdi.
+
+### Arayüz metni yola göre değişiyor
+
+Paylaş menüsü açılacaksa düğme **"Yedekle"**, dosya inecekse **"Yedek al"**.
+Aynı düğmeye iki farklı şey yaptırıp tek isim vermek, ikisinden birinde yalan
+söylemek olurdu.
+
+### Kalan
+
+Native taraf `npx cap add android` sırasında kendiliğinden kuruluyor (`add`
+zaten `sync` çalıştırıyor), yani APK adımları değişmiyor. `android/` **zaten
+duruyorsa** eklentiler girmez; o durumda `npx cap sync android` gerekir.
+
+Paylaş menüsü **gerçek cihazda denenmedi** — telaffuz ve bildirim ikonuyla
+aynı sırada bekliyor.
+
+---
+
+## 2026-09-22 — Play yayını: sürüm ve imza
+
+APK'ya kadar olan her şey **debug** derlemesiydi. Play'e çıkmak üç şeyi
+değiştiriyor ve üçü de `android/` depoda tutulmadığı için ayrı bir adım
+gerektiriyor.
+
+### versionCode her derlemede 1'e dönüyordu
+
+`cap add android` üretilen `build.gradle`'a her seferinde aynı şeyi yazıyor:
+
+```
+versionCode 1
+versionName "1.0"
+```
+
+Play ise her yüklemede versionCode'un **artmasını** şart koşuyor. İlk yükleme
+geçer, ikinci güncellemede yine 1 üretilir ve Play reddeder. *"android/
+tutulmaz"* kararı tek başına Play'e çıkmaya yetmiyor.
+
+`tools/android-release.mjs` eksik parçayı kapatıyor: sürümü `package.json`'dan
+alıp enjekte ediyor.
+
+**Neden `package.json`.** Sürüm zaten tek kaynaktan geliyor — Ayarlar ekranı
+`__APP_VERSION__` ile, ölçüm kayıtları `surum` sütunuyla oradan besleniyor.
+Android'in ayrı bir sayı taşıması, kullanıcının ekranda gördüğü sürüm ile
+Play'deki sürümün sessizce ayrışması demekti.
+
+**Kod şeması:** `major*10000 + minor*100 + patch` — `1.2.3` → `10203`.
+Yalnızca minor ve patch 100'ün altında kaldıkça monoton artıyor; aşılırsa
+sessizce çakışırdı, o yüzden betik açıktan kontrol edip patlıyor. Play daha
+küçük bir versionCode'u kabul etmiyor ve **geri dönüş yok**.
+
+### İmza bilgileri depoya girmiyor
+
+Aynı betik `signingConfigs.release` bloğunu da enjekte ediyor; değerleri
+`android-imza.properties`ten okuyor. O dosya ve `*.jks` `.gitignore`'da.
+
+Dosya yoksa blok yine yazılıyor ama boş kalıyor: debug derlemesi çalışmaya
+devam eder, release derlemesi *"imzasız"* diye düşer. Sessizce imzasız bir
+paket üretmektense açıkça patlaması iyi.
+
+> **Keystore kaybolursa uygulama bir daha güncellenemez.** Play aynı imzayı
+> şart koşuyor ve kurtarma yolu yok. Dosyanın ve parolanın yedeği depoda
+> değil, ayrı bir yerde durmalı.
+
+### Play APK değil AAB istiyor
+
+Yeni uygulamalarda `.aab` zorunlu:
+
+```
+cd android && ./gradlew bundleRelease     # Play'e yüklenecek
+cd android && ./gradlew assembleRelease   # kendi dağıtımın için imzalı APK
+```
+
+İkisi de aynı keystore'la imzalanıyor.
+
+### İmzasız paket sessizce üretiliyordu — iki tur sürdü
+
+İlk yazılışta `signingConfig signingConfigs.release` **koşulsuz** bağlıydı ve
+imza bloğu keystore yokken boş kalıyordu. `bundleRelease` şunu verdi:
+
+```
+Execution failed for task ':app:signReleaseBundle'.
+> java.lang.NullPointerException (no error message)
+```
+
+1 dakika 17 saniye derledikten sonra, eksik olanın ne olduğunu söylemeyen bir
+NPE. Bağlama koşullu yapıldı — ama tek başına bu da yetmiyordu: dosya yokken
+bu sefer **imzasız bir AAB sessizce üretiliyor** ve bu ancak Play'e yükleyip
+reddedilince anlaşılıyor. Sessiz bir başarı, okunur bir hatadan kötü.
+
+Çözüm `gradle.taskGraph.whenReady`: görev grafiği hazır olur olmaz bakıyor,
+derlemeye hiç başlamadan **18 saniyede** düşüyor ve hangi dosyanın eksik
+olduğunu satır satır yazıyor. Debug derlemesi etkilenmiyor.
+
+> Kaçış tuzağı: hata metni önce bir JS şablon dizgisinden, sonra Groovy'den
+> geçiyor. `
+` ikisinde de çözülüp dizgiyi ikiye bölüyor ve `build.gradle`
+> hiç derlenmiyordu — **debug dahil her şey** kırılmıştı. Metin Groovy'nin üç
+> tırnaklı dizgisinde, kaçışsız.
+
+### İmza dosyası BOM'la yazılınca Gradle "null" diyor
+
+İlk imzalı derleme şununla düştü:
+
+```
+A problem occurred evaluating project ':app'.
+> Cannot convert 'null' to File.
+```
+
+Sebep `android-imza.properties`in **UTF-8 BOM**'uyla yazılmış olmasıydı.
+Java'nın `Properties.load`u dosyayı ISO-8859-1 okuyor ve BOM baytlarını
+(`EF BB BF`) **ilk anahtarın adına** yapıştırıyor: `storeFile` değil
+`﻿storeFile`. Değer null kalıyor, Gradle da BOM'dan hiç söz etmeden
+"null" diyor.
+
+Windows'ta tuzağa düşmek **varsayılan davranış**: PowerShell 5.1'de
+`Set-Content -Encoding utf8` tam da BOM'lu yazıyor. `android-release.mjs`
+artık dosyanın başına bakıp BOM'u sessizce temizliyor.
+
+### Üretilen paketler doğrulandı
+
+```
+bundleRelease + assembleRelease → BUILD SUCCESSFUL (38 sn)
+app-release.aab  5,35 MB   jarsigner: "jar verified"
+app-release.apk  5,48 MB   apksigner: Verifies (v2 scheme)
+```
+
+Debug APK 6,5 MB'tı; release'in daha küçük olması beklenen (debug simgeleri
+ve test altyapısı yok).
+
+`v1 scheme: false` bilerek — JAR imzası yalnızca API 24 altı için gerekiyor,
+bizim `minSdk` zaten 24.
+
+**İmza sertifikasının SHA-1'i:**
+
+```
+6a:37:b9:61:aa:27:bb:60:c5:89:1a:3b:99:3c:40:5c:b3:7b:40:14
+```
+
+Bu değer Faz 2'de (gerçek Drive entegrasyonu) OAuth istemcisi için
+gerekecek — notlarda *"release keystore'un SHA-1'i"* diye geçen şey bu.
+Artık var.
+
+### sdkmanager kaldırılmış
+
+`sdkmanager --licenses` ve `sdkmanager "platforms;android-36"` artık uyarı
+basıp **boş dönüyor**: Google yerine `android` CLI'ını koymuş.
+
+```
+android sdk install "platforms;android-36"
+android sdk install "build-tools;36.0.0"
+```
+
+Lisans onayı da ayrı bir adım değil, kurulumun içinde. Eski komut hata
+vermeden hiçbir şey yapmadığı için fark edilmesi zor.
+
+### Windows — doğrulandı
+
+- **JDK 21** (Microsoft OpenJDK 21.0.12), `JAVA_HOME` makine düzeyinde
+- **Android SDK**: cmdline-tools + platform-36 + build-tools 36.0.0 +
+  platform-tools, `ANDROID_HOME` = `%LOCALAPPDATA%\Android\Sdk`, ~426 MB
+- `./gradlew` yerine `gradlew.bat`
+- exFAT'e özgü `buildDirectory` bloğu **gerekmiyor** — o `._` gölgeleri
+  macOS'un sorunuydu
+
+Capacitor 8'in istediği: `compileSdk 36`, `minSdk 24`, AGP 8.13.
+
+`assembleDebug` **BUILD SUCCESSFUL**, APK 6,5 MB. Paket içi doğrulandı
+(`aapt2 dump badging`): `com.hafizada.ingilizce`, versionCode **10000**,
+versionName **1.0.0**, minSdk 24, targetSdk 36.
+
+Derleme sırasında `SDK XML version 4 ... only understands up to 3` uyarısı
+çıkıyor; AGP ile SDK araçlarının farklı zamanlarda çıkmasından, zararsız.
+
+> Tuzak: `npm run android:release | Select-Object -First 4` betiği **erken
+> öldürüyor** — PowerShell boru hattını kapatıyor ve node dosyayı yazmadan
+> ölüyor. Çıktı normal göründüğü için fark edilmiyor; `versionCode 1` kalıyor.
+
+---
+
 ## Sırada
 
-Kapsam kararı gereği sıra **veriden sonra** açılıyor: 26 kartlık set yayına
-çıkacak, D1/D7 ölçülecek, kalan işler ondan sonra sıralanacak.
+Kapsam kararı gereği sıra **veriden sonra** açılıyor: **100 kartlık** set
+yayına çıkacak, D1/D7 ölçülecek, kalan işler ondan sonra sıralanacak.
+*(Kapsam 26'ydı; görseller üretilince 100'e çıktı.)*
 
-1. **Yayın** — GitHub Pages + telefonda PWA kurulumu. APK çıkarıldı ve
-   içeriği doğrulandı (184 web varlığı, uygulama simgesi 6 yoğunluk,
-   bildirim ikonu 5 yoğunluk). **Cihazda denenmemiş iki şey kaldı:**
-   APK'daki telaffuz ve bildirimin durum çubuğu ikonu — ikisi de yalnızca
-   gerçek telefonda görülebilir.
-2. **Kanca aday üretim hattı** — havuzu ~600'e çıkaran tek kaldıraç.
+### Nerede duruyoruz (23 Eylül 2026)
+
+**Hazır olanlar.** Uygulama 1.0.0; 236 test, tip denetimi ve derleme temiz.
+Ölçüm tablosu Supabase'de kurulu ve doğrulandı (RLS yalnızca INSERT,
+`pg_cron` temizliği aktif). Android araç zinciri Windows'ta kuruldu ve
+çalıştığı **derlenerek** kanıtlandı: imzalı `.aab` (5,35 MB) ve `.apk`
+(5,48 MB) üretildi, imzaları doğrulandı. Keystore üretildi ve yedeklendi.
+
+**Adımların tamamı `YAYIN.md`'de.** Sıfırdan makine kurulumu, telefonda
+deneme, Pages ve Play adımları orada; burada tekrarlanmıyor.
+
+**Sırada bekleyen ilk üç iş:**
+
+1. **Cihaz turu** — telaffuz · bildirim ikonu · yedeklemenin paylaş menüsü.
+   Üçü de yalnızca gerçek telefonda görülebilir, üçü de hiç denenmedi.
+   İmzalı APK hazır duruyor, `adb install` ile kurulabilir.
+2. **Web yayını** — Actions'a iki secret (`VITE_SUPABASE_*`) ve Pages
+   ayarı. Play'in istediği gizlilik adresi buradan geliyor, yani **Play'den
+   önce.** Secret'lar konmazsa site çıkar ama ölçüm sessizce kapalı kalır.
+3. **Play Console** — hesap açılışı (kimlik doğrulama günler sürüyor) ve
+   mağaza varlıkları: metinler, 512×512 ikon, 1024×500 grafik, ekran
+   görüntüleri, Veri Güvenliği formu (cevapları hazır, bkz. yukarısı).
+
+**Karar bekleyen:** depo herkese açık. Sır sızmıyor (kontrol edildi) ama
+`NOTLAR.md` görsel üretim reçetesini ve gelir modelini taşıyor. Pages
+ücretsiz planda yalnızca açık depoda çalışıyor, yani kapatmanın bedeli var.
+
+### Veriden sonra açılacaklar
+
+4. **Kanca aday üretim hattı** — havuzu ~600'e çıkaran tek kaldıraç.
    CMU fonetik sözlüğü + Türkçe kelime listesi + fonem mesafesi → sıralı aday
    listesi. "Haa testi" insanda kalır; moat orası.
-3. Kalan 74 kartın görseli — yukarıdaki iskele ve derslerle. Veri gelmeden
-   ~6.700 kredi harcanmıyor.
-4. **Drive'a yedek — ikinci aşama.** Aşama 1 (paylaş menüsü) yapılınca
-   gerçek Google Drive entegrasyonu: "Yedekle" → hesap seç → bitti, ve
-   otomatik yedek. OAuth client + release keystore'un SHA-1'i gerekiyor,
-   yani ancak yayından sonra. Bkz. "Yedekleme buluta değil, kullanıcının
-   kendi Drive'ına".
-5. Hesap + bulut senkronu — yalnızca retention verisi gerektirirse. Drive
+5. Kalan 200 kartın görseli.
+6. **Drive'a yedek — ikinci aşama.** Aşama 1 (paylaş menüsü) YAPILDI;
+   sırada gerçek Google Drive entegrasyonu: "Yedekle" → hesap seç → bitti, ve
+   otomatik yedek. OAuth client gerekiyor; **release keystore'un SHA-1'i
+   artık var** (bkz. "Play yayını: sürüm ve imza"), yani tek engel kalmadı —
+   yine de yayından sonraya bırakıldı, sıra bozulmasın.
+7. Hesap + bulut senkronu — yalnızca retention verisi gerektirirse. Drive
    yedeği bunun büyük kısmını zaten çözüyorsa hiç gerekmeyebilir.
