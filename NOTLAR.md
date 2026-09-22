@@ -1493,6 +1493,27 @@ seçiyor. Gerçek entegrasyon (bkz. Sırada) bunu çözecek ama release
 keystore'a bağlı olduğu için yayından önce yapılamaz — ters sırada
 yapılırsa aynı iş iki kez yapılır.
 
+## 2026-09-22 — APK derlemesi Java 21 istiyor
+
+`./gradlew assembleDebug` şu hatayla düştü:
+
+```
+Cannot find a Java installation ... matching: {languageVersion=21}
+```
+
+Java 21 **kuruluydu** (`/opt/homebrew/opt/openjdk@21/...`) ama `JAVA_HOME`
+17'yi gösteriyordu ve Gradle toolchain'i brew'un dizininde bulamadı.
+Çözüm, derlemeye 21'i açıkça vermek:
+
+```
+JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home \
+  ./gradlew assembleDebug
+```
+
+Kalıcı çözüm istenirse `JAVA_HOME`'u kabuk profilinde 21'e çekmek ya da
+`android/gradle.properties` içine `org.gradle.java.home` yazmak. İkincisi
+depoya girer ve başka makinede yanlış yolu gösterir; o yüzden yapılmadı.
+
 ## Sırada
 
 Kapsam kararı gereği sıra **veriden sonra** açılıyor: 26 kartlık set yayına
