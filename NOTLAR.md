@@ -1299,23 +1299,59 @@ tekrarlanmayacak kadar yorumlu. Üç karar özetle:
 - **`olustu` istemciden, `alindi` sunucudan.** Cihaz saati yanlış
   olabilir; ikisinin farkı saat kaymasını gösteriyor.
 
-#### Saklama süresi — bağlanmamış bir söz
+#### Saklama süresi — artık bağlı
 
 `public/gizlilik.html` 5. maddede kullanım olaylarının **en fazla 24 ay**
-saklanacağını söylüyor. Silme fonksiyonu migration'da versiyonlu duruyor
-(`bakim.olaylari_temizle`), ama **zamanlaması yapılmadı**: `pg_cron` her
-projede açık olmadığı için migration'ın ilk çalışmasını riske atmak
-istemedik.
+saklanacağı yazıyor. Bir süre bunu yapan hiçbir şey yoktu: metin söz
+veriyor, kod tutmuyordu.
 
-Yayından önce bir kere çalıştırılacak:
+`pg_cron` ile bağlandı (`20260922000100_olaylar_saklama_zamanlamasi.sql`):
+her ayın 1'i 04:00 UTC'de `bakim.olaylari_temizle(24)` çalışıyor. Ayrı
+migration dosyası, çünkü `pg_cron` her projede açık değil — tablo her
+koşulda kurulsun, zamanlama takılırsa yalnızca kendisi takılsın.
 
-```sql
-create extension if not exists pg_cron;
-select cron.schedule('olaylari-temizle', '0 4 1 * *',
-                     $$select bakim.olaylari_temizle(24)$$);
-```
+Fonksiyon `ay = 0` ile çağrılıp gerçekten sildiği doğrulandı.
 
-Bu yapılmadan gizlilik politikası tutmayan bir söz veriyor.
+#### Kurulum yapıldı — ve iki hata çıktı
+
+Şema 22 Eylül 2026'da uygulandı (Supabase MCP üzerinden, `apply_migration`).
+İkisi de ancak gerçekten çalıştırınca ortaya çıkan iki hata vardı:
+
+**1. İndeks hiç çalışmıyormuş.** `(kimlik, (olustu::date))` yazılıydı,
+Postgres reddetti: *"functions in index expression must be marked
+IMMUTABLE"*. `timestamptz → date` çevirimi sunucunun TimeZone ayarına
+bağlı. Bu SQL aylardır NOTLAR'da duruyordu, demek ki **hiç
+çalıştırılmamış** — panele elle yapıştırma yöntemiyle de aynı hatayı
+alacaktık. Şemayı migration'a taşımanın karşılığını ilk gün verdi.
+Düzeltme: düz `(kimlik, olustu)`.
+
+**2. Ölçüm sorguları yanlış günü sayıyormuş.** Aynı `olustu::date`
+sorgularda çalışıyor (STABLE yeterli) ama **UTC'ye göre** gün kesiyor.
+Türkiye UTC+3; gece 00:00–03:00 arası ders yapan biri bir önceki güne
+düşüyordu. Hem günlük aktif kullanıcıyı hem D1/D7'yi kaydıran sessiz bir
+hata. Düzeltildi: `at time zone 'Europe/Istanbul'`.
+
+#### RLS iddia ettiğini yapıyor mu — ölçüldü
+
+"Yalnızca INSERT" bir niyet beyanı olarak kalmasın diye `anon` rolüyle ve
+gerçek HTTP ucuyla denendi:
+
+| Deneme | Sonuç |
+|---|---|
+| INSERT | 201 — yazdı |
+| SELECT | `[]` — 0 satır |
+| DELETE | HTTP 204 döndü ama **0 satır silindi** |
+| UPDATE | 0 satır |
+| `bakim.olaylari_temizle()` RPC | 404 / permission denied |
+
+DELETE'in 204 dönmesi ilk bakışta korkutucu: PostgREST politika olmadığı
+için 0 satır etkileyip yine de "başarılı" diyor. Satır sayısı kontrol
+edildi, hiçbir şey silinmemişti.
+
+Uçtan uca da denendi: uygulama başsız tarayıcıda açıldı, `uygulama_acildi`
+olayı kuyruğa girdi, 5 sn sonra POST 201 aldı, kuyruk boşaldı ve satır
+tabloya düştü. Giden tek kimlik rastgele UUID; isim, fotoğraf, cevap,
+konum yok. `alindi - olustu = 5 sn` — toplu gönderim penceresinin kendisi.
 
 #### Fonksiyon neden `public` dışında
 
@@ -1326,28 +1362,41 @@ RPC olarak çağrılabilirdi — yani herkes ölçümü süpürebilirdi. O yüzd
 
 ### Ölçüm sorguları
 
+**Gün sınırı UTC'de değil, Türkiye saatinde.** Sorguların ilk hali düz
+`olustu::date` yazıyordu; o, sunucunun TimeZone ayarına (Supabase'de UTC)
+göre gün kesiyor. Türkiye UTC+3 olduğu için gece 00:00–03:00 arasında ders
+yapan biri **bir önceki güne** sayılırdı — hem günlük aktif kullanıcıyı
+hem D1/D7'yi sessizce kaydıran bir hata. Onun yerine açıkça
+`at time zone 'Europe/Istanbul'`.
+
 ```sql
 -- Günlük tekil kullanıcı
-select olustu::date gun, count(distinct kimlik) kisi
+select (olustu at time zone 'Europe/Istanbul')::date gun,
+       count(distinct kimlik) kisi
 from olaylar where ad = 'uygulama_acildi'
 group by 1 order by 1 desc;
 
 -- D1 / D7: ilk günden sonra geri gelen oranı
-with ilk as (
-  select kimlik, min(olustu::date) g0 from olaylar group by 1
-)
+with olay as (
+  select kimlik, (olustu at time zone 'Europe/Istanbul')::date gun
+  from olaylar
+),
+ilk as (select kimlik, min(gun) g0 from olay group by 1)
 select
-  count(*) filter (where var1)::float / count(*) d1,
-  count(*) filter (where var7)::float / count(*) d7
+  count(*) filter (where var1)::float / nullif(count(*), 0) d1,
+  count(*) filter (where var7)::float / nullif(count(*), 0) d7
 from (
   select i.kimlik,
-    exists (select 1 from olaylar o where o.kimlik = i.kimlik
-            and o.olustu::date = i.g0 + 1) var1,
-    exists (select 1 from olaylar o where o.kimlik = i.kimlik
-            and o.olustu::date = i.g0 + 7) var7
-  from ilk i where i.g0 < current_date - 7
+    exists (select 1 from olay o where o.kimlik = i.kimlik and o.gun = i.g0 + 1) var1,
+    exists (select 1 from olay o where o.kimlik = i.kimlik and o.gun = i.g0 + 7) var7
+  from ilk i
+  where i.g0 < (now() at time zone 'Europe/Istanbul')::date - 7
 ) t;
 ```
+
+`nullif(count(*), 0)` da sonradan eklendi: henüz 7 günü dolmuş kimse
+yokken payda sıfır oluyor ve sorgu bölme hatasıyla patlıyordu. Yayının
+ilk haftasında tam olarak bu durumda olacağız.
 
 ### Üç kural (değişmedi)
 

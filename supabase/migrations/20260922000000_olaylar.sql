@@ -42,9 +42,25 @@ create table if not exists public.olaylar (
   )
 );
 
+comment on table public.olaylar is 'Kullanim olcumu. Istemci: src/analitik.ts. Sema kaynagi: supabase/migrations/';
+comment on column public.olaylar.olustu is 'Cihaz saati; yanlis olabilir';
+comment on column public.olaylar.alindi is 'Sunucu saati; olustu ile farki saat kaymasi';
+comment on column public.olaylar.kimlik is 'Profil.id — cihazda uretilmis rastgele numara, kisisel veri degil';
+comment on column public.olaylar.ad is 'Olay adi. Bilerek enum/check yok — bkz. yukaridaki gerekce';
+
 -- Gunluk tekil kullanici ve D1/D7 sorgulari bu iki indeksi kullaniyor.
-create index if not exists olaylar_kimlik_gun on public.olaylar (kimlik, (olustu::date));
-create index if not exists olaylar_ad on public.olaylar (ad, olustu);
+--
+-- ILK HALI CALISMIYORDU: `(kimlik, (olustu::date))` yazilmisti ve Postgres
+-- reddetti — "functions in index expression must be marked IMMUTABLE".
+-- timestamptz'yi date'e cevirmek sunucunun TimeZone ayarina bagli, yani
+-- IMMUTABLE degil. (Bu SQL bir sure NOTLAR.md'de duruyordu; demek ki hic
+-- calistirilmamis.)
+--
+-- Duz `(kimlik, olustu)` hem "bu kullanicinin olaylari, zaman sirali"
+-- hem de tarih araligi sorgularini karsiliyor. Gun bazli gruplama
+-- sorgu zamaninda yapiliyor, indekse gerek yok.
+create index if not exists olaylar_kimlik_olustu on public.olaylar (kimlik, olustu);
+create index if not exists olaylar_ad_olustu on public.olaylar (ad, olustu);
 
 -- ---------------------------------------------------------------------
 -- SATIR DUZEYI GUVENLIK
@@ -64,9 +80,9 @@ create policy "anon ekleyebilir" on public.olaylar
 -- SAKLAMA SURESI
 --
 -- Gizlilik politikasi 24 ay soz veriyor (public/gizlilik.html, 5. madde).
--- Fonksiyon burada versiyonlu duruyor; ZAMANLAMASI ayri bir adim
--- (bkz. NOTLAR.md), cunku pg_cron her projede acik olmayabiliyor ve
--- migration'in ilk calismasini riske atmak istemiyoruz.
+-- Fonksiyon burada, ZAMANLAMASI bir sonraki migration'da: pg_cron her
+-- projede acik olmayabiliyor, bu migration'in ilk calismasini ona
+-- baglamak istemedik.
 --
 -- Fonksiyon `public` DISINDA bir semada: PostgREST yalnizca `public`i
 -- disa aciyor. Burada olsaydi `security definer` bir silme fonksiyonu
