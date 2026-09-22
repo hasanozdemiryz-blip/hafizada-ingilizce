@@ -228,8 +228,8 @@ export function Settings({
                 onClick={() => {
                   const yeni = state.olcum === false;
                   void setState({ olcum: yeni });
-                  if (yeni) void olcumHazirla(true, state.profil?.id);
-                  else void olcumuKapat();
+                  if (yeni) olcumHazirla(true, state.profil?.id);
+                  else olcumuKapat();
                 }}
                 className={`shrink-0 h-8 w-14 rounded-full p-1 transition-colors ${
                   state.olcum !== false ? 'bg-grow' : 'bg-line'
@@ -276,7 +276,7 @@ export function Settings({
           <h2 className="text-sm font-bold text-ink-soft mb-2">Hakkında</h2>
           <Satir ad="Setteki kelime" deger={String(CARDS.length)} />
           <Satir ad="Öğrendiğin" deger={String(progress.length)} />
-          <Satir ad="Sürüm" deger="0.1.0" />
+          <Satir ad="Sürüm" deger={__APP_VERSION__} />
         </Card>
 
         {/*

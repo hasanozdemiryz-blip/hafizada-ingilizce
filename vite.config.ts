@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -9,8 +10,17 @@ import { VitePWA } from 'vite-plugin-pwa';
  */
 const base = process.env.BASE_PATH ?? '/';
 
+const surum = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version;
+
 export default defineConfig({
   base,
+
+  /**
+   * Surum TEK KAYNAKTAN: package.json.
+   * Ayarlar ekraninda elle "0.1.0" yaziliydi ve paketin surumuyle
+   * ayrisabilirdi; olcum kayitlari da surum tasiyor, ikisi tutmali.
+   */
+  define: { __APP_VERSION__: JSON.stringify(surum) },
 
   /**
    * macOS, xattr desteklemeyen suruculerde (exFAT USB bellek gibi) her

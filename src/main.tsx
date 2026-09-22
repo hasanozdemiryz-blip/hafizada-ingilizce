@@ -40,7 +40,8 @@ void profilSagla().then((state) => {
     `Profil.id` veriliyor — rastgele, kisisel veri degil, ve kullaniciyi
     disarida hicbir seye baglamiyor (bkz. analitik.ts).
   */
-  void olcumHazirla(state.olcum !== false, state.profil?.id).then(() => olay('uygulama_acildi'));
+  olcumHazirla(state.olcum !== false, state.profil?.id);
+  olay('uygulama_acildi');
 });
 
 createRoot(document.getElementById('root')!).render(

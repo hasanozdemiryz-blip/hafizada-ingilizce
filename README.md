@@ -659,18 +659,24 @@ gelmiş olabilir).
 `src/analitik.ts` tek kapı — uygulamanın geri kalanı yalnızca `olay()`
 çağırıyor, Firebase'i tanımıyor. Vazgeçilirse değişen tek yer orası.
 
-- **Yapılandırma yoksa sessizce kapalı.** Anahtarlar `VITE_FIREBASE_*`
-  ortam değişkeninden (bkz. `.env.example`); yoksa hiçbir şey gönderilmez
-  ve Ayarlar'daki anahtar bile görünmez.
+Arka uç **kendi Supabase tablomuz** — üçüncü taraf analitik yok. SDK de
+yok: PostgREST düz bir HTTP ucu, tek ihtiyacımız bir INSERT, `fetch`
+yetiyor. Pakete eklenen bayt: **sıfır**.
+
+- **Yapılandırma yoksa sessizce kapalı.** `VITE_SUPABASE_*` ortam
+  değişkeninden (bkz. `.env.example`); yoksa hiçbir şey gönderilmez ve
+  Ayarlar'daki anahtar bile görünmez.
 - **Kullanıcı kapatabilir** — Ayarlar → Kullanım istatistikleri.
 - **Kişisel veri gitmez** — ad, fotoğraf, cevaplar hiç gönderilmiyor. Tek
   kimlik `Profil.id`: rastgele, dışarıda hiçbir şeye bağlanmıyor.
-- **Paket büyümez** — dinamik import; Firebase ana pakete girmiyor.
+- **Çevrimdışı kaybolmaz** — olaylar `localStorage`'da birikir, bağlanınca
+  toplu gider.
+
+Tablo şeması, RLS politikası ve D1/D7 sorguları **NOTLAR.md**'de.
 
 > Bu, uygulamanın artık "hiçbir veri toplamıyor" diyemeyeceği anlamına
-> geliyor. Gizlilik politikası (`public/gizlilik.html`) ve Play'in Veri
-> Güvenliği formu buna göre. Play'de ret sebebi analitik değil, **beyan
-> uyuşmazlığıdır**.
+> geliyor. Yasal metinler ve Play'in Veri Güvenliği formu buna göre.
+> Play'de ret sebebi analitik değil, **beyan uyuşmazlığıdır**.
 
 ### Yasal metinler
 

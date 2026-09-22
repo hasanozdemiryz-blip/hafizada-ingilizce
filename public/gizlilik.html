@@ -49,8 +49,10 @@
 
       <h2>3. Topladığımız veriler: anonim kullanım istatistikleri</h2>
       <p>
-        Uygulamanın nerede işe yaradığını, nerede takıldığını anlayabilmek için Google
-        Firebase Analytics kullanıyoruz.
+        Uygulamanın nerede işe yaradığını, nerede takıldığını anlayabilmek için
+        <strong>kendi sunucumuzda</strong> (Supabase altyapısı) tuttuğumuz bir tabloya
+        anonim kullanım olayları yazıyoruz. Üçüncü taraf bir analitik hizmeti, reklam
+        ağı veya izleyici (tracker) kullanılmaz.
       </p>
 
       <h3>Gönderilen olaylar</h3>
@@ -61,11 +63,11 @@
         hatırlatma ayarının değişmesi, yedek alma ve yükleme.
       </p>
 
-      <h3>Google tarafından ayrıca işlenenler</h3>
+      <h3>Her olayla birlikte gidenler</h3>
       <p>
-        Cihaz modeli, işletim sistemi sürümü, uygulama sürümü, dil, ülke düzeyinde
-        yaklaşık konum (IP adresinden türetilir; IP adresi saklanmaz) ve cihaza özel
-        rastgele bir uygulama örneği kimliği.
+        Uygulama sürümü, platform (web veya Android) ve olayın gerçekleştiği zaman.
+        Başka hiçbir teknik veri toplanmaz: cihaz modeli, reklam kimliği ve konum
+        <strong>gönderilmez</strong>.
       </p>
 
       <h3>Gönderilmeyenler</h3>
@@ -88,22 +90,20 @@
         andan itibaren hiçbir olay gönderilmez.
       </p>
 
-      <h2>4. Yurt dışına aktarım</h2>
+      <h2>4. Barındırma ve yurt dışına aktarım</h2>
       <p>
-        Kullanım istatistikleri Google Ireland Limited ve Google LLC tarafından işlenir;
-        bu, verilerin yurt dışındaki sunuculara aktarılması anlamına gelir. Ayrıntılar
-        için <a href="kvkk-aydinlatma.html">KVKK Aydınlatma Metni</a>'ne bakabilirsin.
-        Google'ın kendi gizlilik politikası:
-        <a href="https://policies.google.com/privacy" target="_blank" rel="noopener"
-          >policies.google.com/privacy</a
-        >.
+        Kullanım olayları, altyapı sağlayıcımız <strong>Supabase</strong> üzerinde
+        barındırılan kendi veritabanımızda saklanır. Sunucular yurt dışında bulunduğu
+        için bu bir yurt dışına aktarımdır; ayrıntılar
+        <a href="kvkk-aydinlatma.html">KVKK Aydınlatma Metni</a>'nde. Verilere yalnızca
+        biz erişebiliriz; Supabase yalnızca barındırma hizmeti verir, veriyi kendi
+        amaçları için kullanmaz.
       </p>
 
       <h2>5. Saklama süresi</h2>
       <p>
         Cihazındaki veriler, sen silene ya da uygulamayı kaldırana kadar cihazında kalır.
-        Kullanım istatistikleri Firebase'in varsayılan saklama süresi boyunca tutulur ve
-        süre sonunda silinir.
+        Kullanım olayları en fazla <strong>24 ay</strong> saklanır ve sonrasında silinir.
       </p>
 
       <h2>6. Reklam yok, satış yok</h2>

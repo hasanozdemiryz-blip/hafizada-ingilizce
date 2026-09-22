@@ -1224,102 +1224,134 @@ dokunulmadı.
 
 ---
 
-## 2026-09-22 — Kullanım ölçümü (Firebase Analytics)
+## 2026-09-22 — Kullanım ölçümü (kendi Supabase tablomuz)
 
 ### Bu karar "veri toplamıyoruz" sözünü bitiriyor
 
-Uygulamanın en net özelliklerinden biri buydu ve Play'in Veri Güvenliği
-formunu "hiçbir veri toplanmıyor" diye doldurmayı planlıyorduk. Firebase
-girince bu **yanlış beyan** olurdu — ve Play'de asıl ret/kaldırma sebebi
-analitik kullanmak değil, **beyan uyuşmazlığıdır**.
+Uygulamanın en net özelliklerinden biriydi ve Play'in Veri Güvenliği
+formunu "hiçbir veri toplanmıyor" diye doldurmayı planlıyorduk. Artık
+öyle diyemeyiz.
 
-O yüzden kod ile birlikte üç şey de değişti: gizlilik politikası sayfası
-(`public/gizlilik.html`), Ayarlar'daki metin, ve NOTLAR'daki bu kayıt.
-Veri Güvenliği formu bu metne göre doldurulacak.
+O yüzden kodla **birlikte** yasal metinler de yazıldı. Play'de asıl
+ret/kaldırma sebebi analitik kullanmak değil, **beyan uyuşmazlığıdır**.
 
-### Sınır: uygulama Firebase'i tanımıyor
+### Önce Firebase kuruldu, sonra Supabase'e geçildi
 
-`src/analitik.ts` tek kapı. Uygulamanın geri kalanı yalnızca `olay()`
-çağırıyor. Yarın vazgeçilirse ya da başka bir araca geçilirse değişen tek
-yer orası — çağrı noktaları durur.
+Bir tur Firebase Analytics kurulu kaldı. Sonra Supabase hesabının zaten
+açılmış olduğu ortaya çıktı — ve ikisinin **aynı işi yapmadığı** yanlış
+anlaşılmıştı. Karşılaştırma:
 
-### Üç kural
+| | Firebase | Supabase |
+|---|---|---|
+| Panolar | Hazır (retention, huni) | Yok — SQL yazılır |
+| Veri kimde | Google'da | Bizde |
+| Paket | ~45 KB ayrı parça | `fetch` ile **0 KB** |
+| KVKK | Google'a aktarım ayrıca anlatılır | Tek işleyen, barındırma |
 
-**1. Yapılandırma yoksa sessizce kapalı.** Anahtarlar `VITE_FIREBASE_*`
-ortam değişkenlerinden geliyor; yoksa `olay()` hiçbir şey yapmıyor.
-Böylece geliştirme, testler ve depoyu klonlayan herkes ölçüm olmadan
-çalışıyor — ve geliştirme verisi gerçek ölçülere karışmıyor. Ayarlar'daki
-anahtar da yalnızca yapılandırma varsa görünüyor; telaffuz ve hatırlatma
-da aynı kuralı izliyor (olmayan bir şeyin anahtarı gösterilmez).
+Asıl soru *"kaç kişi kullanıyor, geri geliyorlar mı"* ve Supabase buna
+fazlasıyla yetiyor. Firebase'in fazlası (hazır panolar, huni, A/B) bu
+aşamada gerekmiyor — 0 kullanıcıda değil, 1.000'de gerekir.
 
-**2. Kullanıcı kapatabilir.** Ayarlar → Kullanım istatistikleri.
-Varsayılan **açık** ama ilk açılışta izin diyalogu **sorulmuyor**:
-karşılama akışı bu ürünün en korunan yeri, "haa" anından önce bir onay
-kutusu ölçümün kazandıracağından fazlasını kapıda kaybettirir.
+Geçiş ucuzdu çünkü `analitik.ts` baştan **sınır** olarak yazılmıştı:
+uygulamanın geri kalanı yalnızca `olay()` çağırıyor, arka ucu tanımıyor.
+Değişen tek dosya o oldu. Toplam JS 553 → 509 KB.
 
-**3. Kişisel veri gönderilmiyor.** Ad, avatar fotoğrafı, yazılan cevaplar,
-hangi kelimeleri bildiği — hiçbiri olaylara girmiyor. Tek kimlik
-`Profil.id`: zaten rastgele üretilmiş, kullanıcıyı dışarıda hiçbir şeye
-bağlamayan bir numara.
+> Ders: dış bir servisi doğrudan çağrı noktalarına serpiştirmek ucuz
+> görünür; bir sınır dosyası yazmak, fikir değiştirince bedava çıkar.
+
+### SDK yok
+
+`@supabase/supabase-js` ~40 KB getirir ve karşılığında auth, realtime,
+storage verir — hiçbirini kullanmıyoruz. Tek ihtiyacımız bir INSERT;
+PostgREST düz bir HTTP ucu, `fetch` yetiyor.
+
+### Kuyruk: çevrimdışı çalışan bir uygulamada şart
+
+Olaylar `localStorage`'da biriktirilip 5 saniyede bir toplu gönderiliyor.
+Gönderim başarısız olursa kayıtlar **kuyrukta kalıyor** — uygulama
+çevrimdışı çalışabildiği için "gönderemedim, attım" ölçümün yarısını yok
+ederdi. Kuyruk 200 kayıtla sınırlı; sayfa gizlenirken `keepalive` ile
+boşaltılıyor.
+
+Kalıcı hatada (4xx — şema uyumsuzluğu gibi) kuyruk temizleniyor, yoksa
+sonsuza kadar aynı hatayı tekrarlardı.
+
+### Supabase kurulumu
+
+`anon` anahtarı **gizli değildir**: istemciye zaten gönderilir. Güvenliği
+sağlayan şey RLS — tablo yalnızca INSERT'e açık, kimse yazılanı geri
+okuyamaz.
+
+```sql
+create table olaylar (
+  id         bigint generated always as identity primary key,
+  olustu     timestamptz not null,
+  kimlik     text not null,   -- Profil.id, rastgele
+  ad         text not null,   -- olay adı
+  veri       jsonb,           -- parametreler
+  surum      text,
+  platform   text,
+  alindi     timestamptz not null default now()  -- sunucu zamanı
+);
+
+create index olaylar_kimlik_gun on olaylar (kimlik, (olustu::date));
+create index olaylar_ad on olaylar (ad, olustu);
+
+alter table olaylar enable row level security;
+
+-- Yalnızca yazma. `anon` okuyamaz, silemez, güncelleyemez.
+create policy "anon ekleyebilir" on olaylar
+  for insert to anon with check (true);
+```
+
+`olustu` istemciden geliyor (cihaz saati yanlış olabilir), `alindi`
+sunucudan — ikisini karşılaştırmak saat kaymalarını gösteriyor.
+
+### Ölçüm sorguları
+
+```sql
+-- Günlük tekil kullanıcı
+select olustu::date gun, count(distinct kimlik) kisi
+from olaylar where ad = 'uygulama_acildi'
+group by 1 order by 1 desc;
+
+-- D1 / D7: ilk günden sonra geri gelen oranı
+with ilk as (
+  select kimlik, min(olustu::date) g0 from olaylar group by 1
+)
+select
+  count(*) filter (where var1)::float / count(*) d1,
+  count(*) filter (where var7)::float / count(*) d7
+from (
+  select i.kimlik,
+    exists (select 1 from olaylar o where o.kimlik = i.kimlik
+            and o.olustu::date = i.g0 + 1) var1,
+    exists (select 1 from olaylar o where o.kimlik = i.kimlik
+            and o.olustu::date = i.g0 + 7) var7
+  from ilk i where i.g0 < current_date - 7
+) t;
+```
+
+### Üç kural (değişmedi)
+
+1. **Yapılandırma yoksa sessizce kapalı.** Adres ve anahtar
+   `VITE_SUPABASE_*` ortam değişkeninden; yoksa hiçbir şey gönderilmiyor
+   ve Ayarlar'daki anahtar bile görünmüyor.
+2. **Kullanıcı kapatabilir.** Varsayılan açık ama ilk açılışta izin
+   diyaloğu **sorulmuyor**: karşılama akışı bu ürünün en korunan yeri.
+3. **Kişisel veri gönderilmiyor.** Tek kimlik `Profil.id`.
 
 ### Olay adları sabit liste
 
 `type Olay` bir birleşim tipi, serbest metin değil. Serbest olsaydı bir
-gün `ders_bitti`, başka gün `dersBitti` yazılır ve panoda iki ayrı olay
-görünürdü — analitikte en sık yapılan hata bu. Yazım hatası artık
-derlemede yakalanıyor.
+gün `ders_bitti`, başka gün `dersBitti` yazılır ve tabloda iki ayrı olay
+birikirdi. Yazım hatası artık derlemede yakalanıyor.
 
-### Paket büyümedi
+### Sürüm tek kaynaktan
 
-Firebase **dinamik import** ile geliyor: ölçüm kapalıyken ya da
-yapılandırılmamışken ana pakete hiç girmiyor, indirilmiyor bile. Ana
-paket 488 → 494 KB (6 KB); Firebase ayrı parçalarda duruyor ve `grep`
-ana pakette `firebase` bulmuyor.
-
-### Ölçüm akışı asla bozmaz
-
-`olay()` hiçbir zaman hata fırlatmıyor, `await` istemiyor. Firebase
-kurulamazsa sessiz kalıyor — istatistik için kullanıcıya hata göstermek
-ölçünün bedeli olamaz.
-
-### Android tarafı hazırmış
-
-Firebase için gradle yaması yazmaya hazırlanıyordum — gerekmedi.
-Capacitor'ın Android şablonu zaten `com.google.gms:google-services`
-classpath'ini taşıyor ve `app/build.gradle` içinde koşullu bir blok var:
-`google-services.json` varsa eklenti kendiliğinden devreye giriyor, yoksa
-sessizce atlıyor.
-
-Yani `android/` her `cap add`'de yeniden üretilse bile kayıp yok. Tek
-gereken dosyayı `android/app/` içine koymak; `.gitignore`'a eklendi.
-
-> Ders: bir şeyi yamamadan önce şablonun zaten yapıp yapmadığına bakılmalı.
-
-### Yasal metinler: üç belge, düz HTML
-
-`public/gizlilik.html`, `public/kullanim-kosullari.html`,
-`public/kvkk-aydinlatma.html` + ortak `yasal.css`.
-
-**Neden React değil:** mağazalar uygulama YÜKLENMEDEN açılabilen bir
-gizlilik adresi istiyor. Aynı metni hem uygulama içinde hem internette
-tutmanın tek kaynaklı yolu, `public/` içinde duran düz HTML.
-
-**Neden üç belge:** Gizlilik Politikası mağazaların zorunlu tuttuğu şey;
-Kullanım Koşulları sorumluluk ve veri kaybı sınırını çiziyor (ilerleme
-yalnızca cihazda, yedek kullanıcının sorumluluğunda); KVKK Aydınlatma
-Metni ise Türkiye için ayrı bir zorunluluk ve m.10'un istediği yapıyı
-(veri sorumlusu, işlenen veriler, amaç, hukuki sebep, aktarım, m.11
-hakları, başvuru) izliyor.
-
-Metinler uygulamanın **gerçek davranışına** göre yazıldı. Çoğu uygulamanın
-gizlilik metni kopyalandığı için yanlıştır — burada neyin cihazda kaldığı
-ve neyin gönderildiği tek tek sayılı, ve "gönderilmeyenler" ayrı bir
-başlık.
-
-> Bunlar hukuki danışmanlık değil. İki başlık yayından önce avukata
-> okutulmalı: **veri sorumlusu kimliği** (şahıs mı şirket mi — Play
-> hesabı kararıyla da bağlantılı) ve **yurt dışına aktarım** (Google
-> sunucuları; KVKK m.9).
+Ayarlar'da elle `"0.1.0"` yazılıydı ve paketin sürümüyle ayrışabilirdi.
+Artık `package.json`'dan derleme sabiti olarak geliyor (`__APP_VERSION__`)
+— hem ekranda hem ölçüm kayıtlarında aynı sayı.
 
 ### Play Veri Güvenliği formu için cevaplar
 
@@ -1328,11 +1360,16 @@ Uygulama veri **topluyor** (artık "hayır" denemez). Beyan edilecekler:
 | Kategori | Ne | Amaç |
 |---|---|---|
 | Uygulama etkinliği | uygulama içi olaylar | Analiz |
-| Cihaz veya diğer kimlikler | Firebase uygulama örneği kimliği | Analiz |
-| Konum | ülke düzeyinde yaklaşık (IP'den) | Analiz |
+| Cihaz veya diğer kimlikler | uygulamanın ürettiği rastgele numara | Analiz |
 
-Hepsi için: aktarım şifreli · kullanıcı silme talep edebilir · veriler
+Konum **beyan edilmez** — Firebase'den farklı olarak toplamıyoruz. Hepsi
+için: aktarım şifreli · kullanıcı silme talep edebilir · veriler
 satılmıyor · reklam yok.
+
+### Android tarafı
+
+Firebase kaldırılınca `google-services.json` gereği de kalktı. Supabase
+düz HTTPS olduğu için native tarafta **hiçbir kurulum gerekmiyor**.
 
 ---
 
