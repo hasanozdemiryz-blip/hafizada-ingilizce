@@ -58,6 +58,16 @@ export function Settings({
    * hicbir sey yapmamali.
    */
   async function hatirlatmayiAyarla(saat: number | null, dakika = 0) {
+    /*
+      Ayni deger iki kez gelirse hicbir sey yapma.
+
+      Android'in saat secicisi `change`i IKI KEZ gonderiyor — uretimdeki
+      olcumde goruldu: ayni saniyede iki `hatirlatma_degisti`, ayni veri.
+      Zarar olcumle sinirli degil, bildirim de iki kez kuruluyordu.
+    */
+    const ayni = saat === state.reminderHour && (saat === null || dakika === (state.reminderMinute ?? 0));
+    if (ayni) return;
+
     olay('hatirlatma_degisti', { saat: saat ?? 'kapali', dakika });
     if (saat === null) {
       await hatirlatmayiKapat();

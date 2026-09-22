@@ -745,6 +745,11 @@ ama bulunabilir olmak zorunda).
 
 **Bitti:** Logo + marka kilidi · **23 parçalık marka ikon seti** (arayüzde emoji kalmadı) · tek akışlı ders · altı basamaklı egzersiz merdiveni · **ders içinde geçiş anı** · öğrenme testi (beyan yerine ölçüm) · serbest egzersiz bölümü · telaffuz · hafif seri + seri koruma · başarı ve kalıcılık puanları · **yerel profil (ad, avatar, kazanılan çerçeveler)** · Kelimelerim + arama + kanca panosu · kalite ölçümü ve zayıf kanca listesi · yedekleme · PWA (kurulabilir, çevrimdışı) · **APK** (uygulama simgesi + bildirim ikonu dahil).
 
+**Cihazda doğrulandı (23 Eylül 2026):** telaffuz · bildirim ikonu ·
+hatırlatma ve serbest saat seçici · yedeklemenin iki yolu (paylaş menüsü ve
+telefona kaydet) · donanım geri tuşu · uygulama simgesi. Dördü ayrıca ölçüm
+kayıtlarıyla karşılandı; ayrıntısı `NOTLAR.md`'de.
+
 **Yayın öncesi son tur:** 50 kontrollük tıklama turu (karşılamadan ders sonuna,
 egzersiz · ilerleme · ayarlar · profil · çerçeve kilitleri · yedek) tamamlandı,
 konsolda hata yok. 236 birim testi, tip denetimi ve derleme temiz. Paket

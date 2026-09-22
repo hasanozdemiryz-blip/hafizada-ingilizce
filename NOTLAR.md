@@ -1753,6 +1753,41 @@ Derleme sırasında `SDK XML version 4 ... only understands up to 3` uyarısı
 
 İlk gerçek telefon turu. Telaffuz sorunsuz çıktı. Geri kalanı bu bölüm.
 
+### Cihazda doğrulananlar — ölçümle
+
+Telefonda denenen her şey **ölçüm kayıtlarıyla** karşılandı; "çalışıyor
+gibi görünüyor" ile yetinilmedi:
+
+| Ne | Kanıt |
+|---|---|
+| Telaffuz | Cihazda duyuldu; `sesVar` true, Ayarlar satırı görünür |
+| Paylaş menüsü | `yedek_alindi {yol: "native"}` — menü gerçekten açıldı |
+| Telefona kaydet | `yedek_alindi {yol: "telefon"}` |
+| Hatırlatma + saat seçici | `hatirlatma_degisti {saat: 1, dakika: 46}` |
+| Bildirim ikonu | Cihazda görüldü |
+| Geri tuşu | Cihazda denendi |
+| Profil fotoğrafı | `profil_degisti {avatar: "foto"}` |
+
+`yol` alanının değeri bu yüzden konmuştu: *"Android'de paylaş menüsü
+gerçekten açılıyor mu"* sorusu tek bir telefonun tarifiyle değil, kayıtla
+cevaplandı.
+
+### Saat seçici `change`i iki kez gönderiyor
+
+```
+hatirlatma_degisti  {saat:1, dakika:46}  01:45:12
+hatirlatma_degisti  {saat:1, dakika:46}  01:45:12
+```
+
+Android'in saat seçicisi tek seçim için iki olay üretiyor. `ders_bitti`
+ile aynı sınıftan: zarar ölçümle sınırlı değil, bildirim de iki kez
+kuruluyordu. `hatirlatmayiAyarla` artık gelen değer mevcutla aynıysa
+hiçbir şey yapmadan dönüyor.
+
+> Bu iki çift kaydın ikisi de ancak ÜRETİMDE, gerçek cihazda ortaya çıktı.
+> Tarayıcıda tıklayarak da, testle de görünmüyorlardı — ölçümün ilk
+> karşılığı bu oldu.
+
 ### Uygulama simgesi hiç üretilmiyormuş
 
 Kurulan APK'da **Capacitor'ın varsayılan simgesi** duruyordu. 21 Eylül'de
@@ -1838,28 +1873,34 @@ yayına çıkacak, D1/D7 ölçülecek, kalan işler ondan sonra sıralanacak.
 
 **Hazır olanlar.** Uygulama 1.0.0; 236 test, tip denetimi ve derleme temiz.
 Ölçüm tablosu Supabase'de kurulu ve doğrulandı (RLS yalnızca INSERT,
-`pg_cron` temizliği aktif). Android araç zinciri Windows'ta kuruldu ve
-çalıştığı **derlenerek** kanıtlandı: imzalı `.aab` (5,35 MB) ve `.apk`
-(5,48 MB) üretildi, imzaları doğrulandı. Keystore üretildi ve yedeklendi.
+`pg_cron` temizliği aktif). Android araç zinciri Windows'ta kuruldu;
+imzalı `.aab` ve `.apk` üretildi, imzaları doğrulandı. Keystore üretildi
+ve yedeklendi.
+
+**Cihaz turu tamamlandı.** Telaffuz, bildirim ikonu, hatırlatma + serbest
+saat seçici, yedeklemenin iki yolu, geri tuşu ve uygulama simgesi —
+hepsi gerçek telefonda görüldü, dördü ayrıca ölçüm kayıtlarıyla
+doğrulandı (bkz. yukarısı).
 
 **Adımların tamamı `YAYIN.md`'de.** Sıfırdan makine kurulumu, telefonda
 deneme, Pages ve Play adımları orada; burada tekrarlanmıyor.
 
-**Sırada bekleyen ilk üç iş:**
+**Sırada bekleyen iki iş:**
 
-1. **Cihaz turu** — telaffuz · bildirim ikonu · yedeklemenin paylaş menüsü.
-   Üçü de yalnızca gerçek telefonda görülebilir, üçü de hiç denenmedi.
-   İmzalı APK hazır duruyor, `adb install` ile kurulabilir.
-2. **Web yayını** — Actions'a iki secret (`VITE_SUPABASE_*`) ve Pages
+1. **Web yayını** — Actions'a iki secret (`VITE_SUPABASE_*`) ve Pages
    ayarı. Play'in istediği gizlilik adresi buradan geliyor, yani **Play'den
    önce.** Secret'lar konmazsa site çıkar ama ölçüm sessizce kapalı kalır.
-3. **Play Console** — hesap açılışı (kimlik doğrulama günler sürüyor) ve
+2. **Play Console** — hesap açılışı (kimlik doğrulama günler sürüyor) ve
    mağaza varlıkları: metinler, 512×512 ikon, 1024×500 grafik, ekran
    görüntüleri, Veri Güvenliği formu (cevapları hazır, bkz. yukarısı).
 
 **Karar bekleyen:** depo herkese açık. Sır sızmıyor (kontrol edildi) ama
 `NOTLAR.md` görsel üretim reçetesini ve gelir modelini taşıyor. Pages
 ücretsiz planda yalnızca açık depoda çalışıyor, yani kapatmanın bedeli var.
+
+**Açık kalan öneriler (kullanıcı karar vermedi):** kullanım istatistikleri
+anahtarını Ayarlar'ın altına taşımak, istenmese de arada bildirim
+göndermek, tek kart paylaşımı (`renderCardPost`) — Instagram içeriği için.
 
 ### Veriden sonra açılacaklar
 
