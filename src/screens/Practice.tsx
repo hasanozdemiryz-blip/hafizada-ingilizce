@@ -15,6 +15,7 @@ import {
   lessonDays,
   previousLessonCards,
   randomOld,
+  todaysCards,
 } from '../scheduler';
 import type { Progress, Step } from '../types';
 
@@ -133,6 +134,18 @@ export function Practice({
   };
 
   /**
+   * Kosmayi bitir.
+   *
+   * Ders tekrari ayri bir eylem oldugu icin bittiginde secimde IZ BIRAKMAZ:
+   * `adim` geri aliniyor, yoksa alttaki "Başla" dugmesi kullanicinin hic
+   * secmedigi bir tipte duruyor.
+   */
+  const durdur = () => {
+    setCalisiyor(false);
+    if (adim === 'ders') setAdim('karisik');
+  };
+
+  /**
    * Secim ekraninda da alt menu gizlenir.
    * Hem tam ekran odak, hem de alttaki "Tamam" dugmesi menunun arkasinda
    * kalmasin diye — liste uzun oldugu icin dugme ekranin dibinde duruyor.
@@ -151,7 +164,23 @@ export function Practice({
    * DERS kapsamlari kisitlanmaz: bir ders kac kelimeyse o kadar. Zaman/zorluk
    * kapsamlari `PARTI` ile sinirli, elle secim ise sinirsiz.
    */
+  /**
+   * BUGUNUN dersi — "Dersi tekrar et" eyleminin kapsami.
+   *
+   * `latestLessonCards` degil: o, SON dersi veriyor ve gunlerce ders
+   * yapilmamissa haftalar oncesini "bugunun dersi" diye sunardi.
+   */
+  const bugunDersKartlari = useMemo(() => todaysCards(ogrenilenler), [ogrenilenler]);
+
   const secilenler = useMemo(() => {
+    /*
+      Ders tekrari kapsam SECIMINE bakmaz. Bir egzersiz tipi degil, kendi
+      basina bir eylem: "bugun ogrendiklerini bastan gec". Zorlandiklarimi
+      ya da eski kelimeleri "ders gibi" tekrar etmek anlamli bir sey degil —
+      ders bir GUNUN paketi.
+    */
+    if (adim === 'ders') return bugunDersKartlari;
+
     switch (kapsam) {
       case 'son':
         return latestLessonCards(ogrenilenler);
@@ -166,7 +195,7 @@ export function Practice({
       case 'sec':
         return ogrenilenler.filter((p) => secilenIdler.has(p.cardId));
     }
-  }, [ogrenilenler, kapsam, secilenIdler]);
+  }, [ogrenilenler, kapsam, secilenIdler, adim, bugunDersKartlari]);
 
   const kartlar = useMemo(
     () =>
@@ -308,7 +337,7 @@ export function Practice({
     return (
       <Screen>
         <TopBar
-          left={<BackButton onClick={() => setCalisiyor(false)} />}
+          left={<BackButton onClick={() => durdur()} />}
           right={
             <span>
               {kartIndex + 1} / {kartlar.length}
@@ -328,7 +357,7 @@ export function Practice({
               if (kartIndex + 1 < kartlar.length) setKartIndex(kartIndex + 1);
               // Ders tekrarinda kartlar bitince gorevlere gecilir, cikilmaz
               else if (adim === 'ders') setDersFazi('gorev');
-              else setCalisiyor(false);
+              else durdur();
             }}
           >
             Devam
@@ -341,7 +370,7 @@ export function Practice({
   if (calisiyor && gorevler.length > 0) {
     return (
       <Screen>
-        <TopBar left={<BackButton onClick={() => setCalisiyor(false)} />} />
+        <TopBar left={<BackButton onClick={() => durdur()} />} />
         <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-ink-faint">
           {adim === 'ders' ? 'Ders tekrarı · alıştırma' : 'Egzersiz'}
         </p>
@@ -363,7 +392,7 @@ export function Practice({
             void logSession(toplam, dogru, toplam - dogru);
             setOzet({ dogru, toplam });
             sayac.current = { dogru: 0, toplam: 0 };
-            setCalisiyor(false);
+            durdur();
           }}
         />
       </Screen>
@@ -425,6 +454,54 @@ export function Practice({
           </Card>
         ) : (
           <>
+            {/*
+              DERSI TEKRAR ET — kendi basina bir eylem, bir egzersiz tipi
+              degil. Onceden "Hangi egzersiz" izgarasinin bir kutusuydu ve
+              secili kapsamla birlestiriliyordu; "zorlandiklarimi ders gibi
+              tekrar et" anlamli bir sey degil, cunku ders bir GUNUN paketi.
+              O yuzden en ustte, kendi bolumunde ve tek dokunusla basliyor:
+              kapsam ya da "Başla" secmeye gerek yok.
+            */}
+            <section className="mb-1">
+              <button
+                onClick={() => {
+                  setAdim('ders');
+                  setKartIndex(0);
+                  setDersFazi('kart');
+                  setCalisiyor(true);
+                }}
+                disabled={bugunDersKartlari.length === 0}
+                className="w-full rounded-card px-5 py-4 text-left transition-all active:scale-[0.98] bg-ink text-white shadow-[var(--shadow-lift)] disabled:bg-white disabled:text-ink disabled:shadow-[var(--shadow-soft)] disabled:active:scale-100"
+              >
+                <div className="flex items-center gap-3.5">
+                  <span
+                    className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${
+                      bugunDersKartlari.length > 0 ? 'bg-white/15' : 'bg-sunken'
+                    }`}
+                  >
+                    <Ikon ad="ders" ters={bugunDersKartlari.length > 0} className="h-7 w-7" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="word block text-lg font-extrabold leading-tight">
+                      Dersi tekrar et
+                    </span>
+                    <span
+                      className={`block text-xs mt-1 ${
+                        bugunDersKartlari.length > 0 ? 'text-white/70' : 'text-ink-faint'
+                      }`}
+                    >
+                      {bugunDersKartlari.length > 0
+                        ? `bugünün ${bugunDersKartlari.length} kelimesi · kartlar + 6 basamak`
+                        : 'bugün henüz ders yapmadın'}
+                    </span>
+                  </span>
+                  {bugunDersKartlari.length > 0 && (
+                    <span className="text-xl text-white/50 shrink-0">›</span>
+                  )}
+                </div>
+              </button>
+            </section>
+
             <section>
               <h2 className="text-sm font-semibold text-ink-soft mb-2">Hangi kelimeler</h2>
 
@@ -531,49 +608,6 @@ export function Practice({
 
             <section className="mt-1">
               <h2 className="text-sm font-semibold text-ink-soft mb-2">Hangi egzersiz</h2>
-
-              {/*
-                Dersi tekrar etmek: kartlari yeniden gor, sonra alti basamak
-                sirayla — dersin ogrenme testinin aynisi. Merdiven ve
-                zamanlama oynamaz, o yuzden istedigin kadar yapilabilir.
-
-                TAM SATIR ve digerlerinden buyuk, cunku BIRINCIL secim bu:
-                "Hangi kelimeler" bolumunde "Bugün" nasil tek basina duruyorsa
-                burada da ayni kalip — en cok istenen sey ilk goz carpan sey
-                olmali. Ustteki kutu mavi, bu lacivert: kapsam renkli,
-                egzersiz tipi lacivert (bkz. KAPSAMLAR).
-              */}
-              <button
-                onClick={() => {
-                  setAdim('ders');
-                  setKartIndex(0);
-                }}
-                className={`w-full mb-2 rounded-2xl px-4 py-4 text-left transition-all active:scale-[0.98] ${
-                  adim === 'ders'
-                    ? 'bg-ink text-white shadow-[var(--shadow-lift)]'
-                    : 'bg-white text-ink shadow-[var(--shadow-soft)]'
-                }`}
-              >
-                <div className="flex items-center gap-3.5">
-                  <span
-                    className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${
-                      adim === 'ders' ? 'bg-white/15' : 'bg-sunken'
-                    }`}
-                  >
-                    <Ikon ad="ders" ters={adim === 'ders'} className="h-7 w-7" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="word block text-base font-extrabold leading-tight">
-                      Dersi tekrar et
-                    </span>
-                    <span
-                      className={`block text-xs mt-1 ${adim === 'ders' ? 'text-white/70' : 'text-ink-faint'}`}
-                    >
-                      kartları gör, 6 basamak sırayla
-                    </span>
-                  </span>
-                </div>
-              </button>
 
               <div className="grid grid-cols-2 gap-2">
                 <EgzersizKare
