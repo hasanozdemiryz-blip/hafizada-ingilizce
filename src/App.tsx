@@ -9,7 +9,7 @@ import {
   setBittiMi,
   setteOlanlar,
 } from './content';
-import { db, getState } from './db';
+import { db, getState, setState } from './db';
 import {
   aheadQueue,
   dueQueue,
@@ -25,6 +25,9 @@ import { ProgressScreen } from './screens/Progress';
 import { SessionDone } from './screens/SessionDone';
 import { Welcome } from './screens/Welcome';
 import { Settings } from './screens/Settings';
+import { ProfilDuzenle } from './screens/ProfilDuzenle';
+import { gecerliCerceve, type Kazanim } from './cerceveler';
+import { profilDuzelt } from './profil';
 import { Splash } from './screens/Splash';
 import { useToday } from './today';
 import { WordList } from './screens/WordList';
@@ -49,6 +52,7 @@ type Flow =
       yeni: number;
     }
   | { name: 'kelimeler' }
+  | { name: 'profil' }
   | null;
 
 export default function App() {
@@ -73,8 +77,36 @@ export default function App() {
 
   if (!data) return <Splash />;
 
-  const { progress, state } = data;
+  const { progress, state: kayitliState } = data;
   const kapat = () => setFlow(null);
+
+  /**
+   * Cerceve kilitlerini acan uc sayi (bkz. cerceveler.ts).
+   * Ilerleme sekmesindeki sayilarla AYNI kaynaktan okunuyor.
+   */
+  const kazanim: Kazanim = {
+    ogrenilen: progress.filter((p) => p.introduced).length,
+    // Kirilan seri kazanilmis cerceveyi geri almasin (bkz. types.ts)
+    seri: kayitliState.bestStreak ?? kayitliState.streakCount,
+    setBitti: setBittiMi(progress),
+  };
+
+  /**
+   * Hak edilmemis cerceve OKURKEN duzeltilir.
+   *
+   * Yedek baska bir cihazdan geri yuklenebilir ya da ilerleme sifirlanmis
+   * olabilir; o zaman profilde hala "Kraliyet" yazar ama kosul saglanmaz.
+   * Kayda dokunulmuyor — kosul yeniden saglanirsa cerceve geri gelsin.
+   */
+  const state = kayitliState.profil
+    ? {
+        ...kayitliState,
+        profil: {
+          ...profilDuzelt(kayitliState.profil),
+          cerceve: gecerliCerceve(kayitliState.profil, kazanim),
+        },
+      }
+    : kayitliState;
 
   // Sifirlama sonrasi da buraya dusulur — kullaniciyi kaldigi sekmede
   // degil, basa dondurmek gerek.
@@ -110,6 +142,19 @@ export default function App() {
   }
   if (flow?.name === 'kelimeler') {
     return <WordList progress={progress} onExit={kapat} />;
+  }
+  if (flow?.name === 'profil' && state.profil) {
+    return (
+      <ProfilDuzenle
+        profil={state.profil}
+        kazanim={kazanim}
+        onKapat={kapat}
+        onKaydet={(profil) => {
+          void setState({ profil });
+          kapat();
+        }}
+      />
+    );
   }
   if (flow?.name === 'done') {
     return (
@@ -178,7 +223,13 @@ export default function App() {
           onWords={() => setFlow({ name: 'kelimeler' })}
         />
       )}
-      {tab === 'ayarlar' && <Settings state={state} progress={progress} />}
+      {tab === 'ayarlar' && (
+        <Settings
+          state={state}
+          progress={progress}
+          onProfil={() => setFlow({ name: 'profil' })}
+        />
+      )}
 
       {/* Egzersiz kosarken menu gizlenir: tam ekran odak, ve dugmeler menunun altinda kalmaz */}
       {!egzersizde && <TabBar active={tab} onChange={setTab} />}

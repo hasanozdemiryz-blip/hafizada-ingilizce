@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { LearnFace } from '../components/CardFace';
 import { Runner } from '../components/Runner';
-import { ADIMLAR, type Gorev } from '../exercise';
+import { ADIMLAR, bolgelereBol, type Gorev } from '../exercise';
+import { Gecis } from '../components/Gecis';
 import { BackButton, Button, Progressbar, Screen, TopBar } from '../components/ui';
 import { CARD_BY_ID } from '../content';
 import { db, logAnswer, logSession } from '../db';
@@ -9,6 +10,9 @@ import { introduceCard, learningCheck, learningDone, reviewCard } from '../sched
 import type { Card, Progress, Step } from '../types';
 
 type Bolum = 'yeni' | 'ogrenme' | 'tekrar';
+
+/** Ekranda duran gecis ani: ne gosterilecegi + "Devam" basilinca ne olacagi. */
+type GecisAni = Omit<Parameters<typeof Gecis>[0], 'onDevam'> & { devam: () => void };
 
 /**
  * DERS — gunun tek akisi.
@@ -18,7 +22,7 @@ type Bolum = 'yeni' | 'ogrenme' | 'tekrar';
  * bolumler arka arkaya geliyor:
  *
  *   1 Yeni kelimeler — kart gosterilir, soru sorulmaz
- *   2 Ogrenme testi  — AYNI kelimeler, merdivenin 1-2. basamagi
+ *   2 Ogrenme testi  — AYNI kelimeler, merdivenin ALTI basamagi sirayla
  *   3 Tekrar         — vadesi gelen eski kartlar, kendi basamaklarinda
  *
  * Bolum 2, kartin ilk FSRS notunu veren yerdir (bkz. `learningCheck`).
@@ -72,6 +76,19 @@ export function Lesson({
   const [i, setI] = useState(0);
   const [busy, setBusy] = useState(false);
   const [cikisSoruluyor, setCikisSoruluyor] = useState(false);
+
+  /**
+   * Ogrenme testi bolge bolge kosuyor (tanima -> hatirlama -> uretim).
+   * Runner bir basamagin bittigini disari VERMIYOR; bolgeleri ayri ayri
+   * kosturmak o sinirlari ucretsiz veriyor ve motoru degistirmiyor.
+   */
+  const [bolgeIndex, setBolgeIndex] = useState(0);
+
+  /** Ekranda bir gecis ani duruyorsa bolum yerine o cizilir. */
+  const [gecis, setGecis] = useState<GecisAni | null>(null);
+
+  /** Yalnizca ICINDE bulunulan bolgenin sayaci — gecis aninda gosterilir. */
+  const bolgeSayac = useRef({ dogru: 0, toplam: 0 });
 
   /**
    * Yeni kartlar once BELLEKTE tutulur, veritabanina ogrenme testi
@@ -141,6 +158,9 @@ export function Lesson({
     [tekrarKuyrugu, eslestirmesiz],
   );
 
+  /** Ogrenme testinin bolgeleri — bos bolge duser, gecisi de acilmaz. */
+  const ogrenmeBolgeleri = useMemo(() => bolgelereBol(ogrenmeGorevleri), [ogrenmeGorevleri]);
+
   const bolumler = useMemo<Bolum[]>(() => {
     const liste: Bolum[] = [];
     const tekrarVar = tekrarGorevleri.length > 0;
@@ -154,7 +174,11 @@ export function Lesson({
   const ogrenmeSonucu = useCallback(
     async (cardId: string, ok: boolean, hookRevealed: boolean, step: Step) => {
       sayac.current.toplam++;
-      if (ok) sayac.current.dogru++;
+      bolgeSayac.current.toplam++;
+      if (ok) {
+        sayac.current.dogru++;
+        bolgeSayac.current.dogru++;
+      }
       void logAnswer({ cardId, ok, step, ipucu: hookRevealed, kaynak: 'ders' });
 
       if (step === 2) tanimaGecti.current.set(cardId, ok && !hookRevealed);
@@ -203,12 +227,88 @@ export function Lesson({
     else setI(i + 1);
   }
 
-  /** Siradaki bolume gecer; sira bittiyse (ya da bolum listede yoksa) dersi kapatir. */
-  function gec(simdiki: Bolum) {
+  /**
+   * Bolum kapanisinin gecis ani.
+   *
+   * `ogrenme` icin null: onun kapanisini SON BOLGE zaten gosterdi, ust
+   * uste iki ekran cikmasin.
+   */
+  function bolumGecisi(simdiki: Bolum): Omit<GecisAni, 'devam'> | null {
+    if (simdiki === 'yeni') {
+      const n = yeniKartlar.length;
+      return {
+        ikon: 'ogren',
+        renk: 'brand',
+        baslik: `${n} kelimeyle tanıştın`,
+        sonraki: 'Şimdi kancalar tuttu mu bakalım',
+      };
+    }
+    if (simdiki === 'tekrar') {
+      return {
+        ikon: 'bekleyen',
+        renk: 'grow',
+        baslik: 'Tekrarlar bitti',
+        sonraki: 'Şimdi bugünün yeni kelimeleri',
+      };
+    }
+    return null;
+  }
+
+  /**
+   * Siradaki bolume gecer; sira bittiyse (ya da bolum listede yoksa) dersi
+   * kapatir. Son bolumun ardindan gecis ani GOSTERILMEZ — orada `SessionDone`
+   * var ve asil kutlama o.
+   *
+   * `ani` verilmezse bolumun varsayilani kullanilir; `null` verilirse hic
+   * gecis cikmaz (bos bolum atlanirken oldugu gibi).
+   */
+  function gec(simdiki: Bolum, ani?: Omit<GecisAni, 'devam'> | null) {
     const yer = bolumler.indexOf(simdiki);
     const sonraki = yer >= 0 ? bolumler[yer + 1] : undefined;
-    if (sonraki) setBolum(sonraki);
-    else void bitir();
+    if (!sonraki) {
+      void bitir();
+      return;
+    }
+    const gosterilecek = ani === undefined ? bolumGecisi(simdiki) : ani;
+    if (gosterilecek) setGecis({ ...gosterilecek, devam: () => setBolum(sonraki) });
+    else setBolum(sonraki);
+  }
+
+  /**
+   * Bir bolge bitti.
+   *
+   * Ara bolgelerde gecis ani bir sonraki bolgeyi aciyor; SON bolgede
+   * once yeni kartlar yaziliyor, sonra bolum gecisi olarak ayni ekran
+   * kullaniliyor (bkz. `bolumGecisi` — `ogrenme` orada null doner).
+   */
+  function bolgeBitti() {
+    const simdiki = ogrenmeBolgeleri[bolgeIndex];
+    if (!simdiki) return;
+
+    const { dogru, toplam } = bolgeSayac.current;
+    const ani = {
+      ikon: simdiki.bolge.ikon,
+      renk: simdiki.bolge.renk,
+      baslik: simdiki.bolge.ad,
+      sayi: toplam > 0 ? `${dogru} / ${toplam} doğru` : undefined,
+      sonraki: simdiki.bolge.sonraki,
+    };
+    const sonBolge = bolgeIndex + 1 >= ogrenmeBolgeleri.length;
+
+    if (!sonBolge) {
+      setGecis({
+        ...ani,
+        devam: () => {
+          bolgeSayac.current = { dogru: 0, toplam: 0 };
+          setBolgeIndex(bolgeIndex + 1);
+        },
+      });
+      return;
+    }
+
+    void yeniKartlariYaz().then(() =>
+      gec('ogrenme', { ...ani, sonraki: 'Sırada bekleyen tekrarların' }),
+    );
   }
 
   async function bitir() {
@@ -270,6 +370,28 @@ export function Lesson({
     </div>
   ) : null;
 
+  /*
+    Gecis ani bolumlerin ONUNDE ciziliyor: o an ekranda ne soru var ne
+    kart, yalnizca kapanan ve acilan sey. Cikis dugmesi de yok — sinirda
+    kazara cikmak, yeni kelimeler henuz yazilmamisken en pahali hata.
+  */
+  if (gecis) {
+    return (
+      <Gecis
+        ikon={gecis.ikon}
+        renk={gecis.renk}
+        baslik={gecis.baslik}
+        sayi={gecis.sayi}
+        sonraki={gecis.sonraki}
+        onDevam={() => {
+          const devam = gecis.devam;
+          setGecis(null);
+          devam();
+        }}
+      />
+    );
+  }
+
   // --- Bolum 1: yeni kartlar ---
   if (bolum === 'yeni') {
     const card = yeniKartlar[i];
@@ -304,12 +426,16 @@ export function Lesson({
   }
 
   // --- Bolum 2 ve 3: merdiven motoru ---
-  const gorevler = bolum === 'ogrenme' ? ogrenmeGorevleri : tekrarGorevleri;
-  const sonuc = bolum === 'ogrenme' ? ogrenmeSonucu : tekrarSonucu;
+  const ogrenmede = bolum === 'ogrenme';
+  const gorevler = ogrenmede
+    ? (ogrenmeBolgeleri[bolgeIndex]?.gorevler ?? [])
+    : tekrarGorevleri;
+  const sonuc = ogrenmede ? ogrenmeSonucu : tekrarSonucu;
 
   if (gorevler.length === 0) {
-    if (bolum === 'ogrenme') void yeniKartlariYaz().then(() => gec('ogrenme'));
-    else gec(bolum);
+    // Bos bolum/bolge atlanirken gecis ani cikmaz: kapanan bir sey yok.
+    if (ogrenmede) void yeniKartlariYaz().then(() => gec('ogrenme', null));
+    else gec(bolum, null);
     return null;
   }
 
@@ -320,15 +446,13 @@ export function Lesson({
         {bolumEtiketi}
       </p>
       <Runner
-        key={bolum}
+        /* Bolge degisince motor bastan kurulsun — sorular karismasin */
+        key={ogrenmede ? `ogrenme-${bolgeIndex}` : bolum}
         gorevler={gorevler}
         sound={sound}
-        sirali={bolum === 'ogrenme'}
+        sirali={ogrenmede}
         onResult={sonuc}
-        onDone={() => {
-          if (bolum === 'ogrenme') void yeniKartlariYaz().then(() => gec('ogrenme'));
-          else gec(bolum);
-        }}
+        onDone={() => (ogrenmede ? bolgeBitti() : gec(bolum))}
       />
       {uyari}
     </Screen>

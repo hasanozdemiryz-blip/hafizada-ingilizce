@@ -19,6 +19,26 @@ export default defineConfig({
    */
   test: { exclude: ['**/node_modules/**', '**/dist/**', '**/._*'] },
 
+  build: {
+    /**
+     * Arayuz ikonlari HER ZAMAN ayri dosya — base64 olarak paketin icine
+     * gommesin.
+     *
+     * Varsayilan sinir 4 KB ve set tam ortasina dusuyor: 40 dosyanin 23'u
+     * gomulup 17'si dosya oluyordu. Iki sonucu vardi — ana paket ~100 KB'lik
+     * base64 ile sisiyor (uygulama cevrimdisi zaten her seyi onbellege
+     * aliyor, yani kazanc yok, sadece her aciliste cozulecek fazladan
+     * metin) ve ayni setin ikonlari birbirinden farkli davraniyor.
+     * Servis calisani `**\/*.png` zaten on-belliyor (bkz. workbox), yani
+     * dosya olmalari cevrimdisi calismayi bozmuyor.
+     *
+     * `false` = "gomme", `undefined` = "her zamanki boyut sinirina bak".
+     * `true` dondurmek ZORLA gomer: ilk yazilista kart gorselleri de o
+     * dala dusup ana paketi 2,3 MB'a cikarmisti.
+     */
+    assetsInlineLimit: (yol) => (yol.includes('/assets/ikonlar/') ? false : undefined),
+  },
+
   // Telefonda test icin cloudflare tuneli uzerinden servis edilebilsin.
   // Sadece alt alan adlari; genel erisime acmaz.
   preview: { allowedHosts: ['.trycloudflare.com'] },

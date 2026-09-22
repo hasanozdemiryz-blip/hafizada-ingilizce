@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import { LearnFace } from '../components/CardFace';
 import { Runner } from '../components/Runner';
 import { TAB_SPACE } from '../components/TabBar';
-import { BackButton, Button, Card, Screen, TopBar } from '../components/ui';
+import { BackButton, Button, Card, Ikon, Screen, TopBar } from '../components/ui';
+import type { IkonAd } from '../icons';
 import { CARD_BY_ID, ESKI_GUN } from '../content';
 import { ADIM, ADIMLAR, type Gorev } from '../exercise';
 import { hardest } from '../quality';
@@ -33,7 +34,7 @@ const PARTI = 10;
  * "Son ders". Sabit "Bugün" olarak durdugunda set bitince kutu sonsuza
  * kadar bos kaliyordu, cunku artik hicbir gun yeni kelime gelmiyor.
  */
-const SON_DERS = { id: 'son', emoji: '☀️' } as const;
+const SON_DERS = { id: 'son', ikon: 'bugun' } as const;
 
 /**
  * Her kapsamin kendi rengi var. Renk sistemin bir parcasi:
@@ -44,34 +45,34 @@ const KAPSAMLAR = [
   {
     id: 'onceki',
     ad: 'Önceki ders',
-    emoji: '🌙',
+    ikon: 'onceki',
     alt: 'bir önceki dersin kelimeleri',
     secili: 'bg-ink text-white shadow-[var(--shadow-lift)]',
-    ikon: 'bg-sunken',
+    zemin: 'bg-sunken',
   },
   {
     id: 'bekleyen',
     ad: 'Bekleyen tekrarlar',
-    emoji: '⏰',
+    ikon: 'bekleyen',
     alt: `vadesi gelmiş ${PARTI}`,
     secili: 'bg-grow text-white shadow-[0_8px_18px_-8px_rgba(43,196,138,0.85)]',
-    ikon: 'bg-grow-soft',
+    zemin: 'bg-grow-soft',
   },
   {
     id: 'zor',
     ad: 'Zorlandıklarım',
-    emoji: '🩹',
+    ikon: 'zor',
     alt: `en çok düştüğüm ${PARTI}`,
     secili: 'bg-blush text-white shadow-[0_8px_18px_-8px_rgba(247,154,201,0.95)]',
-    ikon: 'bg-blush-soft',
+    zemin: 'bg-blush-soft',
   },
   {
     id: 'eski',
     ad: 'Eski kelimeler',
-    emoji: '🕰️',
+    ikon: 'eski',
     alt: `${ESKI_GUN}+ günlük, rastgele ${PARTI}`,
     secili: 'bg-brand-deep text-white shadow-[0_8px_18px_-8px_rgba(47,111,208,0.9)]',
-    ikon: 'bg-brand-soft',
+    zemin: 'bg-brand-soft',
   },
 ] as const;
 
@@ -90,7 +91,7 @@ const ADIM_RENK: Record<Step, string> = {
 };
 
 /** Elle secim otomatik kapsamlarla ayni eksende degil; kendi satirinda. */
-const SEC = { id: 'sec', ad: 'Seç', emoji: '✋', alt: 'kendin işaretle, sınır yok' } as const;
+const SEC = { id: 'sec', ad: 'Seç', ikon: 'sec', alt: 'kendin işaretle, sınır yok' } as const;
 
 type Kapsam = typeof SON_DERS.id | (typeof KAPSAMLAR)[number]['id'] | typeof SEC.id;
 
@@ -216,12 +217,16 @@ export function Practice({
         <p className="word text-lg font-bold shrink-0 mb-3">Kelime seç</p>
 
         <div className="flex-1 flex flex-col gap-3 pb-6">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Kelime, anlam veya kanca ara…"
-            className="w-full rounded-full bg-white px-5 py-3.5 text-sm shadow-[var(--shadow-soft)] outline-none placeholder:text-ink-faint focus:ring-2 focus:ring-brand shrink-0"
-          />
+          <div className="relative shrink-0">
+            {/* Buyutec kutunun ICINDE: "burasi arama" demenin en kisa yolu */}
+            <Ikon ad="ara" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-70" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Kelime, anlam veya kanca ara…"
+              className="w-full rounded-full bg-white pl-11 pr-5 py-3.5 text-sm shadow-[var(--shadow-soft)] outline-none placeholder:text-ink-faint focus:ring-2 focus:ring-brand"
+            />
+          </div>
 
           <div className="flex gap-2 shrink-0">
             <Kucuk onClick={() => setSecilenIdler(new Set(liste.map((p) => p.cardId)))}>
@@ -412,7 +417,7 @@ export function Practice({
 
         {ogrenilenler.length === 0 ? (
           <Card className="rise text-center py-10">
-            <p className="text-4xl mb-3">🌱</p>
+            <Ikon ad="ogren" className="h-14 w-14 mx-auto mb-3" />
             <p className="word text-lg font-bold">Henüz kelime yok</p>
             <p className="text-sm text-ink-soft mt-1.5">
               Önce birkaç kelime öğren, sonra burada istediğin kadar çalış.
@@ -435,11 +440,11 @@ export function Practice({
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg ${
+                    className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${
                       kapsam === 'son' ? 'bg-white/20' : 'bg-brand-soft'
                     }`}
                   >
-                    {SON_DERS.emoji}
+                    <Ikon ad={SON_DERS.ikon} ters={kapsam === 'son'} className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-bold">
@@ -471,11 +476,11 @@ export function Practice({
                     >
                       <span className="flex items-center justify-between">
                         <span
-                          className={`grid h-8 w-8 place-items-center rounded-lg text-base ${
-                            secili ? 'bg-white/20' : k.ikon
+                          className={`grid h-8 w-8 place-items-center rounded-lg ${
+                            secili ? 'bg-white/20' : k.zemin
                           }`}
                         >
-                          {k.emoji}
+                          <Ikon ad={k.ikon} ters={secili} className="h-5 w-5" />
                         </span>
                         <span className="text-sm font-bold tabular-nums">{sayilar[k.id]}</span>
                       </span>
@@ -504,11 +509,11 @@ export function Practice({
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-base ${
+                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${
                       kapsam === 'sec' ? 'bg-white/20' : 'bg-sunken'
                     }`}
                   >
-                    {SEC.emoji}
+                    <Ikon ad={SEC.ikon} ters={kapsam === 'sec'} className="h-5 w-5" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-bold">{SEC.ad}</span>
@@ -533,10 +538,10 @@ export function Practice({
                   zamanlama oynamaz, o yuzden istedigin kadar yapilabilir.
                 */}
                 <EgzersizKare
-                  emoji="🎓"
+                  ikon="ders"
                   ad="Dersi tekrar et"
                   alt="kartları gör, 6 basamak sırayla"
-                  ikon="bg-sunken"
+                  zemin="bg-sunken"
                   secili={adim === 'ders'}
                   onClick={() => {
                     setAdim('ders');
@@ -544,18 +549,18 @@ export function Practice({
                   }}
                 />
                 <EgzersizKare
-                  emoji="🎲"
+                  ikon="karisik"
                   ad="Karışık"
                   alt="her kelime kendi basamağında"
-                  ikon="bg-sunken"
+                  zemin="bg-sunken"
                   secili={adim === 'karisik'}
                   onClick={() => setAdim('karisik')}
                 />
                 <EgzersizKare
-                  emoji="🃏"
+                  ikon="kartlar"
                   ad="Kartlar"
                   alt="görsel + kanca + cümle"
-                  ikon="bg-sunken"
+                  zemin="bg-sunken"
                   secili={adim === 'kart'}
                   onClick={() => {
                     setAdim('kart');
@@ -565,10 +570,10 @@ export function Practice({
                 {ADIMLAR.map((n) => (
                   <EgzersizKare
                     key={n}
-                    emoji={ADIM[n].emoji}
+                    ikon={ADIM[n].ikon}
                     ad={ADIM[n].ad}
                     alt={ADIM[n].alt}
-                    ikon={ADIM_RENK[n]}
+                    zemin={ADIM_RENK[n]}
                     secili={adim === n}
                     onClick={() => setAdim(n)}
                   />
@@ -610,18 +615,18 @@ function Kucuk({ children, onClick }: { children: React.ReactNode; onClick: () =
 }
 
 function EgzersizKare({
-  emoji,
+  ikon,
   ad,
   alt,
-  ikon,
+  zemin,
   secili,
   onClick,
 }: {
-  emoji: string;
+  ikon: IkonAd;
   ad: string;
   alt: string;
-  /** Merdiven bolgesinin rengi — bkz. ADIM_RENK */
-  ikon: string;
+  /** Ikon kutusunun rengi — merdiven bolgesini soyler, bkz. ADIM_RENK */
+  zemin: string;
   secili: boolean;
   onClick: () => void;
 }) {
@@ -635,11 +640,11 @@ function EgzersizKare({
       }`}
     >
       <span
-        className={`grid h-9 w-9 place-items-center rounded-xl text-lg mb-1.5 ${
-          secili ? 'bg-white/15' : ikon
+        className={`grid h-9 w-9 place-items-center rounded-xl mb-1.5 ${
+          secili ? 'bg-white/15' : zemin
         }`}
       >
-        {emoji}
+        <Ikon ad={ikon} ters={secili} className="h-5 w-5" />
       </span>
       <span className="block text-sm font-bold leading-tight">{ad}</span>
       <span className={`block text-[11px] mt-0.5 ${secili ? 'text-white/70' : 'text-ink-faint'}`}>

@@ -1,5 +1,5 @@
 import { SetFinale } from '../components/SetFinale';
-import { Button, Screen, Streak } from '../components/ui';
+import { Button, Ikon, Screen, Streak } from '../components/ui';
 
 /**
  * Ders bitisi.
@@ -50,7 +50,7 @@ export function SessionDone({
           </div>
         ) : (
           <>
-            <div className="pop text-6xl">🌿</div>
+            <Ikon ad="ogren" className="pop h-16 w-16 mx-auto" />
 
             <div className="rise delay-1">
               <h1 className="word text-3xl font-bold">Ders bitti</h1>

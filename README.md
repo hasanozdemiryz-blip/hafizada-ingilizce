@@ -148,6 +148,31 @@ yanlış yazılmış bir kelime durmaz. Egzersiz bedavaya dönmesin diye yanlı�
 dokunuşlar sayılır: hatasız dizen merdivende ilerler, deneyerek bulan yerinde
 kalır — kanca ipucuna basmakla aynı kural.*
 
+### Ders içinde ritim: geçiş anı
+
+Ders uzun bir düz akış: beş kelime × altı basamak = otuz soru. Bölge ve bölüm
+sınırlarında kısa bir **geçiş anı** duruyor — ne kapandı, kaç doğru, ne
+açılıyor.
+
+**Kutlama değil, bilerek.** Kutlanacak iki an zaten var ve ikisi de nadir:
+ders sonu ve setin bitmesi. Her aşamaya "Tebrikler" koymak o ikisini
+düzleştirir. Üstelik 1-2. basamakta kanca ekranda duruyor, yani oradaki doğru
+"kanca tuttu" demiyor — katılımı ödüllendirmek `beyan yerine ölçüm` ilkesinin
+tersi olurdu.
+
+Sayı üç, çünkü merdivenin üç bölgesi zaten Egzersiz'in renkleri ve
+İlerleme'nin çubuklarıyla anlatılıyor; geçiş anı yeni kavram icat etmiyor:
+
+| Basamak | Renk | Geçişte |
+|---|---|---|
+| 1–2 | mavi | **Tanıdın** → "Şimdi kanca ekrandan kalkıyor" |
+| 3–4 | sarı | **Hatırladın** → "Şimdi kelimeyi baştan sen yazacaksın" |
+| 5–6 | nane | **Ürettin** |
+
+Bölgeler `exercise.ts` içindeki `BOLGELER`'de — modül saf, ikon ve renk **ad**
+olarak taşınıyor. Motor (`Runner`) bir basamağın bittiğini dışarı vermiyor;
+öğrenme testi bölge bölge koşturularak o sınır ücretsiz elde ediliyor.
+
 ### Öğrenme testi
 
 Tanışmanın hemen ardından, aynı 5 kelime — ve merdivenin **altı basamağının
@@ -450,9 +475,22 @@ brand/                 Marka kaynağı + sosyal medya görselleri
   logo-isaret.png      Şeffaf işaret — filigran, sunum
   kilit.png            Yatay kilit (işaret + isim) — başlık, afiş
   instagram-profil*.png  Profil fotoğrafı: sade/yazılı × krem/lacivert
+  ikon-sayfasi.png     Arayüz ikonları, 5×5 ızgara (kaynak)
+  ikon-sayfasi-2.png   harf + seri + koruma + kutlama, 2×2 (kaynak)
+  avatar-sayfasi.png   9 hayvan avatarı, 3×3 (kaynak)
+  cerceve-sayfasi.png  Marka dilinde çerçeveler, 3×2 (kaynak)
+  cerceve-sayfasi-2.png  Madeni çerçeveler: bronz/gümüş/altın/platin (kaynak)
+  *-seti.png           Kontak sayfaları — üretim yazar, elle tutulmaz
   fonts/Nunito-800.ttf Kilit yazısı için (resvg woff2 okumuyor)
 src/
   assets/cards/        Kart görselleri — dosya adı kart id'si (snake.webp)
+  assets/ikonlar/      Marka rengine oturtulmuş ikonlar (düz + ters)
+  assets/avatarlar/    9 hayvan avatarı
+  assets/cerceveler/   6 çerçeve + olcu.json (delik oranı)
+  icons.ts             İkon kaydı: ad → URL (saf, React'siz)
+  avatarlar.ts         Avatar/çerçeve kaydı + delik oranı
+  profil.ts            Yerel profil: kimlik, otomatik ad, avatar (saf)
+  cerceveler.ts        Çerçeveler ve kilit koşulları (saf)
   content.ts           Kart havuzu ve sabitler
   scheduler.ts         FSRS + merdiven geçişleri + kuyruklar
   exercise.ts          Egzersiz tanımları, şıklar, harf dizme (saf)
@@ -461,13 +499,19 @@ src/
   score.ts             Başarı ve kalıcılık yüzdeleri (saf)
   db.ts                Dexie (IndexedDB) — ilerleme + cevap günlüğü, cihazda
   share.ts             Paylaşım görselleri (canvas)
-  components/          Match, Choice, Scramble, TypeAnswer, Runner, CardFace
+  components/          Match, Choice, Scramble, TypeAnswer, Runner, CardFace, Gecis
   screens/             Welcome, Home, Lesson, Practice, Progress,
                        WordList, Settings, SessionDone
 tools/
   import-xlsx.mjs      Tablo → JSON + doğrulama raporu
-  make-icons.mjs       Vektör işaret → PNG ikonlar
+  import-images.mjs    Kart görselleri → 4:3 webp (çerçeveliler düzeltilir)
+  make-icons.mjs       Vektör işaret → uygulama/cihaz simgeleri
+  sayfa.mjs            Ortak: sayfayı hücrelere böl, kremi alfaya çevir
+  make-ui-icons.mjs    İkon sayfaları → marka rengi + ters varyant
+  make-avatars.mjs     Avatar sayfası → 9 daire-hazır resim
+  make-frames.mjs      Çerçeve sayfası → deliği ölçülüp hizalanmış 6 çerçeve
   make-lockup.mjs      İşaret + isim → yazılı kilit, profil görselleri
+  android-bildirim-ikonu.mjs  Filiz → durum çubuğu silueti (cap add sonrası)
 ```
 
 **Local-first.** İlerleme tamamen tarayıcıda (IndexedDB), backend yok. Açılışta
@@ -494,6 +538,90 @@ Son satır kuralın kendisi: `spark` (kanca sarısı) başka hiçbir yerde vurgu
 rengi olarak kullanılmıyor. Kancanın yanına ikinci bir renk girerse kanca
 dikkat çekmeyi bırakır.
 
+### İkon seti
+
+Arayüzdeki her ikon emojiydi: `🌱`, `🎯`, `📊`, `⚙️`, `🔊`, `🎲`… Emoji marka
+değil — **cihazın yazı karakteri çiziyor**, yani aynı ekran Android'de,
+iOS'ta ve masaüstünde üç ayrı stilde görünüyordu ve hiçbiri logonun iki
+rengini taşımıyordu. Artık 20 ikonluk tek bir çizim seti var; logoyla aynı
+lacivert (`#16233A`) ve aynı sarı (`#FFD23F`).
+
+**Kaynak tek bir sayfa.** İkonlar tek tek üretilmedi: hepsi 1152×928'lik bir
+5×5 ızgarada, aynı fırça ve aynı çizgi kalınlığıyla bir arada çizildi. Set
+olmalarının sebebi bu — ayrı ayrı üretilseler kalınlıklar tutmazdı.
+
+| Katman | Nerede |
+|---|---|
+| `brand/ikon-sayfasi.png` | **tek kaynak** — elle düzenlenmez |
+| `tools/make-ui-icons.mjs` | hücreleri ölçerek kırpar, kremi alfaya çevirir, markaya boyar, ters varyantı üretir, optik boyutu eşitler |
+| `src/assets/ikonlar/*.png` | üretilen dosyalar (`ad.png` + `ad-ters.png`), 128px |
+| `src/icons.ts` | ad → URL. Saf: `exercise.ts` de ikon **adı** taşıyabiliyor |
+| `<Ikon>` (components/ui.tsx) | çizen bileşen |
+
+> Bir süre depoda sayfadan **elle kırpılmış** 64px'lik PNG'ler duruyordu ve
+> kırpma kutuları dardı: `egzersiz`in alt halkası düz kesikti, `bugun` ile
+> `zor`un üstünde komşu hücreden bulaşmış çubuklar vardı, beş karo
+> genişliğindeki `harf` ikonu ise ortadan ikiye bölünüp iki ayrı ikon
+> sanılmıştı. Kırpmayı göz yerine ölçüm yapınca hepsi geçti.
+
+**Ters varyant KOYU ZEMİN demek, "seçili" demek değil.** Seçili bir kutu beyaz
+kalıyorsa düz varyant doğru olanı. Ters varyantta lacivert mürekkep logonun
+kremine (`#FFF7E4`) döner, kanca sarısı yerinde kalır — alt menüde seçili
+sekme, seçili kapsam kutusu ve dinleme düğmesi böyle okunuyor.
+
+Yeni ikon: kaynak sayfaya ekle → `tools/make-ui-icons.mjs` içindeki `YERLESIM`
+tablosuna hücresini yaz → `npm run icons:ui` → `src/icons.ts` listesine adını
+ekle. Liste ile üretilen dosyalar ayrışırsa test (`icons.test.ts`) yakalar;
+tip sistemi bu bağı göremiyor çünkü ad ile dosya derleme anında değil çalışma
+anında eşleşiyor.
+
+> Arayüzde artık emoji yok. `✓`, `←`, `›` duruyor ama onlar tipografik
+> işaret, ikon değil.
+
+### Yerel profil
+
+Kullanıcı hiçbir şey yapmadan bir profili olur: ilk açılışta ad ve avatar
+üretilir. **Hesap değil** — e-posta yok, şifre yok, giriş yok, sunucu yok;
+uygulama içinde her yerde "profil" denir. "Hesap" denirse insanlar
+verilerinin bulutta olduğunu sanıp yedek almayı bırakır.
+
+Otomatik ad sıfat + hayvan ("Meraklı Tilki") ve avatar da **o hayvan** —
+ad ile yüz aynı yerden geliyor. İsteyen Ayarlar → Profil'den adını
+değiştirir, dokuz hayvandan birini ya da kendi fotoğrafını seçer. Fotoğraf
+256px kareye küçültülüp cihazda tutulur, hiçbir yere gönderilmez.
+
+> Bir süre üçüncü bir seçenek daha vardı: marka ikonu + renkli zemin.
+> Kaldırıldı — hayvan portrelerinin yanında sönük duruyordu ve aynı işi
+> onlar daha iyi yapıyor. Eski bir kayıtta kalmışsa `profilDuzelt` onu
+> adın kendi hayvanına çeviriyor.
+
+**Çerçeveler satılmaz, kazanılır.** İlk ikisi markanın kendi dilinde
+(lacivert + kanca sarısı), sonraki dördü bir **metal kademesi** — hangisinin
+daha değerli olduğu yazı okunmadan, renge bakarak anlaşılıyor:
+
+| Çerçeve | Nasıl açılır |
+|---|---|
+| Halka | başlangıç, herkeste var |
+| Halat | 10 kelime |
+| Bronz | 25 kelime |
+| Gümüş | 7 gün üst üste |
+| Altın | 50 kelime |
+| Elmas | seti bitir |
+
+> **Seri koşulu EN UZUN seriye bakar, mevcut seriye değil.** Mevcut seriye
+> baksaydı seri kırılınca kazanılmış çerçeve geri alınırdı — bu ceza olurdu
+> ve serinin kuralı "ödül var, ceza yok". Bir kez 7 güne ulaşan bir daha
+> kaybetmez (`AppState.bestStreak`).
+
+Hak edilmemiş çerçeve okurken varsayılana düşer (yedek başka cihazdan
+gelmiş olabilir).
+
+> **`Profil.id` neden var.** Rastgele, kalıcı, görünmez bir kimlik. Ad
+> kimlik değildir — iki kişi de "Meraklı Tilki" olabilir. Bu alan olmadan
+> ileride bulut senkronu *"bu aynı kişinin yeniden kurulumu mu"* sorusunu
+> cevaplayamaz ve herkes sıfırdan başlar. Hiçbir yere gönderilmiyor ama
+> yedeğe giriyor. Yine de "kaç kişi kullanıyor"u **çözmüyor**; o ayrı iş.
+
 **Teknoloji:** Vite · React · TypeScript · Tailwind v4 · Dexie · ts-fsrs (FSRS-5) · vite-plugin-pwa. Yazı karakterleri (**Nunito** + Plus Jakarta Sans) yerelde, çevrimdışı çalışır.
 
 > Başlık fontu Fredoka'ydı; fontun kendisinde **ğ, Ğ, İ, Ş, ş glifleri yok**
@@ -506,7 +634,12 @@ dikkat çekmeyi bırakır.
 
 ## Durum
 
-**Bitti:** Logo + marka kilidi · tek akışlı ders · altı basamaklı egzersiz merdiveni · öğrenme testi (beyan yerine ölçüm) · serbest egzersiz bölümü · telaffuz · hafif seri + seri koruma · başarı ve kalıcılık puanları · Kelimelerim + arama + kanca panosu · kalite ölçümü ve zayıf kanca listesi · yedekleme · PWA (kurulabilir, çevrimdışı).
+**Bitti:** Logo + marka kilidi · **23 parçalık marka ikon seti** (arayüzde emoji kalmadı) · tek akışlı ders · altı basamaklı egzersiz merdiveni · **ders içinde geçiş anı** · öğrenme testi (beyan yerine ölçüm) · serbest egzersiz bölümü · telaffuz · hafif seri + seri koruma · başarı ve kalıcılık puanları · **yerel profil (ad, avatar, kazanılan çerçeveler)** · Kelimelerim + arama + kanca panosu · kalite ölçümü ve zayıf kanca listesi · yedekleme · PWA (kurulabilir, çevrimdışı) · **APK** (uygulama simgesi + bildirim ikonu dahil).
+
+**Yayın öncesi son tur:** 50 kontrollük tıklama turu (karşılamadan ders sonuna,
+egzersiz · ilerleme · ayarlar · profil · çerçeve kilitleri · yedek) tamamlandı,
+konsolda hata yok. 215 birim testi, tip denetimi ve derleme temiz. Paket
+2,7 MB (ana paket 488 KB), 184 dosya çevrimdışı ön-bellekte.
 
 **Yapılmadı ve nedeni:**
 
@@ -516,10 +649,11 @@ dikkat çekmeyi bırakır.
   olarak kaydet, `npm run import:images` çalıştır. Kod veya JSON düzenlemesi yok.
   *(Havuz dolunca workbox ayarı gözden geçirilmeli: şu an tüm `.webp`
   precache ediliyor, 100 görsel ≈ 5 MB'lık ilk indirme demek.)*
-- **Hatırlatma bildirimi** — PWA'da kapalıyken bildirim göndermek sunucu gerektiriyor (Web Push). Backend'siz mümkün değil. Aynı sınır ana ekran widget'ı için de geçerli (o native istiyor).
+- **Hatırlatma bildirimi** — PWA'da kapalıyken bildirim göndermek sunucu gerektiriyor (Web Push). Backend'siz mümkün değil, o yüzden **yalnızca APK'da** var (cihazın kendi zamanlayıcısı). Aynı sınır ana ekran widget'ı için de geçerli (o native istiyor).
+- **Kullanım sayısı** — "kaç kişi kullanıyor" sorusunun cevabı yok ve yerel profil bunu **çözmüyor**: cihazda duran bir isim kimseye ulaşmaz. Tek yolu anonim bir ping (profil kimliği kullanılabilir) ya da APK Play'e girerse Play Console.
 - **Telaffuz kaydı** — tarayıcının ses sentezi kullanılıyor, kayıt kalitesinde değil. Yetmezse aynı arayüz önceden üretilmiş ses dosyalarına bağlanır; çağrı noktaları değişmez.
 
-**Sırada:** kanca aday üretim hattı (havuzu ~600'e çıkarmak için) · kart görselleri · hesap + bulut senkronu (gerekirse).
+**Sırada:** yayın ve D1/D7 ölçümü · kanca aday üretim hattı (havuzu ~600'e çıkarmak için) · kart görselleri · bulut senkronu (gerekirse — yerel profilin `id` alanı çapa olarak hazır).
 
 ---
 

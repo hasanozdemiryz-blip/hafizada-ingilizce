@@ -173,12 +173,23 @@ export function Runner({
       <div className="flex-1 flex flex-col justify-center py-6">
         {soru}
         {verdict && (
-          <div className="rise mt-3 flex items-center justify-center gap-2.5 text-sm">
-            <span className={`rounded-full px-3 py-1.5 font-bold ${GERI_BILDIRIM[verdict.judgement].tone}`}>
+          /*
+            Karar cumlesi buyuk: ekranda o an OKUNMASI gereken tek sey bu.
+            Kucukken soru metniyle ayni agirliktaydi ve goz once soruya
+            gidiyordu — oysa soru bitmis, sira sonuca gelmisti.
+            Yazilan yanlis cevap altinda ve KUCUK kaliyor: bilgi ama
+            manset degil.
+          */
+          <div className="rise mt-4 flex flex-col items-center gap-1.5">
+            <span
+              className={`word rounded-full px-5 py-2 text-xl font-extrabold ${
+                GERI_BILDIRIM[verdict.judgement].tone
+              }`}
+            >
               {GERI_BILDIRIM[verdict.judgement].baslik}
             </span>
             {verdict.typed && verdict.judgement !== 'dogru' && (
-              <span className="text-ink-faint">
+              <span className="text-sm text-ink-faint">
                 yazdığın: <span className="line-through">{verdict.typed}</span>
               </span>
             )}

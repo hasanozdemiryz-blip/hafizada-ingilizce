@@ -1,7 +1,32 @@
 import type { ReactNode } from 'react';
 import { seslendir, useTelaffuz } from '../speech';
+import { ikonUrl, type IkonAd } from '../icons';
 import kilit from '../assets/brand/kilit.webp';
 import isaret from '../assets/brand/isaret.webp';
+
+/**
+ * Arayuz ikonu — markanin cizim setinden (bkz. icons.ts).
+ *
+ * `alt=""`: ikonlar HER YERDE bir yazinin yaninda duruyor, tek baslarina
+ * bilgi tasimiyorlar. Ekran okuyucuya iki kez "Ayarlar" dedirtmek yerine
+ * susuyorlar; yazisiz tek kullanim (telaffuz dugmesi) kendi
+ * `aria-label`'ini tasiyor.
+ *
+ * Kaynak 64 piksel: 32'ye kadar retinada net, ustunde yumusuyor. Bos
+ * ekranlardaki buyuk kullanimlar bu yuzden 56'da duruyor.
+ */
+export function Ikon({
+  ad,
+  ters = false,
+  className = 'h-6 w-6',
+}: {
+  ad: IkonAd;
+  /** Koyu zeminde mi duruyor — murekkep kreme doner. */
+  ters?: boolean;
+  className?: string;
+}) {
+  return <img src={ikonUrl(ad, ters)} alt="" aria-hidden className={`${className} object-contain`} />;
+}
 
 /**
  * Marka kilidi: isaret + isim.
@@ -166,11 +191,11 @@ export function SpeakButton({
         e.stopPropagation(); // kart yuzunde "cevabi goster"i tetiklemesin
         seslendir(word);
       }}
-      className={`shrink-0 inline-flex items-center justify-center rounded-full bg-sunken text-ink-soft transition-all active:scale-90 hover:bg-brand-soft hover:text-brand-deep ${
-        kucuk ? 'h-8 w-8 text-sm' : 'h-11 w-11 text-lg'
+      className={`shrink-0 inline-flex items-center justify-center rounded-full bg-sunken transition-all active:scale-90 hover:bg-brand-soft ${
+        kucuk ? 'h-8 w-8' : 'h-11 w-11'
       }`}
     >
-      🔊
+      <Ikon ad="ses" className={kucuk ? 'h-4 w-4' : 'h-6 w-6'} />
     </button>
   );
 }
@@ -178,7 +203,7 @@ export function SpeakButton({
 export function Streak({ count }: { count: number }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-sm font-bold shadow-[var(--shadow-soft)]">
-      <span className="bob inline-block">🔥</span>
+      <Ikon ad="seri" className="bob h-4 w-4" />
       <span className="tabular-nums">{count}</span>
     </span>
   );

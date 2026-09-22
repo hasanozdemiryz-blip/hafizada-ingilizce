@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { profilSagla } from './db';
 import { hatirlatmaHazirla } from './reminder';
 import { telaffuzHazirla } from './speech';
 
@@ -26,6 +27,13 @@ void telaffuzHazirla();
  * hemen doner (bkz. reminder.ts).
  */
 void hatirlatmaHazirla();
+
+/**
+ * Yerel profil ILK ACILISTA kendiliginden olusur — kullaniciya "adin ne"
+ * diye sorulmaz. Kayit duvari yeni bir uygulamanin en pahali ekranidir;
+ * isteyen Ayarlar'dan degistirir, istemeyen hic fark etmez.
+ */
+void profilSagla();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

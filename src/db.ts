@@ -1,6 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import { LIMIT_DEFAULT } from './content';
 import { nextStreak, todayKey } from './dates';
+import { yeniProfil } from './profil';
 import type { AppState, Cevap, Progress } from './types';
 
 type MetaRow = { key: string; value: unknown };
@@ -179,6 +180,7 @@ export const EMPTY_STATE: AppState = {
   sound: true,
   dailyLimit: LIMIT_DEFAULT,
   streakCount: 0,
+  bestStreak: 0,
   freezes: 0,
   days: {},
   reminderHour: null,
@@ -187,7 +189,26 @@ export const EMPTY_STATE: AppState = {
 
 export async function getState(): Promise<AppState> {
   const row = await db.meta.get(APP_KEY);
-  return { ...EMPTY_STATE, ...((row?.value as Partial<AppState>) ?? {}) };
+  const state = { ...EMPTY_STATE, ...((row?.value as Partial<AppState>) ?? {}) };
+  /*
+    `bestStreak` sonradan eklendi. Eski kayitta yoksa mevcut seriyle
+    baslar — gecmisteki daha uzun bir seri bilinmiyor ama kullaniciyi
+    bugun sahip oldugundan daha geride gostermek yanlis olur.
+  */
+  return { ...state, bestStreak: Math.max(state.bestStreak ?? 0, state.streakCount) };
+}
+
+/**
+ * Profil yoksa uretir ve KAYDEDER; varsa dokunmaz.
+ *
+ * Acilista bir kez cagriliyor (bkz. main.tsx). `getState` icinde yapmak
+ * cazipti ama orasi `setState`'in de icinden geciyor — her yazmada bir
+ * yazma daha tetiklenirdi.
+ */
+export async function profilSagla(): Promise<AppState> {
+  const state = await getState();
+  if (state.profil) return state;
+  return setState({ profil: yeniProfil() });
 }
 
 export async function setState(patch: Partial<AppState>): Promise<AppState> {
@@ -224,7 +245,13 @@ export async function logSession(
     },
   };
 
-  const next = await setState({ ...streak, days });
+  /*
+    En uzun seri yalnizca BUYUR. Cerceve kilitleri buna bakiyor; seri
+    kirilinca kazanilmis cerceveyi geri almak ceza olurdu.
+  */
+  const bestStreak = Math.max(state.bestStreak ?? 0, streak.streakCount);
+
+  const next = await setState({ ...streak, days, bestStreak });
   return { ...next, freezeUsed };
 }
 

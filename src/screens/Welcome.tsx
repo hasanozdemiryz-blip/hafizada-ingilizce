@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CardVisual } from '../components/CardVisual';
-import { Button, Card, HookChip, Screen } from '../components/ui';
+import { Button, Card, HookChip, Ikon, Screen } from '../components/ui';
 import { CARDS, LIMIT_CHOICES, LIMIT_DEFAULT, SHOWCASE_CARD } from '../content';
 import { setState } from '../db';
 import { secenekler } from '../exercise';
@@ -96,7 +96,16 @@ export function Welcome({ onDone }: { onDone: () => void }) {
             </>
           ) : (
             <div className="rise text-center">
-              <div className="pop text-6xl mb-4">{dogru ? '✓' : '🌱'}</div>
+              {/*
+                Dogru bildiyse tik, bilemediyse filiz: ikisi de "olumlu".
+                Tik tipografik kaliyor — set bir eylem ikonu setidir,
+                onay isareti bir eylem degil.
+              */}
+              {dogru ? (
+                <div className="pop text-6xl mb-4">✓</div>
+              ) : (
+                <Ikon ad="ogren" className="pop h-16 w-16 mx-auto mb-4" />
+              )}
               <h1 className="word text-3xl font-extrabold leading-tight">
                 {dogru ? 'Hiç ezberlemedin.' : 'Olsun.'}
               </h1>

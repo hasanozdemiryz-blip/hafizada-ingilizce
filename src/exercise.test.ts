@@ -6,6 +6,8 @@ import {
   ADIM,
   ADIMLAR,
   bloklaraBol,
+  BOLGELER,
+  bolgelereBol,
   clampStep,
   harfKarolari,
   olculebilir,
@@ -18,6 +20,39 @@ const sabit = (diziler: number[]) => {
   let i = 0;
   return () => diziler[i++ % diziler.length];
 };
+
+describe('merdivenin uc bolgesi', () => {
+  const kart = (id: string) => ({ id }) as Card;
+
+  it('alti basamagin hepsi bir bolgeye ait, hicbiri iki bolgede degil', () => {
+    const hepsi = BOLGELER.flatMap((b) => b.adimlar);
+    expect([...hepsi].sort()).toEqual(ADIMLAR);
+  });
+
+  // Renk ve ad iki ekranda daha kullaniliyor (Egzersiz, Ilerleme);
+  // bos kalan bir alan orada sessizce bosluk cizer.
+  it('her bolgenin adi, ikonu ve rengi var', () => {
+    expect(BOLGELER.every((b) => b.ad && b.ikon && b.renk)).toBe(true);
+  });
+
+  it('gorevleri bolgelere ayirir, sira korunur', () => {
+    const gorevler = ADIMLAR.map((step) => ({ card: kart('a'), step }));
+    const bolgeler = bolgelereBol(gorevler);
+
+    expect(bolgeler).toHaveLength(3);
+    expect(bolgeler.map((b) => b.gorevler.map((g) => g.step))).toEqual([[1, 2], [3, 4], [5, 6]]);
+  });
+
+  /*
+    Hizli tekrarda yalnizca bazi basamaklar kosuyor. Bos bir bolge
+    dondurulseydi ekranda "0 / 0 dogru" diyen bir gecis ani acilirdi.
+  */
+  it('bos bolge donmez', () => {
+    const bolgeler = bolgelereBol([{ card: kart('a'), step: 5 }]);
+    expect(bolgeler).toHaveLength(1);
+    expect(bolgeler[0].bolge.ad).toBe('Ürettin');
+  });
+});
 
 describe('merdiven tanimlari', () => {
   it('alti basamak, hepsi tanimli', () => {

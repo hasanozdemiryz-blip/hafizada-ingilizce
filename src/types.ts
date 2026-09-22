@@ -102,9 +102,51 @@ export type Cevap = {
   kaynak: 'ders' | 'egzersiz';
 };
 
+/**
+ * Avatar: ya SETTEN bir ikon + renk, ya kullanicinin kendi fotografi.
+ *
+ * Fotograf 256px kareye kucultulmus bir data URL — cihazda duruyor,
+ * hicbir yere gitmiyor. Ayri tutulmasinin sebebi ileriye donuk: bulut
+ * senkronu gelirse ikon+renk zararsizca tasinir, FOTOGRAF kisisel veridir
+ * ve ayri bir onay ister (bkz. NOTLAR).
+ */
+/**
+ * Bir sure ucuncu bir secenek daha vardi: marka ikonu + renkli zemin.
+ * Kaldirildi — hayvan portrelerinin yaninda sonuk duruyordu ve ayni isi
+ * onlar daha iyi yapiyor. Eski bir kayitta kalmis olabilir diye
+ * `profilDuzelt` onu hayvana ceviriyor (bkz. profil.ts).
+ */
+export type Avatar =
+  /** Hazir hayvan resmi — fotograf yuklemek istemeyen icin */
+  | { tip: 'hayvan'; ad: string }
+  /** Kullanicinin fotografi: 256px kareye kucultulmus data URL */
+  | { tip: 'foto'; veri: string };
+
+/** Yerel profil — hesap degil. Bkz. profil.ts */
+export type Profil = {
+  /**
+   * Kalici, rastgele, GORUNMEZ kimlik. Ad kimlik degildir; bu alan
+   * olmadan ileride bulut senkronu "ayni kisi mi" sorusunu cevaplayamaz.
+   * Uretildikten sonra asla degismez.
+   */
+  id: string;
+  ad: string;
+  avatar: Avatar;
+  /** Cerceve ADI (bkz. cerceveler.ts). Kazanilmamis cerceve secilemez. */
+  cerceve: string;
+  /** ISO — cihazlar birlesirse hangisinin eski oldugu buradan bilinir */
+  olusturuldu: string;
+};
+
 export type AppState = {
   /** Karsilama ekrani goruldu mu */
   onboarded: boolean;
+  /**
+   * Yerel profil. Ilk acilista kendiliginden uretilir (bkz. db.ts
+   * `profilSagla`); eski kurulumlarda bir sure yok olabilir, o yuzden
+   * opsiyonel.
+   */
+  profil?: Profil;
   /**
    * Telaffuz sesi. Cevap acilinca kendiliginden calar; otobuste/derste
    * aniden ses cikmasin diye kapatilabilir. Dugmeye basarak dinlemek
@@ -114,6 +156,16 @@ export type AppState = {
   /** Gunluk yeni kelime hedefi (5/10/15). LIMIT_MAX asilamaz. */
   dailyLimit: number;
   streakCount: number;
+  /**
+   * SIMDIYE KADARKI en uzun seri — geriye gitmez.
+   *
+   * Cerceve kilitleri buna bakiyor, `streakCount`'a degil: seri kirilinca
+   * kazanilmis bir cerceveyi geri almak CEZA olurdu ve bu urunun kurali
+   * "odul var, ceza yok". Bir kez 7 gune ulasan, bir daha kaybetmez.
+   *
+   * v6 oncesi kayitlarda yok; `getState` onu mevcut seriyle dolduruyor.
+   */
+  bestStreak?: number;
   /** Seri koruma hakki. 7 gunde bir kazanilir, en fazla 2 tutulur. */
   freezes: number;
   /**

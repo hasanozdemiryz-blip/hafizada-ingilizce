@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BackButton, Card, Screen, SpeakButton, TopBar } from '../components/ui';
+import { BackButton, Card, Ikon, Screen, SpeakButton, TopBar } from '../components/ui';
 import { CARDS, CARD_BY_ID } from '../content';
 import { ADIM } from '../exercise';
 import { shareHookBoard } from '../share';
@@ -70,12 +70,16 @@ export function WordList({ progress, onExit }: { progress: Progress[]; onExit: (
       <p className="word text-lg font-bold shrink-0 mb-3">Kelimeler</p>
 
       <div className="flex-1 flex flex-col gap-3 pb-6">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Kelime, anlam veya kanca ara…"
-          className="w-full rounded-full bg-white px-5 py-3.5 text-sm shadow-[var(--shadow-soft)] outline-none placeholder:text-ink-faint focus:ring-2 focus:ring-brand shrink-0"
-        />
+        <div className="relative shrink-0">
+          {/* Buyutec kutunun ICINDE: "burasi arama" demenin en kisa yolu */}
+          <Ikon ad="ara" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 opacity-70" />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Kelime, anlam veya kanca ara…"
+            className="w-full rounded-full bg-white pl-11 pr-5 py-3.5 text-sm shadow-[var(--shadow-soft)] outline-none placeholder:text-ink-faint focus:ring-2 focus:ring-brand"
+          />
+        </div>
 
         <div className="flex flex-wrap gap-2 shrink-0">
           {FILTRELER.map((f) => (

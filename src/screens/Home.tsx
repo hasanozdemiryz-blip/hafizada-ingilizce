@@ -1,4 +1,5 @@
-import { Button, Card, Screen, Streak } from '../components/ui';
+import { Avatar } from '../components/Avatar';
+import { Button, Card, Ikon, Screen, Streak } from '../components/ui';
 import { SetFinale } from '../components/SetFinale';
 import { TAB_SPACE } from '../components/TabBar';
 import { CARD_BY_ID, CARDS, ogrenilenKancalar, setBittiMi } from '../content';
@@ -97,14 +98,24 @@ export function Home({
 
   return (
     <Screen>
-      <header className="flex items-center justify-between h-14 shrink-0">
+      <header className="flex items-center justify-between h-[4.25rem] shrink-0">
         {/*
-          Logo burada degil, acilis ekraninda (bkz. Splash).
-          Yatay kilit bu boyutta okunmuyordu; uygulamanin icindeyken de
-          hangi uygulamada oldugunu kimse merak etmiyor. Isim METIN olarak
-          duruyor: her boyutta net, uygulamanin yazi karakterinde.
+          Logo burada degil, acilis ekraninda (bkz. Splash). Yatay kilit bu
+          boyutta okunmuyordu ve uygulamanin icindeyken hangi uygulamada
+          oldugunu kimse merak etmiyor — o yuzden bu yuva uygulamanin adina
+          degil KULLANICIYA ayrildi. Profil yoksa (eski kurulum, ilk
+          milisaniyeler) uygulama adina duser.
         */}
-        <span className="word text-base font-extrabold text-ink-soft">Hafızada İngilizce</span>
+        {state.profil ? (
+          <span className="flex items-center gap-3 min-w-0">
+            <Avatar avatar={state.profil.avatar} cerceve={state.profil.cerceve} boyut="sm" />
+            <span className="word text-lg font-extrabold text-ink truncate">
+              {state.profil.ad}
+            </span>
+          </span>
+        ) : (
+          <span className="word text-base font-extrabold text-ink-soft">Hafızada İngilizce</span>
+        )}
         {state.streakCount > 0 && <Streak count={state.streakCount} />}
       </header>
 
@@ -115,18 +126,25 @@ export function Home({
           kalmadigi icin "0 / 10" her gun boyle kalacak ve kullanici
           yapmadigi bir sey icin eksik gorunecek. Yerine setin kendisi.
         */}
-        <section>
-          <div className="flex items-baseline justify-between mb-2 px-1">
-            <span className="text-sm font-semibold text-ink-soft">
+        {/*
+          Hedef de bir KART. Once cubuk sayfanin zemininde, kartlarin
+          arasinda yuzer halde duruyordu — ekrandaki her sey bir yuzeyin
+          uzerindeyken tek basina duran o satir eksik gorunuyordu.
+          Cubugun zemini de `sunken`: beyaz kartin uzerinde `white/70`
+          kayboluyor.
+        */}
+        <Card className="rise !py-4">
+          <div className="flex items-baseline justify-between mb-2.5">
+            <span className="text-sm font-bold text-ink-soft">
               {setBitti ? 'Set tamamlandı' : 'Bugünün hedefi'}
             </span>
-            <span className="text-sm text-ink-faint tabular-nums">
+            <span className="word text-sm font-extrabold tabular-nums">
               {setBitti
-                ? `${CARDS.length} / ${CARDS.length} kelime`
-                : `${todayCount} / ${state.dailyLimit} kelime`}
+                ? `${CARDS.length} / ${CARDS.length}`
+                : `${todayCount} / ${state.dailyLimit}`}
             </span>
           </div>
-          <div className="h-3 w-full rounded-full bg-white/70 overflow-hidden">
+          <div className="h-3 w-full rounded-full bg-sunken overflow-hidden">
             <div
               className={`h-full rounded-full transition-[width] duration-700 ease-out ${
                 limitDoldu || setBitti ? 'bg-grow' : 'bg-gradient-to-r from-brand to-[#7db2ff]'
@@ -134,7 +152,7 @@ export function Home({
               style={{ width: `${setBitti ? 100 : gunlukPct}%` }}
             />
           </div>
-        </section>
+        </Card>
 
         {limitDoldu ? (
           /*
@@ -172,7 +190,7 @@ export function Home({
           </div>
         ) : bosGun ? (
           <Card className="rise text-center py-10">
-            <div className="text-5xl mb-3">🌿</div>
+            <Ikon ad="ogren" className="h-14 w-14 mx-auto mb-3" />
             <p className="word text-2xl font-extrabold">Bugünlük tamam</p>
             <p className="text-ink-soft mt-2 text-sm">
               {siradaki ? `Sıradaki tekrar ${relativeDue(siradaki)}.` : 'Yarın görüşürüz.'}
@@ -225,25 +243,26 @@ export function Home({
           </div>
         )}
 
+        {/*
+          Kanca ciftleri de kartin icinde. Yanindaki "12 kelime" sayaci
+          kaldirildi: bu bolum bir OLCUM degil, son ogrenilenlere bakma
+          yeri — sayilar zaten hemen ustteki hedefte ve Ilerleme'de.
+
+          Cipler `sunken`: beyaz kartin uzerinde beyaz cip gorunmuyor.
+        */}
         {sonKancalar.length > 0 && (
-          <section>
-            <div className="flex items-baseline justify-between mb-2 px-1">
-              <h2 className="text-sm font-semibold text-ink-soft">Son tanıştıkların</h2>
-              <span className="text-sm text-ink-faint tabular-nums">{ogrenilen} kelime</span>
-            </div>
+          <Card className="rise delay-2 !py-4">
+            <h2 className="text-sm font-bold text-ink-soft mb-2.5">Son tanıştıkların</h2>
             <div className="flex flex-wrap gap-1.5">
               {sonKancalar.map((c) => (
-                <span
-                  key={c.id}
-                  className="rounded-full bg-white px-3 py-1.5 text-sm shadow-[var(--shadow-soft)]"
-                >
+                <span key={c.id} className="rounded-full bg-sunken px-3 py-1.5 text-sm">
                   <span className="word font-semibold">{c.en}</span>
                   <span className="text-ink-faint"> ≈ </span>
                   <span className="font-semibold text-ink bg-spark/55 rounded px-1">{c.hook}</span>
                 </span>
               ))}
             </div>
-          </section>
+          </Card>
         )}
       </div>
     </Screen>

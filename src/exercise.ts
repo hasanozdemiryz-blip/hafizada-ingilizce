@@ -4,6 +4,7 @@
  * Her basamagin NE sordugunu ve NE KADAR yardim gosterdigini burasi tanimlar.
  * Saf: DOM yok, rastgelelik disarida tohumlanabilir, test edilebilir.
  */
+import type { IkonAd } from './icons';
 import type { Card, Step } from './types';
 
 export type Egzersiz = 'kart' | 'eslestirme' | 'secmeli' | 'ters-secmeli' | 'harf' | 'yazma' | 'dinleme';
@@ -15,7 +16,12 @@ export const SON_ADIM: Step = 6;
 type AdimBilgisi = {
   egzersiz: Egzersiz;
   ad: string;
-  emoji: string;
+  /**
+   * Marka setindeki ikonun ADI — resmin kendisi degil (bkz. icons.ts).
+   * Bu modul saf kalsin diye: merdivenin kurallari test edilirken
+   * arayuz varligi yuklenmemeli.
+   */
+  ikon: IkonAd;
   alt: string;
   /**
    * Kanca soru yuzunde DURUYOR mu?
@@ -32,13 +38,76 @@ type AdimBilgisi = {
 };
 
 export const ADIM: Record<Step, AdimBilgisi> = {
-  1: { egzersiz: 'eslestirme',   ad: 'Eşleştirme',     emoji: '🔗', alt: 'kelime ↔ karşılık',      kancaGorunur: true,  kartGorunur: true,  cevapDili: 'tr' },
-  2: { egzersiz: 'secmeli',      ad: 'Çoktan seçmeli', emoji: '✅', alt: 'İngilizceyi gör, seç',   kancaGorunur: true,  kartGorunur: true,  cevapDili: 'tr' },
-  3: { egzersiz: 'ters-secmeli', ad: 'Ters seçmeli',   emoji: '🔄', alt: 'Türkçeyi gör, seç',      kancaGorunur: false, kartGorunur: false, cevapDili: 'en' },
-  4: { egzersiz: 'harf',         ad: 'Harf dizme',     emoji: '🔤', alt: 'harfleri sıraya diz',    kancaGorunur: false, kartGorunur: false, cevapDili: 'en' },
-  5: { egzersiz: 'yazma',        ad: 'Yazma',          emoji: '✍️', alt: 'baştan yaz',             kancaGorunur: false, kartGorunur: false, cevapDili: 'en' },
-  6: { egzersiz: 'dinleme',      ad: 'Dinleme',        emoji: '🔊', alt: 'yazı yok, sadece ses',   kancaGorunur: false, kartGorunur: false, cevapDili: 'en' },
+  1: { egzersiz: 'eslestirme',   ad: 'Eşleştirme',     ikon: 'eslestirme', alt: 'kelime ↔ karşılık',   kancaGorunur: true,  kartGorunur: true,  cevapDili: 'tr' },
+  2: { egzersiz: 'secmeli',      ad: 'Çoktan seçmeli', ikon: 'secmeli',    alt: 'İngilizceyi gör, seç', kancaGorunur: true,  kartGorunur: true,  cevapDili: 'tr' },
+  3: { egzersiz: 'ters-secmeli', ad: 'Ters seçmeli',   ikon: 'ters',       alt: 'Türkçeyi gör, seç',    kancaGorunur: false, kartGorunur: false, cevapDili: 'en' },
+  4: { egzersiz: 'harf',         ad: 'Harf dizme',     ikon: 'harf',       alt: 'harfleri sıraya diz',  kancaGorunur: false, kartGorunur: false, cevapDili: 'en' },
+  5: { egzersiz: 'yazma',        ad: 'Yazma',          ikon: 'yazma',      alt: 'baştan yaz',           kancaGorunur: false, kartGorunur: false, cevapDili: 'en' },
+  6: { egzersiz: 'dinleme',      ad: 'Dinleme',        ikon: 'ses',        alt: 'yazı yok, sadece ses', kancaGorunur: false, kartGorunur: false, cevapDili: 'en' },
 };
+
+/**
+ * MERDIVENIN UC BOLGESI.
+ *
+ * Basamaklar tek tek degil ucer ucer anlamli: 1-2 kelimeyi TANIMA
+ * (kanca ekranda), 3-4 kancasiz HATIRLAMA, 5-6 sifirdan URETME. Bu
+ * gruplama zaten iki ekranda yasiyor — Egzersiz'de basamak kutularinin
+ * rengi (mavi/sari/nane), Ilerleme'de "Neler yapabildin" cubuklari.
+ * Burasi onu tek kaynaga cikariyor.
+ *
+ * `ad` GECMIS ZAMAN: bolge bittiginde gosteriliyor, yani kullanicinin
+ * az once YAPTIGI sey. "Tanima" degil "Tanidin".
+ */
+export type Bolge = {
+  adimlar: Step[];
+  ad: string;
+  /** Bolge bitince ne geliyor — bir sonraki bolgenin ne istedigi */
+  sonraki: string;
+  ikon: IkonAd;
+  /**
+   * Renk TOKENININ adi — sinif degil.
+   * Tokenlar `index.css` `@theme` icinde tanimli; hangi tonun (soft/dolu)
+   * kullanildigina cizen bilesen karar verir.
+   */
+  renk: 'brand' | 'spark' | 'grow';
+};
+
+export const BOLGELER: Bolge[] = [
+  {
+    adimlar: [1, 2],
+    ad: 'Tanıdın',
+    sonraki: 'Şimdi kanca ekrandan kalkıyor',
+    ikon: 'secmeli',
+    renk: 'brand',
+  },
+  {
+    adimlar: [3, 4],
+    ad: 'Hatırladın',
+    sonraki: 'Şimdi kelimeyi baştan sen yazacaksın',
+    ikon: 'harf',
+    renk: 'spark',
+  },
+  {
+    adimlar: [5, 6],
+    ad: 'Ürettin',
+    sonraki: 'Merdivenin tepesi',
+    ikon: 'yazma',
+    renk: 'grow',
+  },
+];
+
+/**
+ * Gorevleri bolgelere ayirir, SIRA korunur.
+ *
+ * Bos bolge donmez: bir derste yalnizca bazi basamaklar kosuluyorsa
+ * (ornegin hizli tekrar) o bolgenin gecis ekrani da hic acilmaz.
+ */
+export function bolgelereBol(gorevler: readonly Gorev[]): { bolge: Bolge; gorevler: Gorev[] }[] {
+  return BOLGELER.map((bolge) => ({
+    bolge,
+    gorevler: gorevler.filter((g) => bolge.adimlar.includes(g.step)),
+  })).filter((b) => b.gorevler.length > 0);
+}
 
 /**
  * Bu basamak olcum uretir mi?

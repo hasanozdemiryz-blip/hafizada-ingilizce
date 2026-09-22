@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { TAB_SPACE } from '../components/TabBar';
-import { Button, Card, Screen } from '../components/ui';
+import { Avatar } from '../components/Avatar';
+import { Button, Card, Ikon, Screen } from '../components/ui';
 import { CARDS, LIMIT_CHOICES, LIMIT_MAX } from '../content';
 import { exportProgress, importProgress, resetAll, setState } from '../db';
 import {
@@ -20,7 +21,15 @@ import type { AppState } from '../types';
  * duruyordu — bir seyi degistirmek icin once grafiklerden gecmek
  * gerekiyordu. Kendi sekmesine alindi; Ilerleme artik saf profil.
  */
-export function Settings({ state, progress }: { state: AppState; progress: unknown[] }) {
+export function Settings({
+  state,
+  progress,
+  onProfil,
+}: {
+  state: AppState;
+  progress: unknown[];
+  onProfil: () => void;
+}) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [sifirlaSoruluyor, setSifirlaSoruluyor] = useState(false);
   const [hata, setHata] = useState<string | null>(null);
@@ -52,7 +61,35 @@ export function Settings({ state, progress }: { state: AppState; progress: unkno
           gun kaldirilamayan bir tekrar yigini demek — o yuzden 15'in
           ustunde secenek yok.
         */}
-        <Card className="rise">
+        {/*
+          PROFIL — en ustte, cunku "benim" olan tek kart bu.
+          "Hesap" DEMIYOR: e-posta, sifre, giris yok. Hesap dendiginde
+          insanlar verilerinin bulutta oldugunu sanip yedek almayi birakir.
+        */}
+        {state.profil && (
+          <button
+            onClick={onProfil}
+            className="rise rounded-card bg-surface p-5 shadow-[var(--shadow-soft)] text-left transition-all active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-4">
+              <Avatar avatar={state.profil.avatar} cerceve={state.profil.cerceve} boyut="md" />
+              <span className="min-w-0 flex-1">
+                <span className="word block text-lg font-extrabold truncate">
+                  {state.profil.ad}
+                </span>
+                <span className="block text-sm text-ink-soft mt-0.5">
+                  Adını ve avatarını değiştir
+                </span>
+              </span>
+              <span className="text-xl text-ink-faint shrink-0">›</span>
+            </div>
+            <p className="text-xs text-ink-faint mt-3">
+              Profil bu cihazda tutulur — hesap değil, giriş gerekmez.
+            </p>
+          </button>
+        )}
+
+        <Card className="rise delay-1">
           <h2 className="text-sm font-bold text-ink-soft mb-1">Günlük hedef</h2>
           <p className="text-sm text-ink-soft mb-3">
             Günde en fazla kaç yeni kelime. Dolduğunda gün kapanır; tekrarlar devam eder.
@@ -85,7 +122,9 @@ export function Settings({ state, progress }: { state: AppState; progress: unkno
               <div>
                 <p className="font-bold">Telaffuz sesi</p>
                 <p className="text-sm text-ink-soft mt-0.5">
-                  Cevap açılınca kendiliğinden çalsın. Kapalıyken 🔊 ile dinleyebilirsin.
+                  Cevap açılınca kendiliğinden çalsın. Kapalıyken{' '}
+                  <Ikon ad="ses" className="inline-block h-4 w-4 align-text-bottom" /> ile
+                  dinleyebilirsin.
                 </p>
               </div>
               <button
@@ -171,7 +210,7 @@ export function Settings({ state, progress }: { state: AppState; progress: unkno
             İlerleme sadece bu cihazda tutuluyor. Taşımak veya korumak için yedek al.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Kucuk onClick={() => void disaAktar()}>Yedek al</Kucuk>
+            <Kucuk onClick={() => void disaAktar(state.profil?.ad)}>Yedek al</Kucuk>
             <Kucuk onClick={() => fileRef.current?.click()}>Geri yükle</Kucuk>
             <Kucuk tehlike onClick={() => setSifirlaSoruluyor(true)}>
               Sıfırla
@@ -235,11 +274,27 @@ export function Settings({ state, progress }: { state: AppState; progress: unkno
   );
 }
 
-async function disaAktar() {
+/**
+ * Dosya adinda profil adi da geciyor: birden fazla yedek yan yana
+ * durunca hangisinin kime ait oldugu dosya adindan anlasilsin.
+ * Turkce harfler ve bosluk dosya adinda sorun cikarabiliyor — sadelestirilir.
+ */
+const dosyaAdi = (ad?: string) => {
+  const sade = (ad ?? '')
+    .toLocaleLowerCase('tr')
+    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  const gun = new Date().toISOString().slice(0, 10);
+  return sade ? `${sade}-yedek-${gun}.json` : `hafizada-yedek-${gun}.json`;
+};
+
+async function disaAktar(profilAdi?: string) {
   const url = URL.createObjectURL(new Blob([await exportProgress()], { type: 'application/json' }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `hafizada-yedek-${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = dosyaAdi(profilAdi);
   a.click();
   URL.revokeObjectURL(url);
 }

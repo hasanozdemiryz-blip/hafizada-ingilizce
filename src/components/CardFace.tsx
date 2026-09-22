@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { CardVisual } from './CardVisual';
 import { seslendir } from '../speech';
-import { Card as CardShell, HookChip, SpeakButton } from './ui';
+import { Card as CardShell, HookChip, Ikon, SpeakButton } from './ui';
 import type { Card } from '../types';
 
 /**
@@ -70,9 +70,10 @@ export function ListenFace({ card, hookRevealed }: { card: Card; hookRevealed: b
           type="button"
           aria-label="Tekrar dinle"
           onClick={() => seslendir(card.en)}
-          className="h-24 w-24 rounded-full bg-brand text-4xl text-white shadow-[0_14px_30px_-12px_rgba(79,146,246,0.95)] transition-all active:scale-90"
+          className="h-24 w-24 grid place-items-center rounded-full bg-brand shadow-[0_14px_30px_-12px_rgba(79,146,246,0.95)] transition-all active:scale-90"
         >
-          🔊
+          {/* Mavi zemin: ikon ters (krem) varyantta, yoksa lacivert kayboluyor */}
+          <Ikon ad="ses" ters className="h-11 w-11" />
         </button>
         <span className="text-sm text-ink-faint">dokun, tekrar dinle</span>
         {hookRevealed && (

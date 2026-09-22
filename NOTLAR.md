@@ -272,8 +272,12 @@ ayrı bir `<kullanici>.github.io` deposu ister. Capacitor'da bu sorun hiç yok.
 npm install
 npm run build
 npx cap add android          # android/ .gitignore'da, her seferinde üretilir
+npm run icons:bildirim       # durum çubuğu ikonu — cap add onu üretmiyor
 cd android && ./gradlew assembleDebug
 ```
+
+`icons:bildirim` atlanırsa bildirimin durum çubuğu ikonu uygulama simgesine
+düşer ve beyaz bir leke olarak çıkar (bkz. aşağıda *Bildirim ikonu*).
 
 Çıktı: `~/Library/Caches/hafizada-android/_app/outputs/apk/debug/app-debug.apk`
 (~5 MB, 26 kart görseli dahil tamamen çevrimdışı).
@@ -659,6 +663,493 @@ yerde vurgu rengi değil. Kancanın yanına ikinci bir renk girerse kanca dikkat
 
 ---
 
+## 2026-09-22 — İkon seti: emojiden markaya
+
+### Emoji marka değildir
+
+Arayüzün her yerinde emoji vardı: alt menüde `🌱 🎯 📊 ⚙️`, egzersiz
+kapsamlarında `☀️ 🌙 ⏰ 🩹 🕰️`, merdivenin altı basamağında `🔗 ✅ 🔄 🔤 ✍️ 🔊`.
+Tek tek bakınca sorun görünmüyordu; sorun **kimin çizdiğiydi**.
+
+Emojiyi uygulama çizmiyor, **cihazın yazı karakteri** çiziyor. Yani aynı ekran
+Android'de Noto, iOS'ta Apple Color Emoji, masaüstünde bir üçüncüsüyle
+görünüyordu — üç ayrı stil, üç ayrı çizgi kalınlığı, üç ayrı palet. Hiçbiri de
+logonun iki rengini taşımıyordu. Uygulamanın en çok tekrar eden görsel öğesi,
+markanın hiç söz sahibi olmadığı tek öğeydi.
+
+20 ikonluk set bunun için üretildi: lacivert çizgi + sarı vurgu, logonun
+kendisiyle aynı iki renk.
+
+### Kaynak sayfa doğrudan kullanılmadı — üç sebep
+
+`brand/ikon-sayfasi.png` **kaynak**, `src/assets/ikonlar/` **üretim**; arada
+`tools/make-ui-icons.mjs` var. Ara adımın her biri gerçek bir kusuru kapatıyor:
+
+1. **Renk.** Model kremi `#FBF3D7`, laciverdi `#0B203A`, sarıyı `#FFCC08`
+   çizdi; markanınkiler `#FFF7E4`, `#16233A`, `#FFD23F`. Yan yana konunca
+   görülüyor: ikonun sarısı kancanın sarısından daha turuncu. Her piksel
+   markanın **tam token değerine** yazılıyor.
+2. **Ters varyant.** Seçili sekme, seçili kapsam kutusu ve dinleme düğmesi
+   koyu zeminde; lacivert ikon orada kayboluyor. Ters varyantta mürekkep
+   logonun kremine döner, sarı yerinde kalır.
+3. **Optik boyut.** Her çizim hücresini farklı dolduruyor. Uzun kenardan
+   sığdırmak yetmiyor: `harf` beş karo genişliğinde ve o yolla komşularının
+   yanında küçük kalıyordu. Ölçek **√alan**'a göre veriliyor, tuval yine de
+   aşılmıyor.
+
+> Ders: üretilen varlık **kaynak**tır, ürün değil. Araya bir üretim adımı
+> koymak "elle düzelt"ten ucuz: aynı kusur bir daha gelirse yine düzelir —
+> ve elle kırpmak, kusuru üretimin kendisine yazmak demekti.
+
+### İki ikon yanlış adla gelmişti
+
+Kırpılmış dosyalar arasında `ara.png` bir **hoparlör** çizimiydi,
+`dinleme.png` ise harf karoları. İkisi de yanlış yerdeydi ve sebebi yine
+kırpmaydı — kaynak sayfaya bakınca hoparlörün `ses`, karoların `harf`
+olduğu, `ara`nın ise hiç çıkarılmamış **büyüteç** olduğu görüldü.
+
+Setteki adlar **ne gösterdiğine** değil **nerede kullanıldığına** göre anılıyor:
+`ses` bir hoparlör çizimi ama uygulamada telaffuzun adı.
+
+### Kırpılmış PNG'ler kaynak sanılmıştı
+
+Depoda `brand/ikonlar/` altında 20 tane 64px'lik PNG duruyordu ve bunlar
+"ikonlar" sanılıyordu. Ekranda üç ayrı kusur çıktı, üçü de aynı kökten:
+
+- `egzersiz`in (hedef tahtası) **alt halkası düz kesikti**.
+- `bugun` ve `zor`un üstünde, gövdeden boş bir satırla ayrılmış **yabancı
+  çubuklar** vardı.
+- `harf` (harf karoları) ile bir başka karo çizimi **neredeyse aynıydı**;
+  ikisini iki ayrı ikon sanıp birini kelime listesine koymuştum.
+
+Kök sebep: ikonlar tek tek üretilmemişti. Hepsi **tek bir sayfada**,
+5×5'lik bir ızgarada birlikte çizilmişti ve o sayfadan gözle kırpılmıştı.
+Dar kutular şekilleri kesiyor, komşu hücrelerden parça bulaştırıyordu —
+ve beş karo genişliğindeki `harf` ikonu **ortadan ikiye bölünmüştü**. İki
+"ayrı" karo ikonu aslında aynı ikonun sol ve sağ yarısıydı.
+
+### Yeniden üretmek değil, yeniden indirmek
+
+Kullanıcı "tekrar indirip ayarlar mısın" dedi ve doğru olan buydu: sayfa
+Magnific'te duruyordu (`iGdE85Q3uK`). **Var olan bir üretimi indirmek kredi
+harcamıyor**, yalnızca üretmek harcıyor — yani kredi bitmiş olması bu işi
+engellemiyordu.
+
+İndirilen sayfa 1152×928: hücre başına ~230px, eldekinin **4 katı
+çözünürlük**. İçinde bir de hiç çıkarılmamış **büyüteç** varmış, artık
+arama kutularında duruyor. Model dört ikonu ikişer kez çizmiş; ikizlerden
+sarı vurgusu olanı alınıyor, çünkü setin kuralı "her ikonda bir sarı
+vurgu" ve vurgusuz olan onu bozuyordu (`bekleyen` bu yüzden değişti).
+
+Kırpmayı artık göz değil ölçüm yapıyor: satır izdüşümünden satır bantları,
+**her satırın kendi içinde** sütun bantları. Sütunları tüm sayfadan aramak
+işe yaramıyor — geniş `harf` ikonu üstteki sütun boşluklarını kapatıp
+ızgarayı 5 yerine 4 sütun gösteriyor.
+
+Bir ikon kopuk parçalardan oluşabiliyor (hoparlörün konisi ile ses dalgaları
+arasında 5 piksel var), o yüzden 40 pikselden yakın bantlar birleştiriliyor;
+hücreler arası boşluk 80 pikselden geniş olduğu için eşik ikisini ayırıyor.
+
+### Krem zemin alfaya nasıl çevrildi
+
+Sayfanın zemini krem, ikonların olması gereken yer şeffaf. Sert bir renk
+anahtarı (krem → şeffaf) kenarları tırtıklı bırakırdı: çizginin kenarındaki
+piksel krem ile mürekkebin **karışımı**.
+
+Onun yerine her piksel iki karışım doğrusuna izdüşürülüyor
+(zemin→mürekkep, zemin→kanca): hangi doğruya daha yakınsa rengi o, doğru
+üzerindeki konumu da alfası. Yumuşak kenar korunuyor, renk tam token oluyor.
+
+İki renk + alfa rampası 16 girdilik palete rahat sığıyor. 40 dosya
+128 pikselde **114 KB** — eski 64 piksellik setten (151 KB) küçük.
+
+### Kelime listesi kart destesi taşıyor
+
+"Kelimeler" listesine konan karo ikonu `harf`in yarısı çıkınca yeri boşaldı.
+Liste artık `kartlar` (kalpli kart destesi) taşıyor — Egzersiz'deki "Kartlar"
+kutusuyla **aynı ikon**. Zorlama değil: ikisi de aynı şeyi gösteriyor,
+öğrendiğin kartlar.
+
+> Ders: "set tamam görünsün" diye boş slotu doldurmak, boş bırakmaktan kötü.
+> Bir ikonun iki anlamı olması, bir kavramın ikonsuz kalmasından daha çok
+> karıştırıyor — üstelik buradaki "iki ikon" hiç var olmamıştı bile.
+
+### `dark` kartı kendi çerçevesiyle gelmişti
+
+100 kartı yan yana dizince biri ayrıksı duruyordu: `dark`. Sebebi kırpma
+değil, **çizimin kendisiydi** — model onu tuvalin ortasına, etrafında geniş
+boş pay bırakan bir yuvarlak dikdörtgen içine çizmişti. İçerik 1200×896'lık
+tuvalin yalnızca %62'sini kaplıyordu ve `cover` o payı olduğu gibi koruyordu.
+
+`import-images.mjs` artık listelenen id'lerde çerçeveyi atıyor: içeriğin sınır
+kutusu bulunuyor, sonra kutu 4:3'e **genişletiliyor** — kırpılmıyor. Kenarda
+226 piksel pay olduğu için genişletme gerçek piksellerden geliyor; uydurma
+zemin eklenmiyor, çizimden de bir şey kesilmiyor.
+
+Liste elle tutuluyor, kural otomatik değil: kartların çoğunda zemin düz bir
+renkle kenardan kenara doluyor ve orada "içerik kutusu" çizimin *kendisi*
+olur — kırpmak onları yakınlaştırıp bozardı.
+
+> Dikkat: kancası "dark ≈ **dar**" ve görsel notu "iki duvar arasında daralan
+> karanlık sokak". Yani sokağın dar olması yöntemin kendisi; düzeltilen şey
+> çizimin kendi çerçevesi içinde küçük kalmasıydı.
+
+### Sette çalışmayan tek ikon: harf
+
+`harf` artık tam ve doğru ama **beş karo genişliğinde**, yani 4:1 bir çizim.
+Egzersiz kutusundaki 20 pikselde 20×5 piksele sıkışıyor ve koyu bir leke
+olarak okunuyor. Rayı kesip kırpmak yeni bir kesik kenar yaratacağı için
+elle düzeltilmedi; kredi gelince o hücre üç karo olarak yeniden çizilmeli.
+
+### `ikon` alanı resim değil, AD taşıyor
+
+`exercise.ts` merdivenin kurallarını tutuyor ve **saf** — DOM yok, varlık yok,
+test edilebilir. Basamağa doğrudan resim URL'si koymak o saflığı bozardı.
+Onun yerine `IkonAd` taşıyor; adın hangi dosyaya düştüğünü yalnızca
+`icons.ts` biliyor.
+
+Bu bağ **çalışma anında** kuruluyor, yani tip sistemi göremiyor: `brand/`
+içinde bir dosyanın adı değişip `IKONLAR` listesi eski adda kalırsa derleme
+sessizce geçer, ekranda ikon kaybolur. `icons.test.ts` tam bunu tutuyor —
+her adın iki dosyası var mı, ve üretilen her dosya listede mi.
+
+### Paketin yarısı base64'e gömülüyordu
+
+İlk derlemede 40 ikonun 17'si dosya, 23'ü **base64 olarak paketin içinde**
+çıktı. Sebep Vite'ın varsayılan 4 KB sınırı: set tam ortasına düşüyor. İki
+sonucu vardı — ana paket ~100 KB'lik base64 ile şişiyor ve *aynı setin*
+ikonları birbirinden farklı davranıyordu.
+
+`assetsInlineLimit` bir işlevle daraltıldı: `/assets/ikonlar/` altındakiler
+hiç gömülmüyor. Uygulama zaten çevrimdışı, servis çalışanı `**/*.png`'yi
+ön-belliyor — dosya olmaları hiçbir şey kaybettirmiyor, ana paket 573 KB'den
+476 KB'ye indi.
+
+> Tuzak: `assetsInlineLimit` işlevi `true` dönerse **zorla gömer**. İlk
+> yazılışta yüklem ters kurulmuştu ve kart görselleri o dala düşüp ana paketi
+> 2,3 MB yapmıştı. Doğrusu: `false` = gömme, `undefined` = her zamanki sınır.
+
+### Sette olmayan üç ikon
+
+`🔥` (seri), `❄️` (seri koruma) ve `🎉` (set finali) hâlâ emoji — setin bu üçü
+için çizimi yok ve üretim kredisi bitti. Elle çizilen, setin çizgi kalınlığını
+tutturamayan bir alev koymaktansa tanınır bir emoji bırakmak daha az kötü.
+Kredi gelince üretilecek ilk üç ikon bunlar.
+
+`✓`, `←`, `›` ise **tipografik** ve öyle kalmalı: onlar ikon değil, işaret.
+
+### Bildirim ikonu: örnek değer üretimde kalmış
+
+`capacitor.config.json` Capacitor'un **belgelerindeki örnek değeri**
+taşıyordu: `smallIcon: "ic_stat_icon_config_sample"`. Eklenti böyle bir
+drawable göndermiyor (`@capacitor/local-notifications` içinde yalnızca
+`ic_transparent.xml` var), yani ad hiçbir şeye çözülmüyor ve Android
+uygulama simgesine düşüyordu — durum çubuğunda **beyaz bir leke**.
+
+Günlük hatırlatma gerçekten gönderildiği için (Ayarlar'daki o satır, APK'da)
+bu görünen bir kusurdu.
+
+**Neden logo kullanılamadı.** Durum çubuğu ikonu bir ALFA MASKESİDİR: Android
+bütün opak pikselleri beyaza boyar, renk atılır. Logonun dolu beyin formu
+böyle olunca 24 pikselde tanınmaz bir lekeye dönüşüyor — denendi, görüldü.
+
+**Çözüm ikon setinden geldi.** Setteki çizimler *çizgi* çizimi; içleri şeffaf
+olduğu için siluete çevrilince yapılarını koruyorlar. `ogren` (filiz) seçildi:
+zaten "Öğren" sekmesinin sembolü, yani bildirim uygulamanın kendi diliyle
+"öğrenme vakti" diyor. 24 pikselde okunuyor.
+
+`iconColor` da değişti: `#16233A` → `#4F92F6`. Bildirim gölgesinde küçük ikon
+bu renkle boyanıyor; koyu lacivert, koyu temadaki gölgede kayboluyordu.
+Marka mavisi hem açık hem koyu gölgede okunuyor.
+
+**Yerleştirme ayrı bir adım.** `android/` depoda tutulmuyor, her seferinde
+`cap add android` ile üretiliyor; `@capacitor/assets` ise launcher ve açılış
+ekranını üretiyor, bildirim ikonunu **üretmiyor**. Bu yüzden
+`npm run icons:bildirim` `cap add android` SONRASINDA çalıştırılmalı —
+tıpkı build.gradle'daki `buildDirectory` bloğu gibi.
+
+> Betik çalıştırılmazsa davranış bugünküyle aynı kalır (ad çözülmez,
+> uygulama simgesine düşer), yani unutmak bir gerileme yaratmıyor —
+> sadece düzelme olmuyor.
+
+---
+
+## 2026-09-22 — Ders içinde ritim: geçiş anı
+
+### İstek kutlamaydı, çıkan şey kutlama olmadı
+
+İstek şuydu: *"her aşama bittikten sonra kutlama olsun, tebrikler bitirdiniz
+tarzı"*. Altında gerçek bir kusur vardı — ders **uzun bir düz akış**. Beş
+kelime × altı basamak = otuz soru, arada hiçbir kapanış hissi yok.
+
+Ama kutlama yanlış araçtı, üç sebeple:
+
+1. **Ödül enflasyonu.** Bu üründe kutlanacak iki an zaten var ve ikisi de
+   nadir: ders sonu (`SessionDone`) ve setin bitmesi (`SetFinale` — dosyanın
+   kendi yorumunda "bir kez yaşanan an" diye geçiyor). Her aşamaya tebrik
+   koymak o ikisini düzleştirir.
+2. **Akış maliyeti.** Bu ürünün en büyük kazancı üç düğmeyi tek "Başla"ya
+   indirmekti. Aşama başına kutlama, her aşamanın arasına bir duraklama
+   koyar.
+3. **Yanlış şeyi kutlamak.** 1-2. basamakta kanca ekranda duruyor —
+   `olculebilir()` bu yüzden orada `false` döndürüyor. Oradaki doğru
+   "kanca tuttu" demiyor. Katılımı ödüllendirmek, "beyan yerine ölçüm"
+   ilkesinin tam tersi.
+
+Onun yerine **geçiş anı**: ne kapandı, kaç doğru, ne açılıyor. Tebrik dili
+yok, konfeti yok, sayı gerçek.
+
+### Kaç tane olacağı zaten belliydi
+
+İlk öneri "bölüm araları" idi (2 geçiş) ama kodu okuyunca görüldü ki öğrenme
+testi merdivenin **altı basamağını da** sırayla koşuyor
+(`ADIMLAR.flatMap(...)`) — yani kullanıcının tarif ettiği aşamalar gerçekten
+var. Dosyanın tepesindeki açıklama hâlâ "merdivenin 1-2. basamağı" diyordu,
+bayat kalmış; düzeltildi.
+
+Altı geçiş fazlaydı, ikisi azdı. Doğru sayı **üçtü** — çünkü merdivenin üç
+bölgesi zaten iki ekranda yaşıyordu: Egzersiz'de basamak kutularının rengi
+(mavi/sarı/nane), İlerleme'de "Neler yapabildin" çubukları. Geçiş anı yeni
+bir kavram icat etmiyor, var olanı tekrar ediyor:
+
+| Basamak | Renk | Geçişte |
+|---|---|---|
+| 1–2 | mavi | **Tanıdın** → "Şimdi kanca ekrandan kalkıyor" |
+| 3–4 | sarı | **Hatırladın** → "Şimdi kelimeyi baştan sen yazacaksın" |
+| 5–6 | nane | **Ürettin** |
+
+Başlıklar **geçmiş zaman**: bölge bittiğinde gösteriliyor, yani az önce
+yapılan şey. "Tanıma" değil "Tanıdın".
+
+### Üç bölge artık tek kaynakta
+
+`BOLGELER` + `bolgelereBol()` `exercise.ts` içinde — modül saf kalıyor, ikon
+ve renk **ad** olarak taşınıyor (`ADIM`'ın `ikon` alanıyla aynı desen).
+Egzersiz ve İlerleme ekranları bir gün buradan beslenebilir.
+
+### Runner'a dokunulmadı
+
+Motor bir basamağın bittiğini dışarı vermiyor. Ona olay eklemek yerine
+öğrenme testi **bölge bölge koşturuluyor**: her bölge kendi `Runner`'ını
+alıyor, `onDone` zaten aradığımız sınır. Motorun sözleşmesi değişmedi.
+
+Son bölgenin geçişi aynı zamanda bölümün geçişi — üst üste iki ekran
+çıkmasın diye `bolumGecisi('ogrenme')` bilerek `null` dönüyor. Son bölümün
+ardından geçiş anı hiç gösterilmiyor: orada `SessionDone` var ve asıl
+kutlama o.
+
+### Ertelenen: hesap
+
+Aynı turda "kullanıcı oluşturma mantıklı mı" diye soruldu. Cevap **hayır,
+bu aşamada değil** — gerekçesi "Sırada" listesindekiyle aynı: yayın → D1/D7
+→ sonra karar. Kayıt duvarı "haa" anından önce konursa hesabın kurtardığından
+fazlasını kapıda kaybettirir.
+
+İstenen şeyin özü hesap değilmiş: *"kendi hesabı gibi görsün, yedeği yine
+cihaza alsın, ismini kendi seçsin"*. Bu **yerel profil** demek ve sunucusuz
+yapılabilir; ileride bulut gelirse bu profil çapa olur. Ayrı bir tura bırakıldı.
+
+> Dikkat: yerel profil "kaç kişi kullanıyor" sorusunu ÇÖZMÜYOR. Cihazda duran
+> bir isim kimseye ulaşmaz; sayım ayrı bir iş ve tek yolu anonim bir ping
+> (ya da APK Play'e girerse Play Console).
+
+---
+
+## 2026-09-22 — Yerel profil, avatarlar ve çerçeveler
+
+### Kredi bitmemişti
+
+Bu turun başında "Magnific kredisi bitti" varsayımıyla üç iş ertelenmişti:
+beş karolu `harf` ikonu, `🔥`/`❄️`/`🎉` emojileri ve çerçeve fikri.
+Bakiye kontrol edilince **192.535 kredi** çıktı (planın 216.000'inin
+23.465'i harcanmış). Erteleme gereksizmiş.
+
+> Ders: "kredi yok" bir varsayımdı, bir ölçüm değil. Maliyeti olan bir
+> karar vermeden önce bakılacak bir sayı varsa bakılır.
+
+### Hesap değil, PROFİL
+
+İstek "kullanıcı oluşturma" diye başladı, konuşunca özü çıktı: *"kendi
+hesabı gibi görsün, yedeği yine cihaza alsın, ismini kendi seçsin"*.
+Yani istenen şey hesap değil, **kimlik hissi**.
+
+Kurulan şey tamamen yerel: e-posta yok, şifre yok, giriş yok, sunucu yok.
+Uygulama içinde her yerde "profil" denir — "hesap" denirse insanlar
+verilerinin bulutta olduğunu sanıp yedek almayı bırakır ve veri kaybı
+**artar**.
+
+**Profil kendiliğinden oluşur.** İlk açılışta ad ve avatar üretilir
+(`profilSagla`), kullanıcıya "adın ne" diye sorulmaz. Kayıt duvarı yeni
+bir uygulamanın en pahalı ekranıdır ve "haa" anından önce konursa
+kazandırdığından fazlasını kapıda kaybettirir. İsteyen Ayarlar'dan
+değiştirir, istemeyen hiç fark etmez.
+
+**Ad ile yüz aynı yerden geliyor.** Otomatik ad sıfat + hayvan
+("Meraklı Tilki") ve avatar da o hayvan. Kullanıcı hiçbir şey yapmadan
+kendine ait bir şeye bakıyor. `HAYVANLAR` listesi ile avatar klasörü
+ayrışırsa profil adsız bir yüze düşer — test ikisini karşılaştırıyor.
+
+### İleride bulut istenirse ne işe yarar
+
+Soru buydu ve cevabı net: **ad ve fotoğraf değil, `id` işe yarar.**
+
+`Profil.id` rastgele, kalıcı, görünmez bir kimlik. Ad kimlik değildir —
+iki kişi de "Meraklı Tilki" olabilir, kullanıcı adını her gün
+değiştirebilir. Bu alan olmadan bulut senkronu geldiğinde *"bu aynı
+kişinin yeniden kurulumu mu, yoksa başka biri mi"* sorusu cevapsız kalır
+ve herkes sıfırdan başlar. Üretildiği an dışında hiç değişmiyor,
+kullanıcıya hiç gösterilmiyor, hiçbir yere gönderilmiyor — ama **yedeğe
+giriyor**, yani cihaz değiştiren kişi kimliğini de taşıyor.
+
+`olusturuldu` ikinci yarısı: iki cihaz birleşirse hangisinin eski olduğu
+oradan bilinir.
+
+> Yine de: yerel profil **"kaç kişi kullanıyor"u çözmüyor.** Cihazda duran
+> bir isim kimseye ulaşmaz. Sayım ayrı bir iş; tek yolu anonim bir ping
+> (aynı `id` kullanılabilir) ya da APK Play'e girerse Play Console.
+
+**Fotoğraf ayrı tutuldu.** `Avatar` birleşim tipinde `foto` ayrı bir dal:
+bulut senkronu gelirse hayvan/ikon seçimi zararsızca taşınır ama fotoğraf
+**kişisel veridir** ve ayrı bir onay ister.
+
+### Çerçeveler satılmıyor, kazanılıyor
+
+İstek "oyunlardaki premium çerçeveler, hatta bazen satılıyor" idi. Altı
+çerçeve üretildi (halka, halat, taşlı, defne, güneş, kraliyet) ama
+satılmıyorlar: **gerçek ilerlemeyle** açılıyorlar — 10/25/50 kelime,
+7 günlük seri, seti bitirmek. Şart "uygulamayı 3 gün aç" gibi bir
+katılım ölçüsü değil, iş ölçüsü; bu üründe ödül yapılan şey için verilir.
+
+Hak edilmemiş çerçeve **okurken** düzeltiliyor (`gecerliCerceve`): yedek
+başka cihazdan gelirse ya da ilerleme sıfırlanırsa profil varsayılana
+düşer. Kayda dokunulmuyor — koşul yeniden sağlanırsa çerçeve geri gelir.
+
+### Çerçevenin deliği ölçülüyor — bu işin can alıcı yeri
+
+Altı çerçeve aynı sayfada çizildi ama birbirinin aynı değil: defnenin
+yaprakları dışa taşıyor, dikenli taç çok daha geniş, kraliyetin tepesinde
+taç var. Hepsini aynı **dış** kutuya oturtmak işe yaramaz — o zaman iç
+delikler farklı büyüklükte olur ve avatar kimi çerçevede taşar, kiminde
+ortada küçücük kalır.
+
+Hizalama bu yüzden dışarıdan değil **içeriden**: her çerçevenin deliği
+flood fill ile bulunuyor (merkez + yarıçap), sonra çizim o delik sabit
+bir orana gelecek şekilde ölçekleniyor ve delik merkezi tuval merkezine
+oturtuluyor. Kutu merkezi kullanılamazdı: taç yüzünden çizim simetrik
+değil, delik kutunun ortasında durmuyor.
+
+Oran da elle yazılmıyor. En geniş çerçeve (dikenli taç) deliğin 1,67 katı
+olduğu için delik ancak 0,58 olabiliyor; üretim bunu hesaplayıp
+`olcu.json`'a yazıyor, `Avatar` bileşeni oradan okuyor. İki yerde tutulan
+bir sayı, çerçeve seti değişince avatarın sessizce kayması demekti.
+
+### Çerçeveler madeni kademeye döndü
+
+İlk set altı ayrı süslemeydi (halka, defne, taşlı, dikenli, halat,
+kraliyet) ve hepsi lacivert + sarıydı. Ekranda görülünce eksik olan şey
+belli oldu: **hangisinin daha değerli olduğu anlaşılmıyordu.** Altı farklı
+şekil, altı eşit görünüm — sıra ancak altındaki yazı okunarak biliniyordu.
+
+Son dördü madeni kademeye çevrildi: **bakır → gümüş → altın → platin**.
+Kademe artık renkten okunuyor. İlk ikisi markanın kendi dilinde kaldı —
+başlangıç çerçevesinin arayüzün geri kalanıyla aynı dilde olması doğru.
+
+Bu, "düz dolgu, gradyan yok" kuralının bilerek delindiği tek yer: bunlar
+arayüz ikonu değil, **kazanılan nesneler**. Üretim tarafında da ayrı bir yol
+gerekti — `boya()` her pikseli iki karışım doğrusundan birine indirgiyor,
+madeni geçişler onlarca ton taşıyor. `renkliKes()` alfayı zeminden
+uzaklıkla veriyor ve rengi karışımdan geri çözüyor
+(`F = (P − (1−a)·BG) / a`), yoksa yarı saydam kenarlarda krem bir hale
+kalıyordu.
+
+### Seri kırılınca çerçeve geri alınıyordu
+
+Çerçeve kilidi `streakCount`'a, yani **mevcut** seriye bakıyordu. Yani 7
+günlük seriyle Gümüş'ü açan biri bir gün kaçırınca çerçeveyi kaybediyordu.
+
+Bu bir ceza ve serinin kendi kuralıyla çelişiyor: *"ödül var, ceza yok —
+kırılınca suçlayıcı bildirim gelmez"*. Kazanılmış bir nişanı geri almak,
+suçlayıcı bildirimden daha ağır.
+
+`AppState.bestStreak` eklendi: yalnızca büyüyen bir sayı, her seans
+sonunda `max` ile güncelleniyor. Kilitler ona bakıyor. Eski kayıtlarda
+alan yok, `getState` onu mevcut seriyle dolduruyor — geçmişteki daha uzun
+bir seri bilinmiyor ama kullanıcıyı bugün sahip olduğundan geride
+göstermek yanlış olurdu.
+
+> Ders: "kazanıldı" ile "şu an geçerli" ayrı şeyler. Bir rozet ikincisine
+> bağlanırsa rozet değil, kira olur.
+
+### Seçim halkası resimden büyüktü — iki ayrı sebep
+
+Hayvan seçme ızgarasında seçili olanın etrafındaki halka resimden belirgin
+biçimde genişti, bozukluk gibi duruyordu. İki sebebi vardı ve ilki
+düzeltilince ikincisi ortaya çıktı.
+
+**Birincisi:** `Avatar` sabit piksel ölçüsüyle çiziliyordu (68px) ama düğme
+ızgara hücresi kadar genişti; halka düğmeyi sarıyor, resim içeride küçük
+kalıyordu. `w-full` sınıfı işe yaramıyordu çünkü satır içi `style` onu
+eziyor. `boyut="tam"` eklendi: sabit piksel yerine kapsayıcıyı dolduruyor,
+iç çember de yüzdeyle veriliyor.
+
+**İkincisi — asıl inatçı olan:** `Avatar`'ın kökü `inline-grid`'di. Satır
+içi bir öğenin altında **taban çizgisi boşluğu** kalıyor, yani kapsayıcı
+düğme resimden birkaç piksel uzun oluyor ve halka bir daire değil hafif
+oval, resimden büyük bir şekil olarak çiziliyordu. `grid`'e (blok seviyesi)
+çevrilince boşluk kayboldu: düğme 61,6×61,6, resim 61,6×61,6.
+
+Halka kalınlığı da 3px'ten 2px'e indi.
+
+> Ders: "ölçüyü büyüttüm, hâlâ oturmuyor" dendiğinde ölçü değil YERLEŞİM
+> modeline bakılmalı. Tarayıcıda görülen boşluğun kaynağı çoğu zaman
+> yazılan bir sayı değil, öğenin satır içi mi blok mu olduğudur.
+
+### Ana ekranda iki bölüm yüzeysizdi
+
+"Bugünün hedefi" çubuğu ve "Son tanıştıkların" cipleri sayfanın zemininde,
+kartların arasında **yüzer halde** duruyordu. Ekrandaki her şey bir yüzeyin
+üzerindeyken tek başına duran o iki satır eksik görünüyordu — bu uygulamanın
+dili kart: *"beyaz, yuvarlak, yumuşak gölgeli bir nesne"*.
+
+İkisi de karta alındı. İki küçük ama gerekli ayrıntı:
+
+- İlerleme çubuğunun zemini `white/70`'ten `sunken`'a döndü — beyaz kartın
+  üzerinde beyaz çubuk görünmüyor.
+- Kanca çipleri de `white`'tan `sunken`'a; aynı sebep.
+
+"Son tanıştıkların" yanındaki **"12 kelime" sayacı kaldırıldı.** O bölüm bir
+ölçüm değil, son öğrenilenlere bakma yeri; sayı zaten hemen üstteki hedefte
+ve İlerleme sekmesinde duruyor. İki yerde duran sayı, üçüncü yerde gürültü.
+
+### Geri alınan: ikon avatarları
+
+Avatar olarak marka ikonu + renkli zemin de seçilebiliyordu (23 × 6 = 138
+kombinasyon). Ekranda görülünce kalktı: **hayvan portrelerinin yanında
+sönük duruyordu.** Çizilmiş, ifadeli, renkli dokuz yüzün yanına iki renkli
+bir arayüz ikonu koymak, ikisini de zayıflatıyor — biri profil resmi gibi
+durmuyor, diğeri de artık "tek seçenek" olmanın netliğini kaybediyor.
+
+Seçenek sayısı düştü ama seçim kolaylaştı: hayvan ya da kendi fotoğrafın.
+
+Tip birleşiminden de çıkarıldı, yani artık üretilemez. Eski bir kayıtta
+kalmış olabilir diye `profilDuzelt` okurken onu hayvana çeviriyor —
+tercihen **adın kendi hayvanına** ("Şen Baykuş" → baykuş).
+
+> Ders: bir seçenek eklemek bedava değil. Yanına konduğu şeyi de
+> değiştiriyor.
+
+### Emojiler bitti
+
+`seri`, `koruma`, `kutlama` ikinci ikon sayfasıyla geldi; `🔥 ❄️ 🎉`
+kalktı. Arayüzde artık `✓`, `←`, `›` dışında emoji yok — o üçü de
+tipografik işaret, ikon değil.
+
+İkinci sayfanın ilk denemesi **dolu siluet** olarak geldi ve setin çizgi
+diliyle örtüşmedi. Atılmadı, stil açıkça tarif edilip bir kez yeniden
+üretildi: *"bunlar KONTUR ikonları, içi boş, dolu glif değil"*.
+
+---
+
 ## Ortam
 
 `/Volumes/TwinMOS` **exFAT**. macOS her dosyanın yanına `._` gölgesi bırakıyor;
@@ -673,8 +1164,11 @@ ve vitest `exclude` ile kapatıldı. Yine de çarparsa: `find . -name '._*' -del
 Kapsam kararı gereği sıra **veriden sonra** açılıyor: 26 kartlık set yayına
 çıkacak, D1/D7 ölçülecek, kalan işler ondan sonra sıralanacak.
 
-1. **Yayın** — GitHub Pages + telefonda PWA kurulumu; APK'daki telaffuz
-   gerçek cihazda doğrulanacak (kod yazıldı, cihazda denenmedi).
+1. **Yayın** — GitHub Pages + telefonda PWA kurulumu. APK çıkarıldı ve
+   içeriği doğrulandı (184 web varlığı, uygulama simgesi 6 yoğunluk,
+   bildirim ikonu 5 yoğunluk). **Cihazda denenmemiş iki şey kaldı:**
+   APK'daki telaffuz ve bildirimin durum çubuğu ikonu — ikisi de yalnızca
+   gerçek telefonda görülebilir.
 2. **Kanca aday üretim hattı** — havuzu ~600'e çıkaran tek kaldıraç.
    CMU fonetik sözlüğü + Türkçe kelime listesi + fonem mesafesi → sıralı aday
    listesi. "Haa testi" insanda kalır; moat orası.

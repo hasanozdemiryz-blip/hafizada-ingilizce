@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { Card, Screen, Streak } from '../components/ui';
+import { Card, Ikon, Screen, Streak } from '../components/ui';
 import { getAnswers } from '../db';
 import { TAB_SPACE } from '../components/TabBar';
 import { FREEZE_MAX } from '../dates';
@@ -66,7 +66,7 @@ export function ProgressScreen({
           className="rise rounded-card bg-gradient-to-br from-ink to-[#2c3d5c] p-5 text-left text-white shadow-[var(--shadow-lift)] transition-all active:scale-[0.98]"
         >
           <div className="flex items-center gap-4">
-            <span className="text-3xl leading-none">📖</span>
+            <Ikon ad="kartlar" ters className="h-8 w-8 shrink-0" />
             <span className="min-w-0 flex-1">
               <span className="word block text-xl font-extrabold">Kelimeler</span>
               <span className="block text-sm text-white/70 mt-0.5">
@@ -215,9 +215,11 @@ export function ProgressScreen({
             </div>
             <div className="flex gap-1 shrink-0 ml-3">
               {Array.from({ length: FREEZE_MAX }, (_, i) => (
-                <span key={i} className={`text-2xl ${i < state.freezes ? '' : 'grayscale opacity-25'}`}>
-                  ❄️
-                </span>
+                <Ikon
+                  key={i}
+                  ad="koruma"
+                  className={`h-7 w-7 ${i < state.freezes ? '' : 'opacity-25 saturate-0'}`}
+                />
               ))}
             </div>
           </div>

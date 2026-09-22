@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Button, Card } from './ui';
+import { Button, Card, Ikon } from './ui';
 import { shareHookBoard } from '../share';
 
 /**
@@ -66,7 +66,7 @@ export function SetFinale({
   if (variant === 'kart') {
     return (
       <Card className="rise text-center py-8">
-        <div className="text-5xl mb-2">🎉</div>
+        <Ikon ad="kutlama" className="h-14 w-14 mx-auto mb-2" />
         <p className="word text-2xl font-extrabold">Seti bitirdin</p>
         {govde}
       </Card>
@@ -75,7 +75,7 @@ export function SetFinale({
 
   return (
     <div className="text-center">
-      <div className="pop text-6xl">🎉</div>
+      <Ikon ad="kutlama" className="pop h-16 w-16 mx-auto" />
       <h1 className="word text-3xl font-bold mt-4">Seti bitirdin</h1>
       {govde}
     </div>
