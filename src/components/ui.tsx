@@ -69,9 +69,17 @@ export function Screen({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Ust serit.
+ *
+ * Yukseklik geri dugmesiyle AYNI (48px): once 44px'ti ve dugme 48'e
+ * cikinca serit onu tutamayip alttaki ilerleme cubuguyla cakisiyordu.
+ * Ikisi tek sayidan beslenmeli, yoksa biri degisince digeri sessizce
+ * tasar.
+ */
 export function TopBar({ left, right }: { left?: ReactNode; right?: ReactNode }) {
   return (
-    <div className="flex items-center justify-between h-11 shrink-0 text-sm font-medium text-ink-soft">
+    <div className="flex items-center justify-between h-12 shrink-0 text-sm font-medium text-ink-soft">
       <div>{left}</div>
       <div className="tabular-nums">{right}</div>
     </div>

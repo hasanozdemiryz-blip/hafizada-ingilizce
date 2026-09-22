@@ -578,7 +578,8 @@ export function Lesson({
   return (
     <Screen>
       <TopBar left={<BackButton onClick={cikmakIstiyor} />} />
-      <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-ink-faint">
+      {/* `mt-2` diger yoldaki etiketle ayni: serit ile etiket birlesik durmasin */}
+      <p className="text-center text-xs font-bold uppercase tracking-[0.14em] text-ink-faint mt-2">
         {bolumEtiketi}
       </p>
       <Runner

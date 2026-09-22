@@ -97,17 +97,25 @@ export function Runner({
   // --- Eslestirme blogu ---
   if (blok.tip === 'eslestirme') {
     return (
-      <Match
-        key={i}
-        cards={blok.kartlar}
-        onDone={async (sonuc) => {
-          if (busy) return;
-          setBusy(true);
-          // Eslestirme blogu yalnizca 1. basamak gorevlerinden kurulur
-          for (const [cardId, ok] of sonuc) await onResult(cardId, ok, false, 1);
-          ilerle();
-        }}
-      />
+      /*
+        Sarmalayici asagidaki genel donusle AYNI: `flex-1 justify-center`.
+        Once dogrudan <Match /> donuyordu, yani eslestirme merdivenin tek
+        egzersizi olarak dikey ortalanmiyordu — ekranin tepesine yapisip
+        bolum etiketiyle birlesik duruyordu.
+      */
+      <div className="flex-1 flex flex-col justify-center py-6">
+        <Match
+          key={i}
+          cards={blok.kartlar}
+          onDone={async (sonuc) => {
+            if (busy) return;
+            setBusy(true);
+            // Eslestirme blogu yalnizca 1. basamak gorevlerinden kurulur
+            for (const [cardId, ok] of sonuc) await onResult(cardId, ok, false, 1);
+            ilerle();
+          }}
+        />
+      </div>
     );
   }
 
