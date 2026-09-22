@@ -24,3 +24,9 @@ brand/denemeler/
 
 # Ham havuz disa aktarimi — tek kaynak kart-havuzu-300.xlsx, bu ondan turuyor
 /cards.json
+
+# Release imzasi — keystore KAYBOLURSA uygulama bir daha guncellenemez.
+# Depoya girmez; yedegi ayri bir yerde, parolayla birlikte durmali.
+android-imza.properties
+*.jks
+*.keystore
