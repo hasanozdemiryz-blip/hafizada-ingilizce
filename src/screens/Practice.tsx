@@ -531,23 +531,51 @@ export function Practice({
 
             <section className="mt-1">
               <h2 className="text-sm font-semibold text-ink-soft mb-2">Hangi egzersiz</h2>
+
+              {/*
+                Dersi tekrar etmek: kartlari yeniden gor, sonra alti basamak
+                sirayla — dersin ogrenme testinin aynisi. Merdiven ve
+                zamanlama oynamaz, o yuzden istedigin kadar yapilabilir.
+
+                TAM SATIR ve digerlerinden buyuk, cunku BIRINCIL secim bu:
+                "Hangi kelimeler" bolumunde "Bugün" nasil tek basina duruyorsa
+                burada da ayni kalip — en cok istenen sey ilk goz carpan sey
+                olmali. Ustteki kutu mavi, bu lacivert: kapsam renkli,
+                egzersiz tipi lacivert (bkz. KAPSAMLAR).
+              */}
+              <button
+                onClick={() => {
+                  setAdim('ders');
+                  setKartIndex(0);
+                }}
+                className={`w-full mb-2 rounded-2xl px-4 py-4 text-left transition-all active:scale-[0.98] ${
+                  adim === 'ders'
+                    ? 'bg-ink text-white shadow-[var(--shadow-lift)]'
+                    : 'bg-white text-ink shadow-[var(--shadow-soft)]'
+                }`}
+              >
+                <div className="flex items-center gap-3.5">
+                  <span
+                    className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${
+                      adim === 'ders' ? 'bg-white/15' : 'bg-sunken'
+                    }`}
+                  >
+                    <Ikon ad="ders" ters={adim === 'ders'} className="h-7 w-7" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="word block text-base font-extrabold leading-tight">
+                      Dersi tekrar et
+                    </span>
+                    <span
+                      className={`block text-xs mt-1 ${adim === 'ders' ? 'text-white/70' : 'text-ink-faint'}`}
+                    >
+                      kartları gör, 6 basamak sırayla
+                    </span>
+                  </span>
+                </div>
+              </button>
+
               <div className="grid grid-cols-2 gap-2">
-                {/*
-                  Dersi tekrar etmek: kartlari yeniden gor, sonra alti basamak
-                  sirayla — dersin ogrenme testinin aynisi. Merdiven ve
-                  zamanlama oynamaz, o yuzden istedigin kadar yapilabilir.
-                */}
-                <EgzersizKare
-                  ikon="ders"
-                  ad="Dersi tekrar et"
-                  alt="kartları gör, 6 basamak sırayla"
-                  zemin="bg-sunken"
-                  secili={adim === 'ders'}
-                  onClick={() => {
-                    setAdim('ders');
-                    setKartIndex(0);
-                  }}
-                />
                 <EgzersizKare
                   ikon="karisik"
                   ad="Karışık"
