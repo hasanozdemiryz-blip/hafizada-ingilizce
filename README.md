@@ -25,7 +25,13 @@ npm run dev        # http://localhost:5173
 | `npm run icons` | `brand/logo-isaret.svg` → tüm ikon ve marka türevleri |
 | `npm run lockup` | işaret + isim → yazılı kilit ve profil görselleri |
 
-Yeni bilgisayarda: repoyu klonla, `npm install`, `npm run dev`. Başka kurulum yok — backend, API anahtarı, veritabanı yok.
+Yeni bilgisayarda: repoyu klonla, `npm install`, `npm run dev`. Başka kurulum
+gerekmiyor — uygulamanın kendisinin backend'i, API anahtarı, veritabanı yok.
+
+Tek isteğe bağlı adım kullanım ölçümü: `.env.example`'ı `.env.local` olarak
+kopyalayıp Supabase anahtarlarını yazmak. **Yazmazsan ölçüm sessizce kapalı
+kalır ve uygulama normal çalışır** — bu bilerek böyle, geliştirme verisi
+gerçek ölçüme karışmasın diye.
 
 ---
 
@@ -530,6 +536,7 @@ src/
   today.ts             Gün sınırı — gün dönünce ekran da döner
   score.ts             Başarı ve kalıcılık yüzdeleri (saf)
   db.ts                Dexie (IndexedDB) — ilerleme + cevap günlüğü, cihazda
+  analitik.ts          Kullanım ölçümünün tek kapısı — SDK yok, düz fetch
   share.ts             Paylaşım görselleri (canvas)
   components/          Match, Choice, Scramble, TypeAnswer, Runner, CardFace, Gecis
   screens/             Welcome, Home, Lesson, Practice, Progress,
@@ -544,9 +551,13 @@ tools/
   make-frames.mjs      Çerçeve sayfası → deliği ölçülüp hizalanmış 6 çerçeve
   make-lockup.mjs      İşaret + isim → yazılı kilit, profil görselleri
   android-bildirim-ikonu.mjs  Filiz → durum çubuğu silueti (cap add sonrası)
+supabase/
+  migrations/          Ölçüm tablosu, RLS, saklama süresi — versiyonlu şema
 ```
 
-**Local-first.** İlerleme tamamen tarayıcıda (IndexedDB), backend yok. Açılışta
+**Local-first.** İlerleme tamamen tarayıcıda (IndexedDB); öğrenme verisinin
+arkasında sunucu yok. (Anonim kullanım ölçümü ayrı bir yol — bkz. *Kullanım
+ölçümü*; oraya ilerleme değil, yalnızca olay adları gidiyor.) Açılışta
 `navigator.storage.persist()` çağrılır — yoksa Safari 7 gün kullanılmayan veriyi
 koşulsuz siliyor. İlerleme sekmesindeki **Yedek al / Geri yükle** ile taşınır.
 
@@ -657,7 +668,7 @@ gelmiş olabilir).
 ### Kullanım ölçümü
 
 `src/analitik.ts` tek kapı — uygulamanın geri kalanı yalnızca `olay()`
-çağırıyor, Firebase'i tanımıyor. Vazgeçilirse değişen tek yer orası.
+çağırıyor, Supabase'i tanımıyor. Vazgeçilirse değişen tek yer orası.
 
 Arka uç **kendi Supabase tablomuz** — üçüncü taraf analitik yok. SDK de
 yok: PostgREST düz bir HTTP ucu, tek ihtiyacımız bir INSERT, `fetch`
@@ -672,7 +683,14 @@ yetiyor. Pakete eklenen bayt: **sıfır**.
 - **Çevrimdışı kaybolmaz** — olaylar `localStorage`'da birikir, bağlanınca
   toplu gider.
 
-Tablo şeması, RLS politikası ve D1/D7 sorguları **NOTLAR.md**'de.
+Tablo şeması ve RLS politikası **`supabase/migrations/`** içinde — panele
+elle yapıştırılan SQL değil, versiyonlu dosya. (Bir süre NOTLAR.md'de
+duruyordu; ilk kez gerçekten çalıştırıldığında içindeki indeksin hatalı
+olduğu ortaya çıktı. Bkz. NOTLAR.) D1/D7 sorguları NOTLAR.md'de.
+
+RLS "yalnızca INSERT" bir niyet beyanı değil, ölçüldü: `anon` anahtarıyla
+SELECT boş dönüyor, DELETE ve UPDATE sıfır satır etkiliyor, bakım
+fonksiyonu HTTP ucundan hiç görünmüyor.
 
 > Bu, uygulamanın artık "hiçbir veri toplamıyor" diyemeyeceği anlamına
 > geliyor. Yasal metinler ve Play'in Veri Güvenliği formu buna göre.
