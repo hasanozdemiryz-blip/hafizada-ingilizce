@@ -40,6 +40,15 @@ jobs:
       - name: Derle
         # GitHub Pages alt dizinde servis ediyor: /<repo>/
         run: BASE_PATH="/${GITHUB_REPOSITORY#*/}/" npx vite build
+        # Vite bu degiskenleri DERLEME ANINDA pakete gomuyor. Tanimli
+        # degillerse uygulama kendi kuralina uyup olcumu sessizce kapatiyor:
+        # site cikar, calisir, kimse fark etmez ve tek bir D1/D7 kaydi gelmez.
+        # `anon` anahtari gizli degil (pakette zaten gorunur olacak); burada
+        # secret olmasinin sebebi catallayanin bizim projemize olcum
+        # gondermemesi.
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
