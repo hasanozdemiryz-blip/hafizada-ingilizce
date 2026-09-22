@@ -13,6 +13,7 @@
     "frames": "node tools/make-frames.mjs",
     "avatars": "node tools/make-avatars.mjs",
     "icons:bildirim": "node tools/android-bildirim-ikonu.mjs",
+    "icons:android": "capacitor-assets generate --android",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "import:images": "node tools/import-images.mjs",
@@ -22,6 +23,7 @@
   "dependencies": {
     "@capacitor-community/text-to-speech": "^8.0.2",
     "@capacitor/android": "^8.5.2",
+    "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "@capacitor/filesystem": "^8.1.3",
@@ -34,6 +36,7 @@
     "ts-fsrs": "^5.4.2"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@resvg/resvg-js": "^2.6.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/react": "^19.3.0",

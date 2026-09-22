@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useGeri } from '../geri';
 import { olay } from '../analitik';
 import { LearnFace } from '../components/CardFace';
 import { Runner } from '../components/Runner';
@@ -128,6 +129,23 @@ export function Practice({
    * gunluk basari kaydina girer.
    */
   const sayac = useRef({ dogru: 0, toplam: 0 });
+
+  /*
+    Geri tusu: once calisan egzersizi durdur, sonra secim ekranini kapat.
+    Ikisi de yoksa ele almiyoruz (`false`) — App sekmeyi degistirir ya da
+    cikis onayini acar. Oncelik 20, ders ile ayni katman.
+  */
+  useGeri(() => {
+    if (calisiyor) {
+      durdur();
+      return true;
+    }
+    if (secimEkrani) {
+      setSecimEkrani(false);
+      return true;
+    }
+    return false;
+  }, 20);
 
   const setCalisiyor = (v: boolean) => {
     setCalisiyorState(v);

@@ -78,14 +78,43 @@ export function TopBar({ left, right }: { left?: ReactNode; right?: ReactNode })
   );
 }
 
+/**
+ * Geri dugmesi.
+ *
+ * Ok TIPOGRAFIK degil CIZIM: `←` karakteri yazi tipinin kendi cizgisiyle
+ * geliyor ve ince kaliyordu — kullanici "bulamiyorum" dedi, haklıydi.
+ * SVG'nin kalinligi ikon setiyle ayni (2.5 birim, yuvarlak uc) ve her
+ * boyutta ayni kaliyor.
+ *
+ * Dugme 48x48 ve DOLU beyaz — yarı saydam degil. Onerilen dokunma hedefi
+ * 44px; burada biraz uzerine cikildi cunku sikayet "bulamiyorum"du, yani
+ * sorun yalnizca dokunulabilirlik degil GORUNURLUK. Ust seritte tek basina
+ * duran bir nesne oldugu icin cevresindeki bosluk onu zaten ayiriyor;
+ * eksik olan kontrasttı.
+ *
+ * Gecmisi: once `←` karakteri 36x36 icinde. Karakterin cizgisi yazi
+ * tipinden geliyordu ve inceydi.
+ */
 export function BackButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="-ml-1 h-9 w-9 rounded-full bg-white/70 text-ink shadow-[var(--shadow-soft)] grid place-items-center hover:bg-white transition"
+      className="-ml-2 h-12 w-12 rounded-full bg-white text-ink shadow-[0_6px_16px_-4px_rgba(22,35,58,0.28)] ring-1 ring-black/5 grid place-items-center hover:bg-white active:scale-95 transition"
       aria-label="Geri"
     >
-      ←
+      <svg
+        viewBox="0 0 24 24"
+        className="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M19 12H5" />
+        <path d="M12 19l-7-7 7-7" />
+      </svg>
     </button>
   );
 }

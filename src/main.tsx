@@ -4,6 +4,7 @@ import App from './App';
 import './index.css';
 import { olcumHazirla, olay } from './analitik';
 import { profilSagla } from './db';
+import { geriHazirla } from './geri';
 import { hatirlatmaHazirla } from './reminder';
 import { telaffuzHazirla } from './speech';
 
@@ -43,6 +44,9 @@ void profilSagla().then((state) => {
   olcumHazirla(state.olcum !== false, state.profil?.id);
   olay('uygulama_acildi');
 });
+
+// Donanim geri tusu — yalnizca native kabukta (bkz. geri.ts)
+void geriHazirla();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

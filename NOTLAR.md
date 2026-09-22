@@ -272,7 +272,8 @@ ayrı bir `<kullanici>.github.io` deposu ister. Capacitor'da bu sorun hiç yok.
 npm install
 npm run build
 npx cap add android          # android/ .gitignore'da, her seferinde üretilir
-npm run icons:bildirim       # durum çubuğu ikonu — cap add onu üretmiyor
+npm run icons:android        # uygulama simgesi + açılış — cap add üretmiyor
+npm run icons:bildirim       # durum çubuğu ikonu — cap add üretmiyor
 npm run android:release      # versionCode/versionName + imza yapılandırması
 cd android && ./gradlew assembleDebug
 ```
@@ -1745,6 +1746,85 @@ Derleme sırasında `SDK XML version 4 ... only understands up to 3` uyarısı
 > Tuzak: `npm run android:release | Select-Object -First 4` betiği **erken
 > öldürüyor** — PowerShell boru hattını kapatıyor ve node dosyayı yazmadan
 > ölüyor. Çıktı normal göründüğü için fark edilmiyor; `versionCode 1` kalıyor.
+
+---
+
+## 2026-09-23 — Cihaz turundan çıkanlar
+
+İlk gerçek telefon turu. Telaffuz sorunsuz çıktı. Geri kalanı bu bölüm.
+
+### Uygulama simgesi hiç üretilmiyormuş
+
+Kurulan APK'da **Capacitor'ın varsayılan simgesi** duruyordu. 21 Eylül'de
+"düzeltildi" diye kayda geçmişti ama düzeltmenin yarısı yapılmış: kaynaklar
+`resources/` altına konmuş, onları Android'e çeviren adım hiçbir yere
+bağlanmamış. `@capacitor/assets` bağımlılıklarda bile yoktu.
+
+`android/app/src/main/res/mipmap-*/ic_launcher.png` dosyalarının tarihi
+**11 Eylül** — yani Capacitor'ın şablonundan beri hiç değişmemişler.
+
+Bildirim ikonuyla birebir aynı sınıftan bir boşluk: `android/` depoda
+tutulmadığı için `cap add` sonrası çalışması gereken bir adım var ve o adım
+unutulunca hiçbir hata vermiyor, sadece yanlış görsel kalıyor.
+
+`npm run icons:android` eklendi, YAYIN.md'deki zincire girdi.
+
+### Geri tuşu — iki ayrı iş
+
+**Ekrandaki düğme** tipografik `←` karakteriydi, 36×36 kutu içinde.
+Karakterin çizgisi yazı tipinden geliyor ve ince kalıyordu; kullanıcı
+"bulamıyorum" dedi. Artık SVG çizim (2.75 kalınlık, ikon setiyle aynı dil),
+48×48, dolu beyaz zemin ve halka. Sorun yalnızca dokunma hedefi değil
+**kontrasttı**.
+
+**Donanım geri tuşu** hiç ele alınmamıştı: nerede olursan ol, geri =
+uygulamadan çık. Ders ortasında yanlışlıkla basan kullanıcı dışarı
+düşüyordu.
+
+Gezinme URL tabanlı değil state tabanlı, yani tarayıcının geçmişi "nerede
+olduğumuzu" bilmiyor — o bilgi ekranlarda. `geri.ts` bir işleyici yığını
+tutuyor; her ekran kendi davranışını kaydediyor.
+
+> **Öncelik, kayıt sırası değil.** React `useEffect`leri çocuktan ebeveyne
+> koşuyor: iç ekran ÖNCE kaydolur, App SONRA. Sırayla gidilseydi en son
+> kaydolan (App) en üstte çıkar ve iç ekranlar hiç söz alamazdı.
+
+> **İşleyici ref'te tutuluyor.** Doğrudan kaydedilseydi yalnızca ilk
+> render'ın kapanışı kaydolur ve state hep başlangıç değeriyle okunurdu —
+> Egzersiz'in `calisiyor` kontrolü sonsuza kadar `false` görür, App de her
+> zaman çıkış onayını açardı. Sessizce yanlış çalışan türden.
+
+Sıra: açık bir akış varsa kapat → sekme ana sekme değilse oraya dön → ana
+ekranda çıkış onayı. Onayda birincil düğme **Vazgeç**; çıkış ikincil.
+
+### Yedekleme: paylaş menüsü kısıtlanamıyor
+
+İstek "sadece Drive ve telefondaki klasör görünsün"dü. **Mümkün değil** —
+paylaş listesini Android hazırlıyor, içinde hangi uygulamaların görüneceğini
+seçen bir API yok.
+
+Menüyü kısıtlamak yerine menüye alternatif kondu: **"Telefona kaydet"**
+dosyayı doğrudan `Belgeler/Hafizada/` altına yazıyor, menü hiç açılmıyor,
+ekranda nereye kaydedildiği yazıyor. Yanında **"Paylaş"** duruyor.
+
+`Directory.Documents` bilerek — kanca panosunun kullandığı `Cache`in aksine
+kalıcı ve kullanıcı dosya yöneticisinden görebiliyor. Yedeğin bulunabilir
+olması tek işi.
+
+Gerçek Drive entegrasyonu (tek dokunuş, menü yok) hâlâ Faz 2; tek engeli
+olan release keystore SHA-1'i artık var.
+
+### Hatırlatma saati serbest
+
+Dört sabit seçenek vardı (9/13/19/21) ve gerekçesi "az seçenek, hızlı
+karar"dı. Kullanıcı serbest seçim istedi — haklı: günün hangi saatinde
+çalışıldığı kişiye göre değişiyor ve dördünden biri tutmuyorsa hatırlatma
+tamamen işe yaramaz hale geliyor.
+
+`type="time"` kullanıldı: Android WebView burada **sistemin kendi saat
+seçicisini** açıyor. Kendi çarkımızı çizmek hem daha kötü çalışırdı hem
+cihazın 12/24 saat tercihini bilmezdi. `reminderMinute` eklendi; eski
+kayıtlarda yok, varsayılanı 0, yani eski kullanıcının 19:00'ı 19:00 kalıyor.
 
 ---
 

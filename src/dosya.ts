@@ -173,6 +173,36 @@ function iptal(err: unknown): boolean {
   return mesaj.includes('cancel');
 }
 
+/** Yedegin telefonda gidecegi klasor — Belgeler altinda, uygulamanin adiyla. */
+export const TELEFON_KLASORU = 'Hafizada';
+
+/**
+ * Dosyayi dogrudan telefonun Belgeler klasorune yazar.
+ *
+ * NEDEN AYRI BIR YOL. Paylas menusu Android'in kendi listesi; icinde hangi
+ * uygulamalarin gorunecegini SECEMIYORUZ (oyle bir API yok). Kullanici
+ * "sadece Drive ve telefondaki klasor olsun" dedi — menuyu kisitlamak
+ * mumkun olmadigi icin menuye alternatif kondu: tek dokunusla, menu hic
+ * acilmadan, bilinen bir klasore.
+ *
+ * `Directory.Documents` bilerek: `Cache`in aksine kalici ve kullanici
+ * telefonun dosya yoneticisinden gorebiliyor. Yedegin bulunabilir olmasi
+ * onun tek isi.
+ *
+ * Yalnizca native kabukta calisir; tarayicide boyle bir klasor yok.
+ */
+export async function telefonaKaydet(blob: Blob, dosyaAdi: string): Promise<string> {
+  const { Filesystem, Directory } = await import('@capacitor/filesystem');
+  const yol = `${TELEFON_KLASORU}/${dosyaAdi}`;
+  await Filesystem.writeFile({
+    path: yol,
+    data: await base64(blob),
+    directory: Directory.Documents,
+    recursive: true,
+  });
+  return `Belgeler/${yol}`;
+}
+
 /**
  * Yedek dosyasinin adi.
  *

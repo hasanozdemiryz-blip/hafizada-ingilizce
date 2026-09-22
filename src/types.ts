@@ -194,6 +194,12 @@ export type AppState = {
    * Yalnizca native kabukta anlamli (bkz. reminder.ts).
    */
   reminderHour: number | null;
+  /**
+   * Hatirlatma dakikasi. `reminderHour` null ise anlamsiz.
+   * Sonradan eklendi: eski kayitlarda yok, `EMPTY_STATE` 0 veriyor —
+   * yani eski kullanicinin 19:00'i 19:00 kalir.
+   */
+  reminderMinute: number;
   /** YYYY-MM-DD, yerel saat */
   lastSessionDate: string | null;
   /**

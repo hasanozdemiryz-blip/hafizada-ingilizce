@@ -6,7 +6,7 @@ import { CARDS, LIMIT_CHOICES, LIMIT_MAX } from '../content';
 import { olay, olcumHazirla, olcumVarMi, olcumuKapat } from '../analitik';
 import { exportProgress, importProgress, resetAll, setState } from '../db';
 import {
-  HATIRLATMA_SAATLERI,
+  HATIRLATMA_VARSAYILAN,
   hatirlatmayiKapat,
   hatirlatmayiKur,
   useHatirlatma,
@@ -14,7 +14,7 @@ import {
 import { useTelaffuz } from '../speech';
 import { DevPanel } from './DevPanel';
 import type { AppState } from '../types';
-import { dosyayiVer, paylasilabilir, yedekAdi } from '../dosya';
+import { dosyayiVer, paylasilabilir, telefonaKaydet, yedekAdi, yol } from '../dosya';
 
 /**
  * AYARLAR.
@@ -35,6 +35,7 @@ export function Settings({
   const fileRef = useRef<HTMLInputElement>(null);
   const [sifirlaSoruluyor, setSifirlaSoruluyor] = useState(false);
   const [hata, setHata] = useState<string | null>(null);
+  const [bilgi, setBilgi] = useState<string | null>(null);
 
   /**
    * Yedek paylas menusune verilebiliyor mu. Yalnizca METIN degistiriyor:
@@ -42,6 +43,13 @@ export function Settings({
    * Kabuk render sirasinda degismedigi icin state'e gerek yok.
    */
   const paylasSecenegi = paylasilabilir();
+
+  /**
+   * Telefona dogrudan kaydetme yalnizca native kabukta var — tarayicide
+   * "Belgeler" diye bir klasor yok. `yol()` blob'suz cagrilinca native
+   * kabugu dogru soyluyor (bkz. dosya.ts).
+   */
+  const telefonSecenegi = yol() === 'native';
   const sesVar = useTelaffuz();
   const hatirlatmaVarMi = useHatirlatma();
 
@@ -49,14 +57,15 @@ export function Settings({
    * Ayari SONUCA gore yaziyoruz: izin verilmezse anahtar acik gorunup
    * hicbir sey yapmamali.
    */
-  async function hatirlatmayiAyarla(saat: number | null) {
-    olay('hatirlatma_degisti', { saat: saat ?? 'kapali' });
+  async function hatirlatmayiAyarla(saat: number | null, dakika = 0) {
+    olay('hatirlatma_degisti', { saat: saat ?? 'kapali', dakika });
     if (saat === null) {
       await hatirlatmayiKapat();
       await setState({ reminderHour: null });
       return;
     }
-    if (await hatirlatmayiKur(saat)) await setState({ reminderHour: saat });
+    if (await hatirlatmayiKur(saat, dakika))
+      await setState({ reminderHour: saat, reminderMinute: dakika });
   }
 
   return (
@@ -176,7 +185,8 @@ export function Settings({
                 aria-label="Günlük hatırlatma"
                 onClick={() =>
                   void hatirlatmayiAyarla(
-                    state.reminderHour === null ? HATIRLATMA_SAATLERI[2] : null,
+                    state.reminderHour === null ? HATIRLATMA_VARSAYILAN.saat : null,
+                    state.reminderHour === null ? HATIRLATMA_VARSAYILAN.dakika : 0,
                   )
                 }
                 className={`shrink-0 h-8 w-14 rounded-full p-1 transition-colors ${
@@ -192,24 +202,29 @@ export function Settings({
             </div>
 
             {state.reminderHour !== null && (
-              <div className="mt-4 flex gap-2">
-                {HATIRLATMA_SAATLERI.map((sa) => {
-                  const secili = state.reminderHour === sa;
-                  return (
-                    <button
-                      key={sa}
-                      onClick={() => void hatirlatmayiAyarla(sa)}
-                      className={`flex-1 rounded-2xl py-3 text-sm font-bold tabular-nums transition-all active:scale-95 ${
-                        secili
-                          ? 'bg-brand text-white shadow-[0_8px_18px_-8px_rgba(79,146,246,0.85)]'
-                          : 'bg-sunken text-ink'
-                      }`}
-                    >
-                      {String(sa).padStart(2, '0')}:00
-                    </button>
-                  );
-                })}
-              </div>
+              /*
+                Dort sabit saat (9/13/19/21) yerine serbest secim.
+                `type="time"` bilerek: Android WebView burada SISTEMIN kendi
+                saat secicisini aciyor — kendi carkimizi cizmek hem daha
+                kotu calisirdi hem cihazin 12/24 saat tercihini bilmezdi.
+              */
+              <label className="mt-4 flex items-center justify-between gap-3">
+                <span className="text-sm text-ink-soft">Saat</span>
+                <input
+                  type="time"
+                  value={`${String(state.reminderHour).padStart(2, '0')}:${String(
+                    state.reminderMinute ?? 0,
+                  ).padStart(2, '0')}`}
+                  onChange={(e) => {
+                    const [sa, dk] = e.target.value.split(':').map(Number);
+                    // Bos birakilirsa tarayici "" donduruyor; NaN ile kurmayalim.
+                    if (Number.isInteger(sa) && Number.isInteger(dk)) {
+                      void hatirlatmayiAyarla(sa, dk);
+                    }
+                  }}
+                  className="bg-sunken text-ink rounded-2xl px-4 py-3 text-base font-bold tabular-nums"
+                />
+              </label>
             )}
           </Card>
         )}
@@ -262,8 +277,25 @@ export function Settings({
             {paylasSecenegi && " — açılan menüden Drive'a, e-postaya ya da istediğin yere gönderebilirsin"}.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Kucuk onClick={() => void disaAktar(state.profil?.ad)}>
-              {paylasSecenegi ? 'Yedekle' : 'Yedek al'}
+            {telefonSecenegi && (
+              <Kucuk
+                onClick={() => {
+                  setHata(null);
+                  void telefonaYedekle(state.profil?.ad)
+                    .then((nereye) => setBilgi(`Kaydedildi: ${nereye}`))
+                    .catch(() => setHata('Telefona kaydedilemedi.'));
+                }}
+              >
+                Telefona kaydet
+              </Kucuk>
+            )}
+            <Kucuk
+              onClick={() => {
+                setBilgi(null);
+                void disaAktar(state.profil?.ad);
+              }}
+            >
+              {telefonSecenegi ? 'Paylaş' : paylasSecenegi ? 'Yedekle' : 'Yedek al'}
             </Kucuk>
             <Kucuk onClick={() => fileRef.current?.click()}>Geri yükle</Kucuk>
             <Kucuk tehlike onClick={() => setSifirlaSoruluyor(true)}>
@@ -271,6 +303,7 @@ export function Settings({
             </Kucuk>
           </div>
           {hata && <p className="text-sm text-[#c2417f] mt-3">{hata}</p>}
+          {bilgi && <p className="text-sm text-ink-soft mt-3 break-all">{bilgi}</p>}
           <input
             ref={fileRef}
             type="file"
@@ -368,6 +401,13 @@ async function disaAktar(profilAdi?: string) {
   // verildiginde yaziliyor. `yol` ise "Android'de paylas menusu aciliyor mu"
   // sorusunu tek bir cihazdan degil, kullanimdan cevapliyor.
   if (verildi) olay('yedek_alindi', { yol });
+}
+
+async function telefonaYedekle(profilAdi?: string): Promise<string> {
+  const blob = new Blob([await exportProgress()], { type: 'application/json' });
+  const nereye = await telefonaKaydet(blob, yedekAdi(profilAdi));
+  olay('yedek_alindi', { yol: 'telefon' });
+  return nereye;
 }
 
 async function iceAktar(file: File) {

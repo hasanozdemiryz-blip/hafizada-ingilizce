@@ -186,6 +186,7 @@ export const EMPTY_STATE: AppState = {
   freezes: 0,
   days: {},
   reminderHour: null,
+  reminderMinute: 0,
   lastSessionDate: null,
   olcum: true,
 };

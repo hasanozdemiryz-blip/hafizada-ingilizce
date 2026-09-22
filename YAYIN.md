@@ -116,8 +116,9 @@ keyPassword=...
 ```powershell
 npm run build
 npx cap add android
-npm run icons:bildirim
-npm run android:release
+npm run icons:android      # uygulama simgesi + açılış ekranı
+npm run icons:bildirim     # durum çubuğu ikonu
+npm run android:release    # sürüm + imza
 cd android
 .\gradlew.bat assembleRelease
 ```
@@ -233,16 +234,23 @@ Console kendi hesabında ne yazıyorsa o geçerli.
 npm install
 npm run build
 npx cap add android
-npm run icons:bildirim
-npm run android:release
+npm run icons:android      # uygulama simgesi + açılış ekranı
+npm run icons:bildirim     # durum çubuğu ikonu
+npm run android:release    # sürüm + imza
 cd android
 .\gradlew.bat bundleRelease      # Play'e .aab
 .\gradlew.bat assembleRelease    # kendi dağıtımın için imzalı APK
 ```
 
-`npm run icons:bildirim` ve `npm run android:release` **`cap add android`
-sonrasında** çalışmalı; ikisi de `android/` içine yazıyor ve o klasör depoda
-tutulmuyor.
+Üç betik de **`cap add android` sonrasında** çalışmalı; hepsi `android/`
+içine yazıyor ve o klasör depoda tutulmuyor. Sıra önemli: `icons:android`
+önce, çünkü `icons:bildirim`in yazdığı `ic_stat_hafizada` onun ürettiği
+klasörlerin yanına gidiyor.
+
+> `icons:android` atlanırsa kurulan uygulamada **Capacitor'ın varsayılan
+> simgesi** kalır. Tam da bu oldu: `resources/` klasörü aylar önce
+> hazırlanmıştı ama onu Android'e çeviren adım hiçbir betiğe bağlanmamıştı,
+> `@capacitor/assets` bağımlılıklarda bile yoktu.
 
 > Betikleri `| Select-Object -First N` ile borulama — PowerShell boru hattını
 > erken kapatıp node'u öldürüyor, dosya yazılmadan çıkıyor ve çıktı normal

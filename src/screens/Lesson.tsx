@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { olay } from '../analitik';
+import { useGeri } from '../geri';
 import { LearnFace } from '../components/CardFace';
 import { Runner } from '../components/Runner';
 import { ADIMLAR, bolgelereBol, type Gorev } from '../exercise';
@@ -151,6 +152,16 @@ export function Lesson({
   const bitiyor = useRef(false);
 
   const toplam = yeniKartlar.length + new Set(tekrarKuyrugu.map((p) => p.cardId)).size;
+
+  /*
+    Donanim geri tusu derste ozel: dogrudan cikmak dersi yarida birakir,
+    o yuzden ekrandaki geri dugmesiyle AYNI uyariyi acar. Oncelik 20 —
+    App'in genel isleyicisinden once sorulur.
+  */
+  useGeri(() => {
+    cikmakIstiyor();
+    return true;
+  }, 20);
 
   /* Ders acilinca bir kez — bagimlilik listesi bos, yeniden kurulmuyor. */
   useEffect(() => {

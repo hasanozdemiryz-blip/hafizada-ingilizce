@@ -29,6 +29,9 @@ import { Welcome } from './screens/Welcome';
 import { Settings } from './screens/Settings';
 import { ProfilDuzenle } from './screens/ProfilDuzenle';
 import { gecerliCerceve, type Kazanim } from './cerceveler';
+import { uygulamadanCik, useGeri } from './geri';
+// `Card` adi types.ts'teki KART tipiyle cakisiyor; arayuz bileseni takma adla.
+import { Button, Card as Kutu } from './components/ui';
 import { profilDuzelt } from './profil';
 import { Splash } from './screens/Splash';
 import { useToday } from './today';
@@ -63,6 +66,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('ogren');
   const [flow, setFlow] = useState<Flow>(null);
   const [egzersizde, setEgzersizde] = useState(false);
+  const [cikisSoruluyor, setCikisSoruluyor] = useState(false);
 
   /*
     Gunun degistigini fark eden yer BURASI (bkz. today.ts). Onceden
@@ -72,6 +76,38 @@ export default function App() {
     oldugu icin gun donunce kuyruklar da bastan hesaplanir.
   */
   const bugun = useToday();
+
+  /**
+   * DONANIM GERI TUSU — en dis katman (oncelik 0).
+   *
+   * Ic ekranlar (ders, egzersiz) kendi isleyicilerini daha yuksek oncelikle
+   * kaydediyor ve once onlar soruluyor; buraya ancak onlar "ele almadim"
+   * dediginde dusuluyor.
+   *
+   * Sira: acik bir akis varsa kapat -> sekme ana sekme degilse oraya don ->
+   * ana ekranda cikis onayi. Yani geri tusu tek tek geriye yuruyor,
+   * uygulamayi bir anda kapatmiyor.
+   *
+   * Kanca KOSULSUZ cagrilmali; asagidaki `if (!data)` erken donusunden
+   * once duruyor.
+   */
+  useGeri(() => {
+    if (cikisSoruluyor) {
+      setCikisSoruluyor(false);
+      return true;
+    }
+    if (flow) {
+      setFlow(null);
+      return true;
+    }
+    if (tab !== 'ogren') {
+      setTab('ogren');
+      return true;
+    }
+    // Ana ekranda: yanlislikla basip disari dusmek en sik sikayet.
+    setCikisSoruluyor(true);
+    return true;
+  }, 0);
 
   const data = useLiveQuery(async () => {
     const [hepsi, state] = await Promise.all([db.progress.toArray(), getState()]);
@@ -244,6 +280,31 @@ export default function App() {
 
       {/* Egzersiz kosarken menu gizlenir: tam ekran odak, ve dugmeler menunun altinda kalmaz */}
       {!egzersizde && <TabBar active={tab} onChange={setTab} />}
+
+      {/*
+        Cikis onayi. Ana ekranda geri tusuna basilinca cikiyor — kullanici
+        "genelde yanlislikla basiyorum" dedi. Varsayilan secenek KALMAK:
+        birincil dugme "Vazgec", cikis ikincil. (Ayarlar'daki sifirlama
+        onayiyla ayni duzen.)
+      */}
+      {cikisSoruluyor && (
+        <div className="fixed inset-0 z-20 flex items-end justify-center bg-ink/40 px-5 pb-8 backdrop-blur-sm">
+          <Kutu className="rise w-full max-w-md p-6">
+            <p className="word text-xl font-extrabold">Çıkmak istiyor musun?</p>
+            <p className="text-sm text-ink-soft mt-2">
+              İlerlemen kayıtlı, kaldığın yerden devam edebilirsin.
+            </p>
+            <div className="mt-5 flex flex-col gap-2.5">
+              <Button variant="brand" onClick={() => setCikisSoruluyor(false)}>
+                Vazgeç
+              </Button>
+              <Button variant="ghost" onClick={() => void uygulamadanCik()}>
+                Çık
+              </Button>
+            </div>
+          </Kutu>
+        </div>
+      )}
     </>
   );
 }

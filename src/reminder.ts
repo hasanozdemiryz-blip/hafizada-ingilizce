@@ -21,9 +21,16 @@ type Eklenti = (typeof import('@capacitor/local-notifications'))['LocalNotificat
 /** Tek bildirim, hep ayni kimlik: yeniden kurmak eskisinin uzerine yazar. */
 const KIMLIK = 1;
 
-/** Sunulan saatler. Serbest saat secici degil — az secenek, hizli karar. */
-export const HATIRLATMA_SAATLERI = [9, 13, 19, 21] as const;
-export type HatirlatmaSaati = (typeof HATIRLATMA_SAATLERI)[number];
+/**
+ * Hatirlatma ilk acildiginda onerilen saat.
+ *
+ * Once dort sabit secenek vardi (9/13/19/21) ve gerekcesi "az secenek,
+ * hizli karar"di. Kullanici serbest secim istedi: gunun hangi saatinde
+ * calistigi kisiye gore degisiyor ve dordunden biri tutmuyorsa hatirlatma
+ * tamamen ise yaramaz hale geliyor. Artik saat de dakika da serbest;
+ * bu sabit yalnizca ANAHTARI ACARKEN bir baslangic degeri.
+ */
+export const HATIRLATMA_VARSAYILAN = { saat: 19, dakika: 0 } as const;
 
 let eklenti: Eklenti | null = null;
 let motor: 'native' | 'yok' = 'yok';
@@ -64,7 +71,7 @@ export const useHatirlatma = () => useSyncExternalStore(abone, hatirlatmaVar, ()
  * Gunluk tekrarlanan bildirimi kurar.
  * Izin verilmezse `false` doner — cagiran yeri ayara yazmamali.
  */
-export async function hatirlatmayiKur(saat: number): Promise<boolean> {
+export async function hatirlatmayiKur(saat: number, dakika = 0): Promise<boolean> {
   if (!eklenti) return false;
   try {
     const izin = await eklenti.requestPermissions();
@@ -77,7 +84,7 @@ export async function hatirlatmayiKur(saat: number): Promise<boolean> {
           id: KIMLIK,
           title: 'Hafızada İngilizce',
           body: 'Bugünün kelimeleri hazır.',
-          schedule: { on: { hour: saat, minute: 0 }, allowWhileIdle: true },
+          schedule: { on: { hour: saat, minute: dakika }, allowWhileIdle: true },
         },
       ],
     });
